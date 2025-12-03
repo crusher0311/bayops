@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AddressAutocomplete } from '@/components/ui/address-autocomplete';
+import { VinDecoder } from '@/components/ui/vin-decoder';
 import { 
   Select,
   SelectContent,
@@ -388,6 +389,26 @@ export default function NewRepairOrder() {
                 </TabsContent>
 
                 <TabsContent value="new" className="space-y-4">
+                  <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-900">
+                    <div className="space-y-2">
+                      <Label htmlFor="vin" className="text-blue-700 dark:text-blue-300 font-medium">
+                        VIN (enter to auto-fill vehicle info)
+                      </Label>
+                      <VinDecoder
+                        value={newVehicle.vin}
+                        onChange={(vin) => setNewVehicle({ ...newVehicle, vin })}
+                        onDecode={(info) => {
+                          setNewVehicle(prev => ({
+                            ...prev,
+                            year: info.year || prev.year,
+                            make: info.make || prev.make,
+                            model: info.model || prev.model,
+                          }));
+                        }}
+                      />
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="year">Year *</Label>
@@ -420,27 +441,15 @@ export default function NewRepairOrder() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="vin">VIN</Label>
-                      <Input
-                        id="vin"
-                        value={newVehicle.vin}
-                        onChange={(e) => setNewVehicle({ ...newVehicle, vin: e.target.value.toUpperCase() })}
-                        placeholder="1HGBH41JXMN109186"
-                        data-testid="input-vin"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="licensePlate">License Plate</Label>
-                      <Input
-                        id="licensePlate"
-                        value={newVehicle.licensePlate}
-                        onChange={(e) => setNewVehicle({ ...newVehicle, licensePlate: e.target.value.toUpperCase() })}
-                        placeholder="ABC-1234"
-                        data-testid="input-plate"
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="licensePlate">License Plate</Label>
+                    <Input
+                      id="licensePlate"
+                      value={newVehicle.licensePlate}
+                      onChange={(e) => setNewVehicle({ ...newVehicle, licensePlate: e.target.value.toUpperCase() })}
+                      placeholder="ABC-1234"
+                      data-testid="input-plate"
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
