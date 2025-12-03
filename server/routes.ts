@@ -597,6 +597,51 @@ export async function registerRoutes(
     }
   });
 
+  // Labor Guide API (VehicleDatabases)
+  app.get("/api/labor-guide", requireAuth, async (req, res) => {
+    try {
+      const { year, make, model } = req.query;
+      
+      if (!year || !make || !model) {
+        return res.status(400).json({ 
+          message: "Year, make, and model are required" 
+        });
+      }
+
+      const apiKey = process.env.VEHICLE_DATABASES_API_KEY;
+      if (!apiKey) {
+        return res.status(503).json({ 
+          message: "Labor guide not configured" 
+        });
+      }
+
+      const url = `https://api.vehicledatabases.com/repair-pricing/${year}/${encodeURIComponent(String(make))}/${encodeURIComponent(String(model))}`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'x-AuthKey': apiKey,
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Labor guide API error:', response.status, errorText);
+        if (response.status === 401 || response.status === 403) {
+          return res.status(503).json({ 
+            message: "Labor guide API key invalid or expired" 
+          });
+        }
+        throw new Error(`Labor guide API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      res.json(data);
+    } catch (error: any) {
+      console.error('Labor guide error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Address autocomplete proxy (keeps API key on server)
   app.get("/api/address-autocomplete", requireAuth, async (req, res) => {
     try {

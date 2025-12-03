@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useRoute, Link } from 'wouter';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { useRepairOrder, useCustomer, useVehicle, useWorkflows, useUpdateRepairOrder } from '@/lib/hooks';
+import { useRepairOrder, useCustomer, useVehicle, useWorkflows, useUpdateRepairOrder, useLaborGuide, type LaborGuideRepair } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +18,10 @@ import {
   LayoutList,
   Briefcase,
   Loader2,
-  Pencil
+  Pencil,
+  BookOpen,
+  Search,
+  DollarSign
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -27,6 +30,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ServiceJob {
   id: string;
@@ -59,6 +63,9 @@ export default function RepairOrderDetail() {
   const [isAddJobDialogOpen, setIsAddJobDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<{ jobId: string; item: LineItem } | null>(null);
   const [editForm, setEditForm] = useState<Partial<LineItem>>({});
+  const [isLaborGuideOpen, setIsLaborGuideOpen] = useState(false);
+  const [laborGuideJobId, setLaborGuideJobId] = useState<string | null>(null);
+  const [laborGuideSearch, setLaborGuideSearch] = useState('');
 
   if (roLoading) {
     return (
@@ -103,6 +110,61 @@ export default function RepairOrderDetail() {
   const total = subtotal + tax;
 
   const currentStepIndex = activeStages.findIndex(s => s.id === ro.status);
+
+  // Labor Guide hook
+  const { data: laborGuideData, isLoading: laborGuideLoading, error: laborGuideError } = useLaborGuide(
+    vehicle?.year || 0,
+    vehicle?.make || '',
+    vehicle?.model || ''
+  );
+
+  // Get all labor operations from the guide
+  const laborOperations = laborGuideData?.data?.repair?.flatMap(trim => 
+    trim.repair.map(r => ({ ...r, trim: trim.trim }))
+  ) || [];
+
+  // Filter labor operations by search
+  const filteredOperations = laborOperations.filter(op =>
+    op.title.toLowerCase().includes(laborGuideSearch.toLowerCase()) ||
+    op.description.toLowerCase().includes(laborGuideSearch.toLowerCase())
+  );
+
+  const handleAddFromLaborGuide = (repair: LaborGuideRepair) => {
+    if (!laborGuideJobId) return;
+    
+    const laborCost = repair.costs.find(c => c.name === 'Labor');
+    const avgLaborPrice = laborCost ? (laborCost.low + laborCost.high) / 2 : 0;
+    
+    const newItem: LineItem = {
+      id: `li-${Date.now()}`,
+      type: 'LABOR',
+      description: repair.title,
+      quantity: 1,
+      unitCost: 0,
+      unitPrice: Math.round(avgLaborPrice * 100) / 100,
+      approved: true
+    };
+    
+    const updatedJobs = jobs.map(job => 
+      job.id === laborGuideJobId 
+        ? { ...job, lineItems: [...job.lineItems, newItem] }
+        : job
+    );
+    
+    updateRO.mutate({
+      id: ro.id,
+      updates: { jobs: updatedJobs as any },
+    });
+    
+    setIsLaborGuideOpen(false);
+    setLaborGuideJobId(null);
+    setLaborGuideSearch('');
+  };
+
+  const openLaborGuide = (jobId: string) => {
+    setLaborGuideJobId(jobId);
+    setIsLaborGuideOpen(true);
+  };
 
   const advanceStatus = () => {
     if (currentStepIndex < activeStages.length - 1) {
@@ -394,6 +456,16 @@ export default function RepairOrderDetail() {
                           </div>
                           <div className="flex gap-2">
                             <Button 
+                              variant="default" 
+                              size="sm" 
+                              className="gap-2" 
+                              onClick={() => openLaborGuide(job.id)}
+                              disabled={updateRO.isPending || !vehicle}
+                              data-testid={`button-labor-guide-${job.id}`}
+                            >
+                              <BookOpen className="w-3 h-3" /> Labor Guide
+                            </Button>
+                            <Button 
                               variant="outline" 
                               size="sm" 
                               className="gap-2" 
@@ -628,6 +700,118 @@ export default function RepairOrderDetail() {
             </Button>
             <Button onClick={handleSaveEdit} disabled={updateRO.isPending} data-testid="button-save-edit">
               {updateRO.isPending ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isLaborGuideOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsLaborGuideOpen(false);
+          setLaborGuideJobId(null);
+          setLaborGuideSearch('');
+        }
+      }}>
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5" />
+              Labor Guide - {vehicle?.year} {vehicle?.make} {vehicle?.model}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="relative">
+            <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search labor operations..."
+              value={laborGuideSearch}
+              onChange={(e) => setLaborGuideSearch(e.target.value)}
+              className="pl-9"
+              data-testid="input-labor-guide-search"
+            />
+          </div>
+
+          {laborGuideLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              <span className="ml-3 text-muted-foreground">Loading labor guide...</span>
+            </div>
+          ) : laborGuideError ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <AlertCircle className="w-12 h-12 text-destructive mb-4" />
+              <h3 className="text-lg font-semibold">Unable to load labor guide</h3>
+              <p className="text-muted-foreground text-sm max-w-sm">
+                {laborGuideError instanceof Error ? laborGuideError.message : 'An error occurred'}
+              </p>
+            </div>
+          ) : filteredOperations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <BookOpen className="w-12 h-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold">
+                {laborGuideSearch ? 'No matching operations' : 'No labor data available'}
+              </h3>
+              <p className="text-muted-foreground text-sm max-w-sm">
+                {laborGuideSearch 
+                  ? 'Try a different search term' 
+                  : 'Labor guide data not found for this vehicle'}
+              </p>
+            </div>
+          ) : (
+            <ScrollArea className="h-[400px] pr-4">
+              <div className="space-y-3">
+                {filteredOperations.map((op, index) => {
+                  const laborCost = op.costs.find(c => c.name === 'Labor');
+                  const partsCost = op.costs.find(c => c.name === 'Parts');
+                  
+                  return (
+                    <Card 
+                      key={`${op.value}-${index}`} 
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => handleAddFromLaborGuide(op)}
+                      data-testid={`labor-guide-item-${index}`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-sm">{op.title}</h4>
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                              {op.description}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            {laborCost && (laborCost.low > 0 || laborCost.high > 0) && (
+                              <div className="flex items-center gap-1 text-sm font-medium text-primary">
+                                <DollarSign className="w-3 h-3" />
+                                {laborCost.low === laborCost.high 
+                                  ? `$${laborCost.low}`
+                                  : `$${laborCost.low} - $${laborCost.high}`}
+                              </div>
+                            )}
+                            {partsCost && (partsCost.low > 0 || partsCost.high > 0) && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                Parts: ${partsCost.low} - ${partsCost.high}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsLaborGuideOpen(false);
+                setLaborGuideJobId(null);
+                setLaborGuideSearch('');
+              }}
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

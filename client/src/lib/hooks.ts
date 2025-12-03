@@ -169,3 +169,48 @@ export function useUsers() {
     },
   });
 }
+
+// Labor Guide
+export interface LaborGuideRepair {
+  title: string;
+  description: string;
+  value: string;
+  costs: Array<{
+    name: string;
+    desc: string;
+    high: number;
+    low: number;
+  }>;
+}
+
+export interface LaborGuideData {
+  status: string;
+  data?: {
+    year: string;
+    make: string;
+    model: string;
+    repair?: Array<{
+      trim: string;
+      repair: LaborGuideRepair[];
+    }>;
+  };
+}
+
+export function useLaborGuide(year: number | string, make: string, model: string) {
+  return useQuery<LaborGuideData>({
+    queryKey: ['labor-guide', year, make, model],
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/labor-guide?year=${year}&make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`,
+        { credentials: 'include' }
+      );
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to fetch labor guide');
+      }
+      return response.json();
+    },
+    enabled: !!year && !!make && !!model,
+    staleTime: 1000 * 60 * 30, // Cache for 30 minutes
+  });
+}
