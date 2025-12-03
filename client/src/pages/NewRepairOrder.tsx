@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useCustomers, useVehicles, useWorkflows, useCreateCustomer, useCreateVehicle, useCreateRepairOrder } from '@/lib/hooks';
 import { useShopStore } from '@/lib/store';
+import { useAuthStore } from '@/lib/authStore';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +34,7 @@ import { Link } from 'wouter';
 export default function NewRepairOrder() {
   const [, navigate] = useLocation();
   const { currentLocationId } = useShopStore();
+  const { user } = useAuthStore();
   
   const { data: customers = [] } = useCustomers();
   const { data: vehicles = [] } = useVehicles();
@@ -129,13 +131,14 @@ export default function NewRepairOrder() {
   };
 
   const handleCreateRO = async () => {
-    if (!selectedCustomerId || !selectedVehicleId || !currentLocationId) return;
+    if (!selectedCustomerId || !selectedVehicleId || !currentLocationId || !user) return;
     
     try {
       const ro = await createRO.mutateAsync({
         customerId: selectedCustomerId,
         vehicleId: selectedVehicleId,
         locationId: currentLocationId,
+        advisorId: user.id,
         workflowId: roDetails.workflowId || workflows[0]?.id,
         status: 'check-in',
         odometerIn: roDetails.odometerIn ? parseInt(roDetails.odometerIn) : null,
