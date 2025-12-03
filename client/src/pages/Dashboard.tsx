@@ -25,7 +25,9 @@ export default function Dashboard() {
   const totalRevenue = ros
     .filter(ro => ['INVOICED', 'PAID'].includes(ro.status))
     .reduce((sum, ro) => {
-      const roTotal = ro.lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0);
+      const roTotal = ro.jobs.reduce((jobSum, job) => 
+        jobSum + job.lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0)
+      , 0);
       return sum + roTotal;
     }, 0);
 
@@ -119,7 +121,7 @@ export default function Dashboard() {
                 <div key={ro.id} className="flex items-center">
                   <div className="space-y-1">
                     <p className="text-sm font-medium leading-none">
-                      RO #{ro.roNumber} - {ro.lineItems[0]?.description || 'Service'}
+                      RO #{ro.roNumber} - {ro.jobs[0]?.name || 'Service'}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {format(new Date(ro.createdAt), 'MMM d, h:mm a')}
