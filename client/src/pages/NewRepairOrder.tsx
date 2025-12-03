@@ -62,10 +62,18 @@ export default function NewRepairOrder() {
     year: '',
     make: '',
     model: '',
+    trim: '',
     vin: '',
     licensePlate: '',
     color: '',
     mileage: '',
+    bodyClass: '',
+    engineCylinders: '',
+    engineDisplacement: '',
+    fuelType: '',
+    driveType: '',
+    transmission: '',
+    doors: '',
   });
 
   // RO Details state
@@ -93,10 +101,22 @@ export default function NewRepairOrder() {
     if (!selectedCustomerId) return;
     try {
       const vehicle = await createVehicle.mutateAsync({
-        ...newVehicle,
-        customerId: selectedCustomerId,
+        vin: newVehicle.vin,
         year: parseInt(newVehicle.year) || new Date().getFullYear(),
+        make: newVehicle.make,
+        model: newVehicle.model,
+        trim: newVehicle.trim || null,
+        licensePlate: newVehicle.licensePlate,
         mileage: parseInt(newVehicle.mileage) || 0,
+        color: newVehicle.color || null,
+        bodyClass: newVehicle.bodyClass || null,
+        engineCylinders: newVehicle.engineCylinders || null,
+        engineDisplacement: newVehicle.engineDisplacement || null,
+        fuelType: newVehicle.fuelType || null,
+        driveType: newVehicle.driveType || null,
+        transmission: newVehicle.transmission || null,
+        doors: newVehicle.doors ? parseInt(newVehicle.doors) : null,
+        customerId: selectedCustomerId,
       } as any);
       setSelectedVehicleId(vehicle.id);
       setVehicleTab('existing');
@@ -403,6 +423,14 @@ export default function NewRepairOrder() {
                             year: info.year || prev.year,
                             make: info.make || prev.make,
                             model: info.model || prev.model,
+                            trim: info.trim || prev.trim,
+                            bodyClass: info.bodyClass || prev.bodyClass,
+                            engineCylinders: info.engineCylinders || prev.engineCylinders,
+                            engineDisplacement: info.engineDisplacement || prev.engineDisplacement,
+                            fuelType: info.fuelType || prev.fuelType,
+                            driveType: info.driveType || prev.driveType,
+                            transmission: info.transmission || prev.transmission,
+                            doors: info.doors || prev.doors,
                           }));
                         }}
                       />
@@ -474,6 +502,56 @@ export default function NewRepairOrder() {
                       />
                     </div>
                   </div>
+
+                  {(newVehicle.bodyClass || newVehicle.engineDisplacement || newVehicle.fuelType || newVehicle.driveType) && (
+                    <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-900">
+                      <p className="text-sm font-medium text-green-700 dark:text-green-300 mb-3">Decoded Vehicle Specs</p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                        {newVehicle.bodyClass && (
+                          <div>
+                            <span className="text-muted-foreground">Body:</span>
+                            <span className="ml-1 font-medium">{newVehicle.bodyClass}</span>
+                          </div>
+                        )}
+                        {newVehicle.engineDisplacement && (
+                          <div>
+                            <span className="text-muted-foreground">Engine:</span>
+                            <span className="ml-1 font-medium">{newVehicle.engineDisplacement} {newVehicle.engineCylinders ? `${newVehicle.engineCylinders}cyl` : ''}</span>
+                          </div>
+                        )}
+                        {newVehicle.fuelType && (
+                          <div>
+                            <span className="text-muted-foreground">Fuel:</span>
+                            <span className="ml-1 font-medium">{newVehicle.fuelType}</span>
+                          </div>
+                        )}
+                        {newVehicle.driveType && (
+                          <div>
+                            <span className="text-muted-foreground">Drive:</span>
+                            <span className="ml-1 font-medium">{newVehicle.driveType}</span>
+                          </div>
+                        )}
+                        {newVehicle.transmission && (
+                          <div>
+                            <span className="text-muted-foreground">Trans:</span>
+                            <span className="ml-1 font-medium">{newVehicle.transmission}</span>
+                          </div>
+                        )}
+                        {newVehicle.doors && (
+                          <div>
+                            <span className="text-muted-foreground">Doors:</span>
+                            <span className="ml-1 font-medium">{newVehicle.doors}</span>
+                          </div>
+                        )}
+                        {newVehicle.trim && (
+                          <div>
+                            <span className="text-muted-foreground">Trim:</span>
+                            <span className="ml-1 font-medium">{newVehicle.trim}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex gap-3">
                     <Button variant="outline" onClick={() => setStep('customer')} className="flex-1">

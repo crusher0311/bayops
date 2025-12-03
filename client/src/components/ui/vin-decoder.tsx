@@ -3,15 +3,18 @@ import { Input } from './input';
 import { Button } from './button';
 import { Loader2, Search, CheckCircle, AlertCircle } from 'lucide-react';
 
-interface VehicleInfo {
+export interface VehicleInfo {
   year: string;
   make: string;
   model: string;
   trim?: string;
   bodyClass?: string;
   engineCylinders?: string;
+  engineDisplacement?: string;
   fuelType?: string;
   driveType?: string;
+  transmission?: string;
+  doors?: string;
 }
 
 interface VinDecoderProps {
@@ -75,8 +78,11 @@ export function VinDecoder({
             trim: result.Trim || '',
             bodyClass: result.BodyClass || '',
             engineCylinders: result.EngineCylinders || '',
+            engineDisplacement: result.DisplacementL ? `${result.DisplacementL}L` : '',
             fuelType: result.FuelTypePrimary || '',
             driveType: result.DriveType || '',
+            transmission: result.TransmissionStyle || '',
+            doors: result.Doors || '',
           };
 
           if (info.year && info.make && info.model) {
@@ -100,8 +106,11 @@ export function VinDecoder({
         trim: result.Trim || '',
         bodyClass: result.BodyClass || '',
         engineCylinders: result.EngineCylinders || '',
+        engineDisplacement: result.DisplacementL ? `${result.DisplacementL}L` : '',
         fuelType: result.FuelTypePrimary || '',
         driveType: result.DriveType || '',
+        transmission: result.TransmissionStyle || '',
+        doors: result.Doors || '',
       };
 
       if (info.year && info.make && info.model) {
