@@ -13,11 +13,14 @@ import RepairOrderDetail from "@/pages/RepairOrderDetail";
 import Inventory from "@/pages/Inventory";
 import Customers from "@/pages/Customers";
 import Settings from "@/pages/Settings";
+import OrganizationSettings from "@/pages/OrganizationSettings";
+import MasterDashboard from "@/pages/MasterDashboard";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
+      <Route path="/master-dashboard" component={MasterDashboard} />
       <Route path="/job-board" component={JobBoard} />
       <Route path="/ros" component={RepairOrders} />
       <Route path="/ros/:id" component={RepairOrderDetail} />
@@ -25,6 +28,7 @@ function Router() {
       <Route path="/customers" component={Customers} />
       <Route path="/reports" component={Dashboard} /> {/* Placeholder for now */}
       <Route path="/settings" component={Settings} />
+      <Route path="/org-settings" component={OrganizationSettings} />
       <Route component={NotFound} />
     </Switch>
   );

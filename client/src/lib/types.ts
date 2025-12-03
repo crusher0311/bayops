@@ -4,6 +4,9 @@ export interface Organization {
   id: string;
   name: string;
   slug: string;
+  subscriptionStatus: 'ACTIVE' | 'PAST_DUE' | 'CANCELED';
+  subscriptionPlan: 'STARTER' | 'GROWTH' | 'ENTERPRISE';
+  billingEmail: string;
 }
 
 export interface Location {
@@ -16,6 +19,7 @@ export interface Location {
   zip: string;
   phone: string;
   taxRate: number;
+  isActive: boolean; // For billing purposes
 }
 
 export interface User {

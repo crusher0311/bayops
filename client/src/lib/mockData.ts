@@ -8,7 +8,10 @@ import { addDays, subDays } from 'date-fns';
 export const MOCK_ORG: Organization = {
   id: 'org-1',
   name: 'Apex Auto Group',
-  slug: 'apex-auto'
+  slug: 'apex-auto',
+  subscriptionStatus: 'ACTIVE',
+  subscriptionPlan: 'GROWTH',
+  billingEmail: 'billing@apexauto.com'
 };
 
 export const DEFAULT_WORKFLOWS: WorkflowDefinition[] = [
@@ -51,7 +54,8 @@ export const MOCK_LOCATIONS: Location[] = [
     state: 'TX',
     zip: '75001',
     phone: '(555) 123-4567',
-    taxRate: 0.0825
+    taxRate: 0.0825,
+    isActive: true
   },
   {
     id: 'loc-2',
@@ -62,7 +66,8 @@ export const MOCK_LOCATIONS: Location[] = [
     state: 'TX',
     zip: '75002',
     phone: '(555) 987-6543',
-    taxRate: 0.0825
+    taxRate: 0.0825,
+    isActive: true
   }
 ];
 
