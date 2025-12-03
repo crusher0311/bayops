@@ -213,7 +213,8 @@ export default function Settings() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {activeWorkflow.stages.sort((a, b) => a.order - b.order).map((stage, index) => (
+                        {/* SAFEGUARD: avoid mutating state directly and handle possible undefined */}
+                        {[...activeWorkflow.stages].sort((a, b) => a.order - b.order).map((stage, index) => (
                           <TableRow key={stage.id}>
                             <TableCell>
                               <div className="flex flex-col gap-1">

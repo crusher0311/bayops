@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useShopStore } from '@/lib/store';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,21 +16,27 @@ import {
 } from 'lucide-react';
 import { ROStatus } from '@/lib/types';
 import { format } from 'date-fns';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
 
 export default function JobBoard() {
   const { ros, users, customers, vehicles, updateROStatus, workflows } = useShopStore();
   const [activeWorkflowId, setActiveWorkflowId] = useState(workflows[0]?.id || '');
+  const [, setLocation] = useLocation();
 
   const activeWorkflow = workflows.find(w => w.id === activeWorkflowId) || workflows[0];
-  const activeStages = activeWorkflow.stages.sort((a, b) => a.order - b.order);
+  
+  if (!activeWorkflow) return null;
+
+  // Create a copy to sort to avoid mutating state
+  const activeStages = [...activeWorkflow.stages].sort((a, b) => a.order - b.order);
 
   const getCustomer = (id: string) => customers.find(c => c.id === id);
   const getVehicle = (id: string) => vehicles.find(v => v.id === id);
   const getTech = (id?: string) => users.find(u => u.id === id);
 
-  const moveRO = (roId: string, currentStatus: ROStatus, direction: 'next' | 'prev') => {
+  const moveRO = (e: React.MouseEvent, roId: string, currentStatus: ROStatus, direction: 'next' | 'prev') => {
+    e.stopPropagation(); // Prevent card click
     const currentIndex = activeStages.findIndex(s => s.id === currentStatus);
     if (currentIndex === -1) return;
 
@@ -93,7 +99,11 @@ export default function JobBoard() {
                   const tech = getTech(ro.technicianId);
 
                   return (
-                    <Card key={ro.id} className="cursor-move hover:shadow-md transition-shadow border-l-4 border-l-primary">
+                    <Card 
+                      key={ro.id} 
+                      className="cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-primary"
+                      onClick={() => setLocation(`/ros/${ro.id}`)}
+                    >
                       <CardContent className="p-3 space-y-3">
                         <div className="flex justify-between items-start">
                           <div>
@@ -103,7 +113,7 @@ export default function JobBoard() {
                               {vehicle?.year} {vehicle?.make} {vehicle?.model}
                             </p>
                           </div>
-                          <Button variant="ghost" size="icon" className="h-6 w-6">
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()}>
                             <MoreHorizontal className="w-4 h-4" />
                           </Button>
                         </div>
@@ -135,7 +145,7 @@ export default function JobBoard() {
                             variant="ghost" 
                             size="sm" 
                             className="h-6 px-2 text-xs"
-                            onClick={() => moveRO(ro.id, ro.status, 'prev')}
+                            onClick={(e) => moveRO(e, ro.id, ro.status, 'prev')}
                             disabled={idx === 0}
                           >
                             <ArrowLeft className="w-3 h-3 mr-1" /> Prev
@@ -144,7 +154,7 @@ export default function JobBoard() {
                             variant="ghost" 
                             size="sm" 
                             className="h-6 px-2 text-xs"
-                            onClick={() => moveRO(ro.id, ro.status, 'next')}
+                            onClick={(e) => moveRO(e, ro.id, ro.status, 'next')}
                             disabled={idx === activeStages.length - 1}
                           >
                             Next <ArrowRight className="w-3 h-3 ml-1" />

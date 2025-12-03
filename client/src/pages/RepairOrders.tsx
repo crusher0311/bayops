@@ -13,10 +13,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search, Filter } from 'lucide-react';
 import { format } from 'date-fns';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 
 export default function RepairOrders() {
   const { ros, customers, vehicles } = useShopStore();
+  const [, setLocation] = useLocation();
 
   const getCustomer = (id: string) => customers.find(c => c.id === id);
   const getVehicle = (id: string) => vehicles.find(v => v.id === id);
@@ -72,7 +73,11 @@ export default function RepairOrders() {
               const total = ro.lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0);
 
               return (
-                <TableRow key={ro.id} className="cursor-pointer hover:bg-muted/50">
+                <TableRow 
+                  key={ro.id} 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => setLocation(`/ros/${ro.id}`)}
+                >
                   <TableCell className="font-medium">#{ro.roNumber}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className={
