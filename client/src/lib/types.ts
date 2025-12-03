@@ -55,9 +55,7 @@ export interface Vehicle {
   notes?: string;
 }
 
-// ROStatus is now a string to allow for custom statuses, 
-// but we keep the system keys for type safety in core logic
-export type ROStatus = 'ESTIMATE' | 'AWAITING_APPROVAL' | 'WORK_IN_PROGRESS' | 'COMPLETED' | 'INVOICED' | 'PAID' | string;
+export type ROStatus = string; // Dynamic based on workflow
 
 export interface WorkflowStage {
   id: string;
@@ -65,7 +63,14 @@ export interface WorkflowStage {
   color: string; // Tailwind class or hex
   type: 'SYSTEM' | 'CUSTOM';
   order: number;
-  isEnabled: boolean;
+}
+
+export interface WorkflowDefinition {
+  id: string;
+  name: string;
+  description?: string;
+  isDefault: boolean;
+  stages: WorkflowStage[];
 }
 
 export interface LineItem {
@@ -89,7 +94,10 @@ export interface RepairOrder {
   vehicleId: string;
   advisorId: string;
   technicianId?: string; // Main tech (optional)
+  
+  workflowId: string; // Link to specific workflow
   status: ROStatus;
+  
   lineItems: LineItem[];
   createdAt: string;
   promisedAt?: string;

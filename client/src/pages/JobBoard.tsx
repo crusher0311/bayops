@@ -1,25 +1,30 @@
+import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useShopStore } from '@/lib/store';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   MoreHorizontal, 
   Clock, 
   ArrowRight, 
   ArrowLeft,
-  Settings2
+  Settings2,
+  Plus
 } from 'lucide-react';
 import { ROStatus } from '@/lib/types';
 import { format } from 'date-fns';
 import { Link } from 'wouter';
+import { cn } from '@/lib/utils';
 
 export default function JobBoard() {
-  const { ros, users, customers, vehicles, updateROStatus, workflowStages } = useShopStore();
+  const { ros, users, customers, vehicles, updateROStatus, workflows } = useShopStore();
+  const [activeWorkflowId, setActiveWorkflowId] = useState(workflows[0]?.id || '');
 
-  // Filter only enabled stages
-  const activeStages = workflowStages.filter(s => s.isEnabled).sort((a, b) => a.order - b.order);
+  const activeWorkflow = workflows.find(w => w.id === activeWorkflowId) || workflows[0];
+  const activeStages = activeWorkflow.stages.sort((a, b) => a.order - b.order);
 
   const getCustomer = (id: string) => customers.find(c => c.id === id);
   const getVehicle = (id: string) => vehicles.find(v => v.id === id);
@@ -42,20 +47,38 @@ export default function JobBoard() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Job Board</h1>
           <p className="text-muted-foreground mt-1">
-            Drag and drop repair orders to update status
+            Manage repair orders across workflows.
           </p>
         </div>
-        <Link href="/settings">
-          <Button variant="outline" className="gap-2">
-            <Settings2 className="w-4 h-4" />
-            Edit Workflow
-          </Button>
-        </Link>
+        <div className="flex gap-3">
+          <Link href="/settings">
+            <Button variant="outline" className="gap-2">
+              <Settings2 className="w-4 h-4" />
+              Edit Workflow
+            </Button>
+          </Link>
+          <Link href="/ros/new">
+            <Button className="gap-2">
+              <Plus className="w-4 h-4" />
+              New RO
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      <div className="flex h-[calc(100vh-12rem)] overflow-x-auto gap-4 pb-4">
+      <Tabs value={activeWorkflowId} onValueChange={setActiveWorkflowId} className="mb-6">
+        <TabsList>
+          {workflows.map(wf => (
+            <TabsTrigger key={wf.id} value={wf.id}>
+              {wf.name}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
+      <div className="flex h-[calc(100vh-14rem)] overflow-x-auto gap-4 pb-4">
         {activeStages.map((col, idx) => {
-          const colROs = ros.filter(r => r.status === col.id);
+          const colROs = ros.filter(r => r.status === col.id && r.workflowId === activeWorkflowId);
           
           return (
             <div key={col.id} className="flex-shrink-0 w-80 flex flex-col">

@@ -22,12 +22,12 @@ import { cn } from '@/lib/utils';
 
 export default function RepairOrderDetail() {
   const [, params] = useRoute('/ros/:id');
-  const { ros, customers, vehicles, updateROStatus, workflowStages } = useShopStore();
+  const { ros, customers, vehicles, updateROStatus, workflows } = useShopStore();
   
-  // Sort stages by order
-  const activeStages = workflowStages.filter(s => s.isEnabled).sort((a, b) => a.order - b.order);
-
   const ro = ros.find(r => r.id === params?.id);
+  const activeWorkflow = workflows.find(w => w.id === ro?.workflowId) || workflows[0];
+  const activeStages = activeWorkflow.stages.sort((a, b) => a.order - b.order);
+
   const customer = customers.find(c => c.id === ro?.customerId);
   const vehicle = vehicles.find(v => v.id === ro?.vehicleId);
 
@@ -73,6 +73,9 @@ export default function RepairOrderDetail() {
               <h1 className="text-2xl font-bold tracking-tight">RO #{ro.roNumber}</h1>
               <Badge variant="outline" className="text-sm uppercase">
                 {ro.status.replace(/_/g, ' ')}
+              </Badge>
+              <Badge variant="secondary" className="text-xs">
+                {activeWorkflow.name}
               </Badge>
             </div>
             <p className="text-muted-foreground text-sm">

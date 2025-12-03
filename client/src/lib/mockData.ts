@@ -1,6 +1,6 @@
 import { 
   Organization, Location, User, Customer, Vehicle, 
-  InventoryItem, RepairOrder, AuditLog, WorkflowStage 
+  InventoryItem, RepairOrder, AuditLog, WorkflowDefinition 
 } from './types';
 import { addDays, subDays } from 'date-fns';
 
@@ -10,13 +10,34 @@ export const MOCK_ORG: Organization = {
   slug: 'apex-auto'
 };
 
-export const DEFAULT_WORKFLOW_STAGES: WorkflowStage[] = [
-  { id: 'ESTIMATE', label: 'Estimates', color: 'bg-gray-100 border-gray-200', type: 'SYSTEM', order: 1, isEnabled: true },
-  { id: 'AWAITING_APPROVAL', label: 'Approval Needed', color: 'bg-orange-50 border-orange-200', type: 'SYSTEM', order: 2, isEnabled: true },
-  { id: 'WORK_IN_PROGRESS', label: 'In Progress', color: 'bg-blue-50 border-blue-200', type: 'SYSTEM', order: 3, isEnabled: true },
-  { id: 'COMPLETED', label: 'Completed', color: 'bg-green-50 border-green-200', type: 'SYSTEM', order: 4, isEnabled: true },
-  { id: 'INVOICED', label: 'Ready for Pickup', color: 'bg-purple-50 border-purple-200', type: 'SYSTEM', order: 5, isEnabled: true },
-  { id: 'PAID', label: 'Paid / Closed', color: 'bg-slate-100 border-slate-200', type: 'SYSTEM', order: 6, isEnabled: true },
+export const DEFAULT_WORKFLOWS: WorkflowDefinition[] = [
+  {
+    id: 'wf-standard',
+    name: 'Standard Repair',
+    description: 'Full diagnosis and repair process',
+    isDefault: true,
+    stages: [
+      { id: 'ESTIMATE', label: 'Estimates', color: 'bg-gray-100 border-gray-200', type: 'SYSTEM', order: 1 },
+      { id: 'AWAITING_APPROVAL', label: 'Approval Needed', color: 'bg-orange-50 border-orange-200', type: 'SYSTEM', order: 2 },
+      { id: 'WORK_IN_PROGRESS', label: 'In Progress', color: 'bg-blue-50 border-blue-200', type: 'SYSTEM', order: 3 },
+      { id: 'QC_CHECK', label: 'QC Check', color: 'bg-indigo-50 border-indigo-200', type: 'CUSTOM', order: 4 },
+      { id: 'COMPLETED', label: 'Completed', color: 'bg-green-50 border-green-200', type: 'SYSTEM', order: 5 },
+      { id: 'INVOICED', label: 'Ready for Pickup', color: 'bg-purple-50 border-purple-200', type: 'SYSTEM', order: 6 },
+      { id: 'PAID', label: 'Paid / Closed', color: 'bg-slate-100 border-slate-200', type: 'SYSTEM', order: 7 },
+    ]
+  },
+  {
+    id: 'wf-quick',
+    name: 'Quick Lube / Tire',
+    description: 'Fast track workflow for simple services',
+    isDefault: false,
+    stages: [
+      { id: 'CHECK_IN', label: 'Check In', color: 'bg-gray-100 border-gray-200', type: 'CUSTOM', order: 1 },
+      { id: 'LUBE_BAY', label: 'In Bay', color: 'bg-blue-50 border-blue-200', type: 'CUSTOM', order: 2 },
+      { id: 'COMPLETED', label: 'Done', color: 'bg-green-50 border-green-200', type: 'SYSTEM', order: 3 },
+      { id: 'PAID', label: 'Paid', color: 'bg-slate-100 border-slate-200', type: 'SYSTEM', order: 4 },
+    ]
+  }
 ];
 
 export const MOCK_LOCATIONS: Location[] = [
@@ -210,6 +231,7 @@ export const MOCK_ROS: RepairOrder[] = [
     vehicleId: 'veh-1',
     advisorId: 'user-4',
     technicianId: 'user-3',
+    workflowId: 'wf-standard',
     status: 'WORK_IN_PROGRESS',
     createdAt: subDays(new Date(), 1).toISOString(),
     promisedAt: addDays(new Date(), 0).toISOString(),
@@ -245,6 +267,7 @@ export const MOCK_ROS: RepairOrder[] = [
     customerId: 'cust-2',
     vehicleId: 'veh-2',
     advisorId: 'user-4',
+    workflowId: 'wf-standard',
     status: 'ESTIMATE',
     createdAt: new Date().toISOString(),
     odometerIn: 28000,
@@ -272,6 +295,31 @@ export const MOCK_ROS: RepairOrder[] = [
     ]
   },
   {
+    id: 'ro-1003',
+    orgId: 'org-1',
+    locationId: 'loc-1',
+    roNumber: 1003,
+    customerId: 'cust-1',
+    vehicleId: 'veh-1',
+    advisorId: 'user-4',
+    workflowId: 'wf-quick',
+    status: 'LUBE_BAY',
+    createdAt: new Date().toISOString(),
+    odometerIn: 45100,
+    notes: 'Quick oil change waiter',
+    lineItems: [
+       {
+        id: 'li-8',
+        type: 'LABOR',
+        description: 'Oil Change Service',
+        quantity: 1,
+        unitCost: 15,
+        unitPrice: 35,
+        approved: true
+      }
+    ]
+  },
+  {
     id: 'ro-1000',
     orgId: 'org-1',
     locationId: 'loc-1',
@@ -280,6 +328,7 @@ export const MOCK_ROS: RepairOrder[] = [
     vehicleId: 'veh-1',
     advisorId: 'user-4',
     technicianId: 'user-3',
+    workflowId: 'wf-standard',
     status: 'COMPLETED',
     createdAt: subDays(new Date(), 2).toISOString(),
     completedAt: subDays(new Date(), 1).toISOString(),
