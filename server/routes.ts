@@ -545,5 +545,36 @@ export async function registerRoutes(
     }
   });
 
+  // Address autocomplete proxy (keeps API key on server)
+  app.get("/api/address-autocomplete", requireAuth, async (req, res) => {
+    try {
+      const { text } = req.query;
+      if (!text || typeof text !== 'string' || text.length < 3) {
+        return res.json({ features: [] });
+      }
+
+      const apiKey = process.env.GEOAPIFY_API_KEY;
+      if (!apiKey) {
+        return res.status(503).json({ 
+          message: "Address autocomplete not configured",
+          features: [] 
+        });
+      }
+
+      const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(text)}&format=json&filter=countrycode:us&apiKey=${apiKey}`;
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Geoapify API error');
+      }
+      
+      const data = await response.json();
+      res.json(data);
+    } catch (error: any) {
+      console.error('Address autocomplete error:', error);
+      res.status(500).json({ message: error.message, features: [] });
+    }
+  });
+
   return httpServer;
 }

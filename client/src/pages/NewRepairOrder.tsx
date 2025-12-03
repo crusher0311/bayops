@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AddressAutocomplete } from '@/components/ui/address-autocomplete';
 import { 
   Select,
   SelectContent,
@@ -63,6 +64,7 @@ export default function NewRepairOrder() {
     vin: '',
     licensePlate: '',
     color: '',
+    mileage: '',
   });
 
   // RO Details state
@@ -93,6 +95,7 @@ export default function NewRepairOrder() {
         ...newVehicle,
         customerId: selectedCustomerId,
         year: parseInt(newVehicle.year) || new Date().getFullYear(),
+        mileage: parseInt(newVehicle.mileage) || 0,
       } as any);
       setSelectedVehicleId(vehicle.id);
       setVehicleTab('existing');
@@ -281,11 +284,10 @@ export default function NewRepairOrder() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="address">Address</Label>
-                    <Input
-                      id="address"
+                    <AddressAutocomplete
                       value={newCustomer.address}
-                      onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
-                      data-testid="input-address"
+                      onChange={(address) => setNewCustomer({ ...newCustomer, address })}
+                      placeholder="Start typing address..."
                     />
                   </div>
 
@@ -440,15 +442,28 @@ export default function NewRepairOrder() {
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="color">Color</Label>
-                    <Input
-                      id="color"
-                      value={newVehicle.color}
-                      onChange={(e) => setNewVehicle({ ...newVehicle, color: e.target.value })}
-                      placeholder="Silver"
-                      data-testid="input-color"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="color">Color</Label>
+                      <Input
+                        id="color"
+                        value={newVehicle.color}
+                        onChange={(e) => setNewVehicle({ ...newVehicle, color: e.target.value })}
+                        placeholder="Silver"
+                        data-testid="input-color"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="mileage">Mileage *</Label>
+                      <Input
+                        id="mileage"
+                        type="number"
+                        value={newVehicle.mileage}
+                        onChange={(e) => setNewVehicle({ ...newVehicle, mileage: e.target.value })}
+                        placeholder="45000"
+                        data-testid="input-mileage"
+                      />
+                    </div>
                   </div>
 
                   <div className="flex gap-3">
