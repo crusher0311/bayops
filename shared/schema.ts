@@ -120,7 +120,7 @@ export const vehicles = pgTable("vehicles", {
   model: text("model").notNull(),
   trim: text("trim"),
   licensePlate: text("license_plate").notNull(),
-  mileage: integer("mileage").notNull(),
+  mileage: integer("mileage"),
   color: text("color"),
   bodyClass: text("body_class"),
   engineCylinders: text("engine_cylinders"),

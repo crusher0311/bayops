@@ -111,7 +111,7 @@ export default function NewRepairOrder() {
         model: newVehicle.model,
         trim: newVehicle.trim || null,
         licensePlate: newVehicle.licensePlate,
-        mileage: parseInt(newVehicle.mileage) || 0,
+        mileage: newVehicle.mileage ? parseInt(newVehicle.mileage) : null,
         color: newVehicle.color || null,
         bodyClass: newVehicle.bodyClass || null,
         engineCylinders: newVehicle.engineCylinders || null,
@@ -515,7 +515,7 @@ export default function NewRepairOrder() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="mileage">Mileage *</Label>
+                      <Label htmlFor="mileage">Mileage (optional)</Label>
                       <Input
                         id="mileage"
                         type="number"

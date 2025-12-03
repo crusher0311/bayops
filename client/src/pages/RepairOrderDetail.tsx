@@ -17,13 +17,16 @@ import {
   FileText,
   LayoutList,
   Briefcase,
-  Loader2
+  Loader2,
+  Pencil
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ServiceJob {
   id: string;
@@ -54,6 +57,8 @@ export default function RepairOrderDetail() {
 
   const [newJobName, setNewJobName] = useState('');
   const [isAddJobDialogOpen, setIsAddJobDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<{ jobId: string; item: LineItem } | null>(null);
+  const [editForm, setEditForm] = useState<Partial<LineItem>>({});
 
   if (roLoading) {
     return (
@@ -182,6 +187,44 @@ export default function RepairOrderDetail() {
     updateRO.mutate({
       id: ro.id,
       updates: { jobs: updatedJobs as any },
+    });
+  };
+
+  const handleEditItem = (jobId: string, item: LineItem) => {
+    setEditingItem({ jobId, item });
+    setEditForm({
+      description: item.description,
+      type: item.type,
+      quantity: item.quantity,
+      unitCost: item.unitCost,
+      unitPrice: item.unitPrice,
+    });
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingItem) return;
+    
+    const updatedJobs = jobs.map(job => 
+      job.id === editingItem.jobId 
+        ? { 
+            ...job, 
+            lineItems: job.lineItems.map(i => 
+              i.id === editingItem.item.id 
+                ? { ...i, ...editForm }
+                : i
+            )
+          }
+        : job
+    );
+    
+    updateRO.mutate({
+      id: ro.id,
+      updates: { jobs: updatedJobs as any },
+    }, {
+      onSuccess: () => {
+        setEditingItem(null);
+        setEditForm({});
+      }
     });
   };
 
@@ -383,7 +426,7 @@ export default function RepairOrderDetail() {
                                 <th className="px-4 py-3 text-center">Qty</th>
                                 <th className="px-4 py-3 text-right">Unit Price</th>
                                 <th className="px-4 py-3 text-right">Total</th>
-                                <th className="w-[50px]"></th>
+                                <th className="w-[80px]"></th>
                               </tr>
                             </thead>
                             <tbody className="divide-y">
@@ -402,16 +445,28 @@ export default function RepairOrderDetail() {
                                     ${(item.unitPrice * item.quantity).toFixed(2)}
                                   </td>
                                   <td className="px-4 py-3 text-center">
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon" 
-                                      className="h-8 w-8 opacity-0 group-hover:opacity-100 text-destructive"
-                                      onClick={() => handleDeleteItem(job.id, item.id)}
-                                      disabled={updateRO.isPending}
-                                      data-testid={`button-delete-${item.id}`}
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
+                                    <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8"
+                                        onClick={() => handleEditItem(job.id, item)}
+                                        disabled={updateRO.isPending}
+                                        data-testid={`button-edit-${item.id}`}
+                                      >
+                                        <Pencil className="w-4 h-4" />
+                                      </Button>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8 text-destructive"
+                                        onClick={() => handleDeleteItem(job.id, item.id)}
+                                        disabled={updateRO.isPending}
+                                        data-testid={`button-delete-${item.id}`}
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </div>
                                   </td>
                                 </tr>
                               ))}
@@ -493,6 +548,90 @@ export default function RepairOrderDetail() {
           </div>
         </div>
       </div>
+
+      <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Line Item</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Input
+                id="edit-description"
+                value={editForm.description || ''}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                data-testid="input-edit-description"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-type">Type</Label>
+              <Select
+                value={editForm.type || 'LABOR'}
+                onValueChange={(value) => setEditForm({ ...editForm, type: value as LineItem['type'] })}
+              >
+                <SelectTrigger data-testid="select-edit-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="LABOR">Labor</SelectItem>
+                  <SelectItem value="PART">Part</SelectItem>
+                  <SelectItem value="TIRE">Tire</SelectItem>
+                  <SelectItem value="FEE">Fee</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-quantity">Quantity</Label>
+                <Input
+                  id="edit-quantity"
+                  type="number"
+                  step="0.5"
+                  min="0.5"
+                  value={editForm.quantity || 1}
+                  onChange={(e) => setEditForm({ ...editForm, quantity: parseFloat(e.target.value) || 1 })}
+                  data-testid="input-edit-quantity"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-unit-price">Unit Price ($)</Label>
+                <Input
+                  id="edit-unit-price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editForm.unitPrice || 0}
+                  onChange={(e) => setEditForm({ ...editForm, unitPrice: parseFloat(e.target.value) || 0 })}
+                  data-testid="input-edit-unit-price"
+                />
+              </div>
+            </div>
+            {editForm.type !== 'LABOR' && (
+              <div className="space-y-2">
+                <Label htmlFor="edit-unit-cost">Unit Cost ($)</Label>
+                <Input
+                  id="edit-unit-cost"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editForm.unitCost || 0}
+                  onChange={(e) => setEditForm({ ...editForm, unitCost: parseFloat(e.target.value) || 0 })}
+                  data-testid="input-edit-unit-cost"
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingItem(null)} data-testid="button-cancel-edit">
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={updateRO.isPending} data-testid="button-save-edit">
+              {updateRO.isPending ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
