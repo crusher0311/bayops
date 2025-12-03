@@ -251,6 +251,15 @@ export async function registerRoutes(
   });
 
   // Vehicles
+  app.get("/api/vehicles", requireAuth, async (req, res) => {
+    try {
+      const vehicles = await storage.getVehiclesByOrg(req.user!.orgId);
+      res.json(vehicles);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/vehicles/customer/:customerId", requireAuth, async (req, res) => {
     try {
       const vehicles = await storage.getVehiclesByCustomer(req.params.customerId);

@@ -12,6 +12,7 @@ import Dashboard from "@/pages/Dashboard";
 import JobBoard from "@/pages/JobBoard";
 import RepairOrders from "@/pages/RepairOrders";
 import RepairOrderDetail from "@/pages/RepairOrderDetail";
+import NewRepairOrder from "@/pages/NewRepairOrder";
 import Inventory from "@/pages/Inventory";
 import Customers from "@/pages/Customers";
 import Settings from "@/pages/Settings";
@@ -57,6 +58,7 @@ function ProtectedRouter() {
       <Route path="/master-dashboard" component={MasterDashboard} />
       <Route path="/job-board" component={JobBoard} />
       <Route path="/ros" component={RepairOrders} />
+      <Route path="/ros/new" component={NewRepairOrder} />
       <Route path="/ros/:id" component={RepairOrderDetail} />
       <Route path="/inventory" component={Inventory} />
       <Route path="/customers" component={Customers} />

@@ -66,6 +66,17 @@ export function useUpdateCustomer() {
 }
 
 // Vehicles
+export function useVehicles() {
+  return useQuery<Vehicle[]>({
+    queryKey: ['vehicles'],
+    queryFn: async () => {
+      const response = await fetch('/api/vehicles', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch vehicles');
+      return response.json();
+    },
+  });
+}
+
 export function useVehiclesByCustomer(customerId: string) {
   return useQuery<Vehicle[]>({
     queryKey: ['vehicles', 'customer', customerId],
