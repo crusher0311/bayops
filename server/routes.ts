@@ -545,6 +545,58 @@ export async function registerRoutes(
     }
   });
 
+  // License plate lookup proxy (Auto.dev API)
+  app.get("/api/plate-lookup", requireAuth, async (req, res) => {
+    try {
+      const { plate, state } = req.query;
+      if (!plate || !state || typeof plate !== 'string' || typeof state !== 'string') {
+        return res.status(400).json({ 
+          message: "Plate number and state are required" 
+        });
+      }
+
+      const apiKey = process.env.AUTO_DEV_API_KEY;
+      if (!apiKey) {
+        return res.status(503).json({ 
+          message: "License plate lookup not configured" 
+        });
+      }
+
+      const cleanPlate = plate.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      const cleanState = state.toUpperCase();
+
+      const url = `https://api.auto.dev/plate/${cleanState}/${cleanPlate}`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 404) {
+          return res.status(404).json({ 
+            message: errorData.error || "No vehicle found for this plate" 
+          });
+        }
+        if (response.status === 403) {
+          return res.status(403).json({ 
+            message: "Plate lookup requires Auto.dev Scale plan" 
+          });
+        }
+        throw new Error(errorData.error || 'Plate lookup failed');
+      }
+
+      const data = await response.json();
+      res.json(data);
+    } catch (error: any) {
+      console.error('Plate lookup error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Address autocomplete proxy (keeps API key on server)
   app.get("/api/address-autocomplete", requireAuth, async (req, res) => {
     try {

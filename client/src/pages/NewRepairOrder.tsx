@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AddressAutocomplete } from '@/components/ui/address-autocomplete';
 import { VinDecoder } from '@/components/ui/vin-decoder';
+import { PlateLookup } from '@/components/ui/plate-lookup';
 import { 
   Select,
   SelectContent,
@@ -58,6 +59,7 @@ export default function NewRepairOrder() {
   // Vehicle state
   const [vehicleTab, setVehicleTab] = useState<'existing' | 'new'>('existing');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
+  const [plateState, setPlateState] = useState<string>('');
   const [newVehicle, setNewVehicle] = useState({
     year: '',
     make: '',
@@ -409,6 +411,35 @@ export default function NewRepairOrder() {
                 </TabsContent>
 
                 <TabsContent value="new" className="space-y-4">
+                  <div className="p-4 bg-purple-50 dark:bg-purple-950/30 rounded-lg border border-purple-200 dark:border-purple-900">
+                    <div className="space-y-2">
+                      <Label className="text-purple-700 dark:text-purple-300 font-medium">
+                        License Plate Lookup (US plates only)
+                      </Label>
+                      <PlateLookup
+                        plateValue={newVehicle.licensePlate}
+                        stateValue={plateState}
+                        onPlateChange={(plate) => setNewVehicle({ ...newVehicle, licensePlate: plate })}
+                        onStateChange={setPlateState}
+                        onLookup={(info) => {
+                          setNewVehicle(prev => ({
+                            ...prev,
+                            vin: info.vin || prev.vin,
+                            year: info.year?.toString() || prev.year,
+                            make: info.make || prev.make,
+                            model: info.model || prev.model,
+                            trim: info.trim || prev.trim,
+                            driveType: info.drivetrain || prev.driveType,
+                            engineDisplacement: info.engine || prev.engineDisplacement,
+                            transmission: info.transmission || prev.transmission,
+                          }));
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="text-center text-sm text-muted-foreground">— or —</div>
+
                   <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-900">
                     <div className="space-y-2">
                       <Label htmlFor="vin" className="text-blue-700 dark:text-blue-300 font-medium">
@@ -468,16 +499,6 @@ export default function NewRepairOrder() {
                         data-testid="input-model"
                       />
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="licensePlate">License Plate</Label>
-                    <Input
-                      id="licensePlate"
-                      value={newVehicle.licensePlate}
-                      onChange={(e) => setNewVehicle({ ...newVehicle, licensePlate: e.target.value.toUpperCase() })}
-                      placeholder="ABC-1234"
-                      data-testid="input-plate"
-                    />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
