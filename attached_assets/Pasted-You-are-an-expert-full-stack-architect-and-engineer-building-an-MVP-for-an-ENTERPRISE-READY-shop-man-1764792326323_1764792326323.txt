@@ -1,0 +1,285 @@
+You are an expert full-stack architect and engineer building an MVP for an ENTERPRISE-READY shop management system targeting TIRE + FULL MECHANICAL shops.
+
+Think of this product as:
+- UX/workflow strengths of Tekmetric,
+- Operational best-practices of Protractor,
+- Digital retail + AI tire quote intelligence of TireTutor,
+- Enterprise inventory + multi-channel depth of MaddenCo,
+- Compliance/audit rigor of Navex,
+
+…combined into one modern, cloud-based platform that scales from 1 to 1,000+ locations.
+
+========================
+HIGH-LEVEL PRODUCT GOALS
+========================
+
+Build a cloud-native, multi-tenant SaaS that:
+
+1. Works great for a single shop BUT is designed from day one for multi-location groups (1–1000+).
+2. Is tire-first but fully supports mechanical repair.
+3. Supports real-world workflows: lead → appointment → check-in → DVI → estimate → approval → work in progress → QC → checkout → follow-up.
+4. Has a strong API-first backend with clean domain models (Org, Location, User, Customer, Vehicle, RO, Inventory, Payments, etc.).
+5. Lays a foundation for:
+   - Deep reporting/analytics
+   - Accounting integrations
+   - AI-assisted quoting and recommendations
+   - Compliance and auditability
+
+For now, focus on the **MVP scope** below.
+
+=================
+TECH STACK TARGET
+=================
+
+Use an opinionated, pragmatic stack:
+
+FRONTEND
+- React + TypeScript
+- Next.js (App Router) for SSR and routing
+- UI: TailwindCSS + a basic component library (headless UI, Radix, or similar)
+- State management: React Query (TanStack Query) for server state, lightweight local state with context/hooks
+- Build for desktop first (advisors), but keep mobile-friendly layouts in mind (tech portal later)
+
+BACKEND
+- Node.js with TypeScript
+- Framework: NestJS (preferred) or Express with modular architecture
+- Primary DB: PostgreSQL
+- ORM: Prisma or TypeORM
+- Caching: Redis (for sessions, caching, etc.)
+- Authentication: JWT-based auth with refresh tokens; organization-aware multi-tenant approach
+- API style: REST endpoints (with clean resource naming and versioning); keep it structured so GraphQL could be added later.
+- Background jobs: simple job queue (e.g., BullMQ or similar) for async tasks (emails, SMS, etc.) – can be stubbed in MVP.
+
+INFRASTRUCTURE (you can scaffold but not fully implement if out of scope)
+- Containerized (Docker) and deployable to any cloud
+- Basic config for environment-based settings (dev/stage/prod)
+- Sensible logging and error-handling structure
+
+====================
+MVP FUNCTIONAL SCOPE
+====================
+
+Only implement the following for now. Design the codebase so features can be expanded later.
+
+1) MULTI-TENANT FOUNDATIONS
+---------------------------
+
+Core entities:
+- Organization
+- Location (belongs to Organization)
+- User (belongs to Organization; can have access to one or more Locations)
+- Roles: Owner/Admin, Manager, Service Advisor, Technician
+
+Features:
+- Sign up / login
+- Each user belongs to an org and has a role; all data is scoped to org (and usually location).
+- Basic org & location management:
+  - Create/edit locations
+  - Set taxes, shop hours, contact info
+- Role-based access:
+  - Admin: manage users, locations, settings
+  - Manager: manage day-to-day ops, reports for their location(s)
+  - Service Advisor: manage ROs, customers, vehicles, estimates, invoices
+  - Tech: view assigned jobs, time tracking (simple stub)
+
+2) CUSTOMER & VEHICLE MANAGEMENT
+---------------------------------
+
+Entities:
+- Customer (name, phone, email, address, marketing consent flags)
+- Vehicle (VIN, year, make, model, trim, license plate, mileage, tire size fields)
+
+Features:
+- CRUD for Customers
+- CRUD for Vehicles; each vehicle belongs to a customer
+- Link multiple vehicles to one customer
+- Store tire-related fields on Vehicle (e.g., primary tire size, alternate size, notes)
+- (Optional but nice) Stub integration point for VIN decoding (no need to implement a real VIN API; just structure the code and leave a placeholder service)
+
+3) RO LIFECYCLE: ESTIMATE → WORK ORDER → INVOICE
+-------------------------------------------------
+
+Core entity: RepairOrder (RO), which moves through states:
+- ESTIMATE
+- AWAITING_APPROVAL
+- WORK_IN_PROGRESS
+- COMPLETED
+- INVOICED
+- PAID
+
+Each RO:
+- Belongs to a Customer, Vehicle, Location
+- Has line items:
+  - Labor line items (description, hours, rate)
+  - Part line items (link to inventory item or ad-hoc, cost, price)
+  - Tire line items (link to tire inventory item or ad-hoc, cost, price, qty, DOT optional)
+  - Fees (shop supplies %, hazmat, misc)
+- Totals:
+  - Subtotal, taxes, fees, grand total
+  - Simple discount support (percent or flat)
+
+Features:
+- Create an Estimate:
+  - Add customer, vehicle, line items
+  - Apply tax, fees
+- Change status → WORK_IN_PROGRESS, → COMPLETED, → INVOICED
+- Generate an “Invoice view” from RO
+- Mark invoice as PAID (just record basic payment info)
+
+4) BASIC TIRE & PARTS INVENTORY
+-------------------------------
+
+Entities:
+- InventoryItem (generic) with type: TIRE, PART, OTHER
+- Tire-specific attributes when type=TIRE:
+  - Size (e.g., 225/45R17)
+  - Speed rating
+  - Load index
+  - Category (e.g., All-Season, Winter, Performance, LT)
+  - Brand, model
+  - Cost, price, quantity on hand
+- Part-specific fields: brand, part number, category, cost, price, quantity
+
+Features:
+- CRUD for inventory items
+- Adjust stock levels manually (e.g. stock adjustments)
+- Basic Purchase Order stub:
+  - Create PO with vendor name and list of items
+  - Mark PO as received to update stock
+
+We don’t need full vendor integrations yet – just structure the entities and APIs so they can be extended.
+
+5) SIMPLE TIRE QUOTE BUILDER
+----------------------------
+
+Goal: early TireTutor-like behavior but minimal.
+
+Features:
+- Given a vehicle (with tire size) OR direct tire size entry:
+  - Query tire inventory for matching or compatible sizes
+  - Return a list of candidate tire options
+- Allow building a “Good / Better / Best” set:
+  - Select up to 3 tires from inventory and label them GOOD, BETTER, BEST
+- Attach selected options to an Estimate as line items
+
+We’re not implementing full e-commerce or vendor feeds yet – just internal inventory-based quoting.
+
+6) JOB BOARD / WORK-IN-PROGRESS SCREEN
+--------------------------------------
+
+Features:
+- For a given Location:
+  - Show a board of all active ROs grouped by status:
+    - ESTIMATE / AWAITING_APPROVAL / WORK_IN_PROGRESS / COMPLETED / INVOICED
+  - Support drag-and-drop to move ROs between statuses
+- Each card shows:
+  - Customer name
+  - Vehicle
+  - RO number
+  - Status
+  - Technician (if assigned)
+  - Promised time (optional)
+
+This should be a central screen for service advisors.
+
+7) BASIC REPORTING (MVP)
+------------------------
+
+Start with 2–3 simple reports, no massive analytics engine:
+
+- Daily Summary per Location:
+  - Date range filter
+  - Car count (unique ROs with work done)
+  - Total sales
+  - ARO (average repair order)
+- Sales by Category:
+  - Breakdown of revenue by:
+    - Tires
+    - Parts
+    - Labor
+    - Fees
+- Technician Summary (basic stub if time-tracking is minimal):
+  - Hours sold vs number of ROs with that tech assigned
+
+Make sure the data model supports later expansion into deeper KPIs.
+
+8) COMMUNICATION & APPROVALS (MVP-LITE)
+---------------------------------------
+
+We don’t need a full messaging platform yet; just wire up the core.
+
+Features:
+- Generate a shareable “estimate link” URL (no auth required) that:
+  - Shows customer the estimate items and totals
+  - Allows them to click “Approve” or “Decline”
+- When approved:
+  - Update RO status → AWAITING_APPROVAL → WORK_IN_PROGRESS automatically
+- Provide API hooks for:
+  - Sending an SMS/email with this link (you can stub the actual send and just code the interfaces)
+
+9) COMPLIANCE & AUDIT FOUNDATIONS (NAVEX-INSPIRED)
+--------------------------------------------------
+
+We do NOT need a full GRC system now, but we DO want the architecture to support it.
+
+Features:
+- Implement central AuditLog entity:
+  - userId
+  - orgId
+  - locationId (optional)
+  - actionType (e.g., PRICE_OVERRIDE, DISCOUNT_APPLIED, RO_STATUS_CHANGE)
+  - targetType and targetId (e.g., RepairOrder, InventoryItem)
+  - previousValue / newValue (JSON blobs or text)
+  - timestamp
+- Automatically write an audit log entry whenever:
+  - RO status changes
+  - Prices are overridden or discounts applied
+  - Inventory quantities are changed manually
+
+We want to seed the system to later build compliance dashboards.
+
+==========================
+COMPETITIVE POSITIONING MAP
+==========================
+
+Design and implement with this mental model:
+
+- TEKMETRIC strengths to emulate:
+  - Clean cloud UI
+  - Job board for WIP
+  - DVI & approvals (we’ll start with approvals + simple attachments and add DVI later)
+- PROTRACTOR strengths to emulate:
+  - “Best-practice” flows for shop operations: not just CRUD, but opinionated workflows.
+- TIRETUTOR strengths to emulate:
+  - Tire-first quoting UX
+  - Future AI tire recommendation (we’re only building the internal inventory-based quote builder now).
+- MADDENCO strengths to emulate:
+  - Inventory depth (especially tire inventory)
+  - Multi-location capability
+  - Later: wholesale/fleet/retread expansions.
+- NAVEX strengths to emulate:
+  - Audit logging and compliance-ready infrastructure (even if the UI comes later).
+
+====================
+HOW TO PROCEED (ASK)
+====================
+
+When you respond:
+
+1. Propose a high-level folder and module structure for:
+   - frontend/
+   - backend/
+   - shared/ (if appropriate)
+2. Scaffold the backend:
+   - NestJS app (or Express), data models/entities in TypeScript, migrations for PostgreSQL
+   - Auth, multi-tenancy basics, and the main domain models (Org, Location, User, Customer, Vehicle, RepairOrder, LineItem, InventoryItem, AuditLog)
+3. Scaffold the frontend:
+   - Next.js app with basic pages/route structure:
+     - /login, /org, /locations, /customers, /vehicles, /ros, /job-board, /reports
+   - Create placeholder components/screens for each MVP feature
+4. Then start implementing feature by feature, in a sequence that keeps the app runnable as we go:
+   - Multi-tenant auth → Customers/Vehicles → Inventory → ROs → Job board → Reporting → Approvals → Audit logging.
+
+At each step, generate actual code (backend + frontend) that compiles and runs, not just pseudocode.
+
+Focus on clean, extensible architecture and clear separation of concerns, but keep it pragmatic enough to ship an MVP quickly.
