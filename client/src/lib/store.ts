@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import { 
   Organization, Location, User, Customer, Vehicle, 
-  InventoryItem, RepairOrder, AuditLog 
+  InventoryItem, RepairOrder, AuditLog, WorkflowStage 
 } from './types';
 import { 
   MOCK_ORG, MOCK_LOCATIONS, MOCK_USERS, MOCK_CUSTOMERS, 
-  MOCK_VEHICLES, MOCK_INVENTORY, MOCK_ROS, MOCK_AUDIT_LOGS 
+  MOCK_VEHICLES, MOCK_INVENTORY, MOCK_ROS, MOCK_AUDIT_LOGS,
+  DEFAULT_WORKFLOW_STAGES 
 } from './mockData';
 
 interface ShopState {
@@ -22,6 +23,9 @@ interface ShopState {
   inventory: InventoryItem[];
   ros: RepairOrder[];
   auditLogs: AuditLog[];
+  
+  // Settings
+  workflowStages: WorkflowStage[];
 
   // Actions
   login: (email: string) => void;
@@ -33,6 +37,9 @@ interface ShopState {
   addRO: (ro: RepairOrder) => void;
   updateROStatus: (roId: string, status: RepairOrder['status']) => void;
   updateInventoryQuantity: (itemId: string, delta: number) => void;
+  
+  // Workflow Actions
+  updateWorkflowStages: (stages: WorkflowStage[]) => void;
 }
 
 export const useShopStore = create<ShopState>((set, get) => ({
@@ -47,6 +54,7 @@ export const useShopStore = create<ShopState>((set, get) => ({
   inventory: MOCK_INVENTORY,
   ros: MOCK_ROS,
   auditLogs: MOCK_AUDIT_LOGS,
+  workflowStages: DEFAULT_WORKFLOW_STAGES,
 
   login: (email: string) => {
     const user = get().users.find(u => u.email === email);
@@ -96,5 +104,7 @@ export const useShopStore = create<ShopState>((set, get) => ({
     inventory: state.inventory.map(i => 
       i.id === itemId ? { ...i, quantityOnHand: i.quantityOnHand + delta } : i
     )
-  }))
+  })),
+
+  updateWorkflowStages: (stages) => set({ workflowStages: stages }),
 }));

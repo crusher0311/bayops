@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useRoute } from 'wouter';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useShopStore } from '@/lib/store';
@@ -13,7 +12,6 @@ import {
   Plus, 
   Trash2, 
   CheckCircle2, 
-  Circle, 
   AlertCircle
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -24,8 +22,11 @@ import { cn } from '@/lib/utils';
 
 export default function RepairOrderDetail() {
   const [, params] = useRoute('/ros/:id');
-  const { ros, customers, vehicles, updateROStatus } = useShopStore();
+  const { ros, customers, vehicles, updateROStatus, workflowStages } = useShopStore();
   
+  // Sort stages by order
+  const activeStages = workflowStages.filter(s => s.isEnabled).sort((a, b) => a.order - b.order);
+
   const ro = ros.find(r => r.id === params?.id);
   const customer = customers.find(c => c.id === ro?.customerId);
   const vehicle = vehicles.find(v => v.id === ro?.vehicleId);
@@ -47,18 +48,15 @@ export default function RepairOrderDetail() {
 
   const handleAddTires = (selection: any) => {
     console.log("Adding tires", selection);
-    // Mock implementation - in real app would add line items
   };
 
-  const STATUS_STEPS = [
-    { id: 'ESTIMATE', label: 'Estimate' },
-    { id: 'AWAITING_APPROVAL', label: 'Approval' },
-    { id: 'WORK_IN_PROGRESS', label: 'In Progress' },
-    { id: 'COMPLETED', label: 'Complete' },
-    { id: 'INVOICED', label: 'Invoiced' },
-  ];
+  const currentStepIndex = activeStages.findIndex(s => s.id === ro.status);
 
-  const currentStepIndex = STATUS_STEPS.findIndex(s => s.id === ro.status);
+  const advanceStatus = () => {
+    if (currentStepIndex < activeStages.length - 1) {
+      updateROStatus(ro.id, activeStages[currentStepIndex + 1].id);
+    }
+  };
 
   return (
     <AppLayout>
@@ -90,43 +88,44 @@ export default function RepairOrderDetail() {
             </Button>
             <Button 
               className="gap-2" 
-              disabled={ro.status === 'COMPLETED' || ro.status === 'INVOICED'}
-              onClick={() => {
-                if (ro.status === 'ESTIMATE') updateROStatus(ro.id, 'AWAITING_APPROVAL');
-                else if (ro.status === 'AWAITING_APPROVAL') updateROStatus(ro.id, 'WORK_IN_PROGRESS');
-                else if (ro.status === 'WORK_IN_PROGRESS') updateROStatus(ro.id, 'COMPLETED');
-              }}
+              disabled={currentStepIndex >= activeStages.length - 1}
+              onClick={advanceStatus}
             >
-              {ro.status === 'ESTIMATE' ? 'Send for Approval' : 
-               ro.status === 'AWAITING_APPROVAL' ? 'Mark Approved' :
-               ro.status === 'WORK_IN_PROGRESS' ? 'Complete Job' : 'Process Payment'}
+              {currentStepIndex < activeStages.length - 1 
+                ? `Move to ${activeStages[currentStepIndex + 1].label}` 
+                : 'Completed'}
             </Button>
           </div>
         </div>
 
-        {/* Status Bar */}
-        <div className="w-full bg-card border rounded-lg p-4 flex justify-between items-center">
-          {STATUS_STEPS.map((step, idx) => (
-            <div key={step.id} className="flex items-center gap-2">
-              <div className={cn(
-                "flex items-center justify-center w-8 h-8 rounded-full border-2 text-xs font-bold",
-                idx <= currentStepIndex 
-                  ? "bg-primary border-primary text-primary-foreground" 
-                  : "bg-muted text-muted-foreground border-muted-foreground/20"
-              )}>
-                {idx < currentStepIndex ? <CheckCircle2 className="w-5 h-5" /> : idx + 1}
+        {/* Dynamic Status Bar */}
+        <div className="w-full bg-card border rounded-lg p-4 overflow-x-auto">
+           <div className="flex justify-between items-center min-w-[600px]">
+            {activeStages.map((step, idx) => (
+              <div key={step.id} className="flex items-center gap-2 flex-1 last:flex-none">
+                <div className={cn(
+                  "flex items-center justify-center w-8 h-8 rounded-full border-2 text-xs font-bold shrink-0 transition-colors",
+                  idx <= currentStepIndex 
+                    ? "bg-primary border-primary text-primary-foreground" 
+                    : "bg-muted text-muted-foreground border-muted-foreground/20"
+                )}>
+                  {idx < currentStepIndex ? <CheckCircle2 className="w-5 h-5" /> : idx + 1}
+                </div>
+                <span className={cn(
+                  "text-sm font-medium whitespace-nowrap",
+                  idx <= currentStepIndex ? "text-foreground" : "text-muted-foreground"
+                )}>
+                  {step.label}
+                </span>
+                {idx < activeStages.length - 1 && (
+                  <div className={cn(
+                    "h-[2px] flex-1 mx-2 transition-colors",
+                    idx < currentStepIndex ? "bg-primary" : "bg-muted"
+                  )} />
+                )}
               </div>
-              <span className={cn(
-                "text-sm font-medium",
-                idx <= currentStepIndex ? "text-foreground" : "text-muted-foreground"
-              )}>
-                {step.label}
-              </span>
-              {idx < STATUS_STEPS.length - 1 && (
-                <div className="w-12 h-[2px] bg-muted ml-2" />
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-6">

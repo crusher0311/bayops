@@ -1,6 +1,6 @@
 import { 
   Organization, Location, User, Customer, Vehicle, 
-  InventoryItem, RepairOrder, AuditLog 
+  InventoryItem, RepairOrder, AuditLog, WorkflowStage 
 } from './types';
 import { addDays, subDays } from 'date-fns';
 
@@ -9,6 +9,15 @@ export const MOCK_ORG: Organization = {
   name: 'Apex Auto Group',
   slug: 'apex-auto'
 };
+
+export const DEFAULT_WORKFLOW_STAGES: WorkflowStage[] = [
+  { id: 'ESTIMATE', label: 'Estimates', color: 'bg-gray-100 border-gray-200', type: 'SYSTEM', order: 1, isEnabled: true },
+  { id: 'AWAITING_APPROVAL', label: 'Approval Needed', color: 'bg-orange-50 border-orange-200', type: 'SYSTEM', order: 2, isEnabled: true },
+  { id: 'WORK_IN_PROGRESS', label: 'In Progress', color: 'bg-blue-50 border-blue-200', type: 'SYSTEM', order: 3, isEnabled: true },
+  { id: 'COMPLETED', label: 'Completed', color: 'bg-green-50 border-green-200', type: 'SYSTEM', order: 4, isEnabled: true },
+  { id: 'INVOICED', label: 'Ready for Pickup', color: 'bg-purple-50 border-purple-200', type: 'SYSTEM', order: 5, isEnabled: true },
+  { id: 'PAID', label: 'Paid / Closed', color: 'bg-slate-100 border-slate-200', type: 'SYSTEM', order: 6, isEnabled: true },
+];
 
 export const MOCK_LOCATIONS: Location[] = [
   {

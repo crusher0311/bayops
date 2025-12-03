@@ -55,7 +55,18 @@ export interface Vehicle {
   notes?: string;
 }
 
-export type ROStatus = 'ESTIMATE' | 'AWAITING_APPROVAL' | 'WORK_IN_PROGRESS' | 'COMPLETED' | 'INVOICED' | 'PAID';
+// ROStatus is now a string to allow for custom statuses, 
+// but we keep the system keys for type safety in core logic
+export type ROStatus = 'ESTIMATE' | 'AWAITING_APPROVAL' | 'WORK_IN_PROGRESS' | 'COMPLETED' | 'INVOICED' | 'PAID' | string;
+
+export interface WorkflowStage {
+  id: string;
+  label: string;
+  color: string; // Tailwind class or hex
+  type: 'SYSTEM' | 'CUSTOM';
+  order: number;
+  isEnabled: boolean;
+}
 
 export interface LineItem {
   id: string;

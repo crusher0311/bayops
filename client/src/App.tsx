@@ -12,6 +12,7 @@ import RepairOrders from "@/pages/RepairOrders";
 import RepairOrderDetail from "@/pages/RepairOrderDetail";
 import Inventory from "@/pages/Inventory";
 import Customers from "@/pages/Customers";
+import Settings from "@/pages/Settings";
 
 function Router() {
   return (
@@ -23,7 +24,7 @@ function Router() {
       <Route path="/inventory" component={Inventory} />
       <Route path="/customers" component={Customers} />
       <Route path="/reports" component={Dashboard} /> {/* Placeholder for now */}
-      <Route path="/settings" component={Dashboard} /> {/* Placeholder for now */}
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,41 +1,38 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useShopStore } from '@/lib/store';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   MoreHorizontal, 
   Clock, 
-  Calendar, 
   ArrowRight, 
-  ArrowLeft 
+  ArrowLeft,
+  Settings2
 } from 'lucide-react';
-import { ROStatus, RepairOrder } from '@/lib/types';
+import { ROStatus } from '@/lib/types';
 import { format } from 'date-fns';
-
-const COLUMNS: { id: ROStatus; label: string; color: string }[] = [
-  { id: 'ESTIMATE', label: 'Estimates', color: 'bg-gray-100 border-gray-200' },
-  { id: 'AWAITING_APPROVAL', label: 'Approval Needed', color: 'bg-orange-50 border-orange-200' },
-  { id: 'WORK_IN_PROGRESS', label: 'In Progress', color: 'bg-blue-50 border-blue-200' },
-  { id: 'COMPLETED', label: 'Completed', color: 'bg-green-50 border-green-200' },
-  { id: 'INVOICED', label: 'Ready for Pickup', color: 'bg-purple-50 border-purple-200' },
-];
+import { Link } from 'wouter';
 
 export default function JobBoard() {
-  const { ros, users, customers, vehicles, updateROStatus } = useShopStore();
+  const { ros, users, customers, vehicles, updateROStatus, workflowStages } = useShopStore();
+
+  // Filter only enabled stages
+  const activeStages = workflowStages.filter(s => s.isEnabled).sort((a, b) => a.order - b.order);
 
   const getCustomer = (id: string) => customers.find(c => c.id === id);
   const getVehicle = (id: string) => vehicles.find(v => v.id === id);
   const getTech = (id?: string) => users.find(u => u.id === id);
 
   const moveRO = (roId: string, currentStatus: ROStatus, direction: 'next' | 'prev') => {
-    const statusOrder: ROStatus[] = ['ESTIMATE', 'AWAITING_APPROVAL', 'WORK_IN_PROGRESS', 'COMPLETED', 'INVOICED', 'PAID'];
-    const currentIndex = statusOrder.indexOf(currentStatus);
+    const currentIndex = activeStages.findIndex(s => s.id === currentStatus);
+    if (currentIndex === -1) return;
+
     const nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
     
-    if (nextIndex >= 0 && nextIndex < statusOrder.length) {
-      updateROStatus(roId, statusOrder[nextIndex]);
+    if (nextIndex >= 0 && nextIndex < activeStages.length) {
+      updateROStatus(roId, activeStages[nextIndex].id);
     }
   };
 
@@ -48,10 +45,16 @@ export default function JobBoard() {
             Drag and drop repair orders to update status
           </p>
         </div>
+        <Link href="/settings">
+          <Button variant="outline" className="gap-2">
+            <Settings2 className="w-4 h-4" />
+            Edit Workflow
+          </Button>
+        </Link>
       </div>
 
       <div className="flex h-[calc(100vh-12rem)] overflow-x-auto gap-4 pb-4">
-        {COLUMNS.map(col => {
+        {activeStages.map((col, idx) => {
           const colROs = ros.filter(r => r.status === col.id);
           
           return (
@@ -110,7 +113,7 @@ export default function JobBoard() {
                             size="sm" 
                             className="h-6 px-2 text-xs"
                             onClick={() => moveRO(ro.id, ro.status, 'prev')}
-                            disabled={col.id === 'ESTIMATE'}
+                            disabled={idx === 0}
                           >
                             <ArrowLeft className="w-3 h-3 mr-1" /> Prev
                           </Button>
@@ -119,7 +122,7 @@ export default function JobBoard() {
                             size="sm" 
                             className="h-6 px-2 text-xs"
                             onClick={() => moveRO(ro.id, ro.status, 'next')}
-                            disabled={col.id === 'INVOICED'}
+                            disabled={idx === activeStages.length - 1}
                           >
                             Next <ArrowRight className="w-3 h-3 ml-1" />
                           </Button>
