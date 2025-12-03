@@ -238,25 +238,32 @@ export const MOCK_ROS: RepairOrder[] = [
     promisedAt: addDays(new Date(), 0).toISOString(),
     odometerIn: 45000,
     notes: 'Customer hears a rattle in the front right.',
-    lineItems: [
+    jobs: [
       {
-        id: 'li-1',
-        type: 'LABOR',
-        description: 'Diagnose Front Suspension Noise',
-        quantity: 1,
-        unitCost: 30,
-        unitPrice: 120,
-        technicianId: 'user-3',
-        approved: true
-      },
-      {
-        id: 'li-2',
-        type: 'PART',
-        description: 'Sway Bar Link',
-        quantity: 1,
-        unitCost: 25,
-        unitPrice: 65,
-        approved: true
+        id: 'job-1',
+        name: 'Front Suspension',
+        description: 'Customer states rattle noise from front right',
+        lineItems: [
+          {
+            id: 'li-1',
+            type: 'LABOR',
+            description: 'Diagnose Front Suspension Noise',
+            quantity: 1,
+            unitCost: 30,
+            unitPrice: 120,
+            technicianId: 'user-3',
+            approved: true
+          },
+          {
+            id: 'li-2',
+            type: 'PART',
+            description: 'Sway Bar Link',
+            quantity: 1,
+            unitCost: 25,
+            unitPrice: 65,
+            approved: true
+          }
+        ]
       }
     ]
   },
@@ -273,25 +280,32 @@ export const MOCK_ROS: RepairOrder[] = [
     createdAt: new Date().toISOString(),
     odometerIn: 28000,
     notes: 'Quote for 4 tires',
-    lineItems: [
+    jobs: [
       {
-        id: 'li-3',
-        type: 'TIRE',
-        description: 'Goodyear Wrangler Duratrac 275/65R18',
-        quantity: 4,
-        unitCost: 190,
-        unitPrice: 285,
-        inventoryItemId: 'inv-2',
-        approved: false
-      },
-      {
-        id: 'li-4',
-        type: 'LABOR',
-        description: 'Mount & Balance',
-        quantity: 4,
-        unitCost: 10,
-        unitPrice: 25,
-        approved: false
+        id: 'job-1',
+        name: 'Tires',
+        description: 'Replace all 4 tires',
+        lineItems: [
+          {
+            id: 'li-3',
+            type: 'TIRE',
+            description: 'Goodyear Wrangler Duratrac 275/65R18',
+            quantity: 4,
+            unitCost: 190,
+            unitPrice: 285,
+            inventoryItemId: 'inv-2',
+            approved: false
+          },
+          {
+            id: 'li-4',
+            type: 'LABOR',
+            description: 'Mount & Balance',
+            quantity: 4,
+            unitCost: 10,
+            unitPrice: 25,
+            approved: false
+          }
+        ]
       }
     ]
   },
@@ -308,15 +322,22 @@ export const MOCK_ROS: RepairOrder[] = [
     createdAt: new Date().toISOString(),
     odometerIn: 45100,
     notes: 'Quick oil change waiter',
-    lineItems: [
-       {
-        id: 'li-8',
-        type: 'LABOR',
-        description: 'Oil Change Service',
-        quantity: 1,
-        unitCost: 15,
-        unitPrice: 35,
-        approved: true
+    jobs: [
+      {
+        id: 'job-1',
+        name: 'Oil Change',
+        description: 'Full synthetic service',
+        lineItems: [
+          {
+            id: 'li-8',
+            type: 'LABOR',
+            description: 'Oil Change Service',
+            quantity: 1,
+            unitCost: 15,
+            unitPrice: 35,
+            approved: true
+          }
+        ]
       }
     ]
   },
@@ -335,36 +356,43 @@ export const MOCK_ROS: RepairOrder[] = [
     completedAt: subDays(new Date(), 1).toISOString(),
     odometerIn: 44800,
     notes: 'Oil change',
-    lineItems: [
+    jobs: [
       {
-        id: 'li-5',
-        type: 'PART',
-        description: '0W-20 Synthetic Oil (Qt)',
-        quantity: 5,
-        unitCost: 4.50,
-        unitPrice: 12.99,
-        inventoryItemId: 'inv-3',
-        approved: true
-      },
-      {
-        id: 'li-6',
-        type: 'PART',
-        description: 'Oil Filter',
-        quantity: 1,
-        unitCost: 3.25,
-        unitPrice: 8.99,
-        inventoryItemId: 'inv-4',
-        approved: true
-      },
-      {
-        id: 'li-7',
-        type: 'LABOR',
-        description: 'Oil Change Service',
-        quantity: 0.5,
-        unitCost: 30,
-        unitPrice: 40,
-        technicianId: 'user-3',
-        approved: true
+        id: 'job-1',
+        name: 'Maintenance',
+        description: 'Regular scheduled maintenance',
+        lineItems: [
+          {
+            id: 'li-5',
+            type: 'PART',
+            description: '0W-20 Synthetic Oil (Qt)',
+            quantity: 5,
+            unitCost: 4.50,
+            unitPrice: 12.99,
+            inventoryItemId: 'inv-3',
+            approved: true
+          },
+          {
+            id: 'li-6',
+            type: 'PART',
+            description: 'Oil Filter',
+            quantity: 1,
+            unitCost: 3.25,
+            unitPrice: 8.99,
+            inventoryItemId: 'inv-4',
+            approved: true
+          },
+          {
+            id: 'li-7',
+            type: 'LABOR',
+            description: 'Oil Change Service',
+            quantity: 0.5,
+            unitCost: 30,
+            unitPrice: 40,
+            technicianId: 'user-3',
+            approved: true
+          }
+        ]
       }
     ]
   }

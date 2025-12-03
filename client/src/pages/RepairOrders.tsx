@@ -70,7 +70,9 @@ export default function RepairOrders() {
             {ros.map((ro) => {
               const customer = getCustomer(ro.customerId);
               const vehicle = getVehicle(ro.vehicleId);
-              const total = ro.lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0);
+              const total = ro.jobs.reduce((jobAcc, job) => 
+                jobAcc + job.lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0)
+              , 0);
 
               return (
                 <TableRow 

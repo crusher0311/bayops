@@ -86,6 +86,13 @@ export interface LineItem {
   approved: boolean;
 }
 
+export interface ServiceJob {
+  id: string;
+  name: string; // e.g. "Oil Change", "Brake Job"
+  description?: string;
+  lineItems: LineItem[];
+}
+
 export interface RepairOrder {
   id: string;
   orgId: string;
@@ -99,7 +106,7 @@ export interface RepairOrder {
   workflowId: string; // Link to specific workflow
   status: ROStatus;
   
-  lineItems: LineItem[];
+  jobs: ServiceJob[];
   createdAt: string;
   promisedAt?: string;
   completedAt?: string;

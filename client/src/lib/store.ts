@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { 
   Organization, Location, User, Customer, Vehicle, 
   InventoryItem, RepairOrder, AuditLog, WorkflowDefinition,
-  Inspection, InspectionTemplate, InspectionItemResult 
+  Inspection, InspectionTemplate, InspectionItemResult, ServiceJob, LineItem
 } from './types';
 import { 
   MOCK_ORG, MOCK_LOCATIONS, MOCK_USERS, MOCK_CUSTOMERS, 
@@ -45,6 +45,11 @@ interface ShopState {
   
   // Workflow Actions
   updateWorkflows: (workflows: WorkflowDefinition[]) => void;
+
+  // RO Actions
+  addJobToRO: (roId: string, job: ServiceJob) => void;
+  addItemToJob: (roId: string, jobId: string, item: LineItem) => void;
+  deleteItemFromJob: (roId: string, jobId: string, itemId: string) => void;
 
   // DVI Actions
   createInspection: (roId: string, templateId: string, techId: string) => void;
@@ -119,6 +124,44 @@ export const useShopStore = create<ShopState>((set, get) => ({
   })),
 
   updateWorkflows: (workflows) => set({ workflows }),
+
+  addJobToRO: (roId, job) => set((state) => ({
+    ros: state.ros.map(ro => 
+      ro.id === roId 
+        ? { ...ro, jobs: [...ro.jobs, job] }
+        : ro
+    )
+  })),
+
+  addItemToJob: (roId, jobId, item) => set((state) => ({
+    ros: state.ros.map(ro => 
+      ro.id === roId 
+        ? { 
+            ...ro, 
+            jobs: ro.jobs.map(j => 
+              j.id === jobId 
+                ? { ...j, lineItems: [...j.lineItems, item] }
+                : j
+            )
+          }
+        : ro
+    )
+  })),
+
+  deleteItemFromJob: (roId, jobId, itemId) => set((state) => ({
+    ros: state.ros.map(ro => 
+      ro.id === roId 
+        ? { 
+            ...ro, 
+            jobs: ro.jobs.map(j => 
+              j.id === jobId 
+                ? { ...j, lineItems: j.lineItems.filter(i => i.id !== itemId) }
+                : j
+            )
+          }
+        : ro
+    )
+  })),
 
   createInspection: (roId, templateId, techId) => set((state) => {
     const template = state.inspectionTemplates.find(t => t.id === templateId);
