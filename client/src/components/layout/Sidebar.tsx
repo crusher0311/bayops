@@ -41,7 +41,7 @@ export function Sidebar() {
         <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
           <Wrench className="w-5 h-5 text-primary-foreground" />
         </div>
-        <span className="font-display font-bold text-xl tracking-tight">ShopFlow</span>
+        <span className="font-display font-bold text-xl tracking-tight">BayOPS</span>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
