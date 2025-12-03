@@ -1,4 +1,4 @@
-import { useShopStore } from '@/lib/store';
+import { useAuthStore } from '@/lib/authStore';
 import { Link, useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
 import { 
@@ -16,9 +16,8 @@ import {
 
 export function Sidebar() {
   const [location] = useLocation();
-  const { currentUser } = useShopStore();
+  const { user } = useAuthStore();
   
-  // Basic nav for everyone
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
     { icon: ClipboardList, label: 'Job Board', href: '/job-board' },
@@ -29,8 +28,7 @@ export function Sidebar() {
     { icon: Settings, label: 'Settings', href: '/settings' },
   ];
 
-  // Org Admin Only Items
-  const isOrgAdmin = currentUser?.role === 'OWNER' || currentUser?.role === 'MANAGER';
+  const isOrgAdmin = user?.role === 'OWNER' || user?.role === 'MANAGER';
   
   const orgNavItems = [
     { icon: LayoutGrid, label: 'Master Dashboard', href: '/master-dashboard' },
@@ -51,15 +49,15 @@ export function Sidebar() {
           const isActive = location === item.href;
           return (
             <Link key={item.href} href={item.href}>
-              <a className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+              <div className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer",
                 isActive 
                   ? "bg-sidebar-accent text-sidebar-accent-foreground" 
                   : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-              )}>
+              )} data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}>
                 <item.icon className="w-4 h-4" />
                 {item.label}
-              </a>
+              </div>
             </Link>
           );
         })}
@@ -75,15 +73,15 @@ export function Sidebar() {
               const isActive = location === item.href;
               return (
                 <Link key={item.href} href={item.href}>
-                  <a className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+                  <div className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer",
                     isActive 
                       ? "bg-sidebar-accent text-sidebar-accent-foreground" 
                       : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                  )}>
+                  )} data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}>
                     <item.icon className="w-4 h-4" />
                     {item.label}
-                  </a>
+                  </div>
                 </Link>
               );
             })}
