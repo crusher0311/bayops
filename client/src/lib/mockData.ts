@@ -1,6 +1,7 @@
 import { 
   Organization, Location, User, Customer, Vehicle, 
-  InventoryItem, RepairOrder, AuditLog, WorkflowDefinition 
+  InventoryItem, RepairOrder, AuditLog, WorkflowDefinition,
+  InspectionTemplate, Inspection 
 } from './types';
 import { addDays, subDays } from 'date-fns';
 
@@ -381,3 +382,24 @@ export const MOCK_AUDIT_LOGS: AuditLog[] = [
     timestamp: subDays(new Date(), 0).toISOString()
   }
 ];
+
+export const MOCK_INSPECTION_TEMPLATES: InspectionTemplate[] = [
+  {
+    id: 'tmpl-standard',
+    name: 'Standard 25-Point Inspection',
+    items: [
+      { id: 'item-1', label: 'Engine Oil Level', category: 'Under Hood' },
+      { id: 'item-2', label: 'Coolant Level', category: 'Under Hood' },
+      { id: 'item-3', label: 'Air Filter', category: 'Under Hood' },
+      { id: 'item-4', label: 'Brake Fluid', category: 'Under Hood' },
+      { id: 'item-5', label: 'Front Brake Pads', category: 'Brakes' },
+      { id: 'item-6', label: 'Rear Brake Pads', category: 'Brakes' },
+      { id: 'item-7', label: 'Front Tires', category: 'Tires' },
+      { id: 'item-8', label: 'Rear Tires', category: 'Tires' },
+      { id: 'item-9', label: 'Wipers', category: 'Exterior' },
+      { id: 'item-10', label: 'Lights', category: 'Exterior' },
+    ]
+  }
+];
+
+export const MOCK_INSPECTIONS: Inspection[] = [];

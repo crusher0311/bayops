@@ -12,17 +12,24 @@ import {
   Plus, 
   Trash2, 
   CheckCircle2, 
-  AlertCircle
+  AlertCircle,
+  FileText,
+  LayoutList
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { TireQuoteBuilder } from '@/components/shop/TireQuoteBuilder';
+import { InspectionBuilder } from '@/components/shop/InspectionBuilder';
 import { Link } from 'wouter';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 export default function RepairOrderDetail() {
   const [, params] = useRoute('/ros/:id');
-  const { ros, customers, vehicles, updateROStatus, workflows } = useShopStore();
+  const { 
+    ros, customers, vehicles, updateROStatus, workflows, 
+    inspections, inspectionTemplates, createInspection, currentUser 
+  } = useShopStore();
   
   const ro = ros.find(r => r.id === params?.id);
   const activeWorkflow = workflows.find(w => w.id === ro?.workflowId) || workflows[0];
@@ -30,6 +37,8 @@ export default function RepairOrderDetail() {
 
   const customer = customers.find(c => c.id === ro?.customerId);
   const vehicle = vehicles.find(v => v.id === ro?.vehicleId);
+  const roInspection = inspections.find(i => i.roId === ro?.id);
+  const inspectionTemplate = inspectionTemplates.find(t => t.id === roInspection?.templateId);
 
   if (!ro) return <div className="p-8">RO Not Found</div>;
 
@@ -48,6 +57,12 @@ export default function RepairOrderDetail() {
 
   const handleAddTires = (selection: any) => {
     console.log("Adding tires", selection);
+  };
+
+  const handleStartInspection = () => {
+    if (currentUser) {
+      createInspection(ro.id, 'tmpl-standard', currentUser.id);
+    }
   };
 
   const currentStepIndex = activeStages.findIndex(s => s.id === ro.status);
@@ -153,82 +168,115 @@ export default function RepairOrderDetail() {
               </CardContent>
             </Card>
 
-            {/* Line Items */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle>Line Items</CardTitle>
-                <div className="flex gap-2">
-                  <Dialog>
-                    <DialogTrigger asChild>
+            <Tabs defaultValue="estimate" className="w-full">
+              <TabsList className="w-full justify-start">
+                <TabsTrigger value="estimate" className="gap-2">
+                   <FileText className="w-4 h-4" /> Estimate & Parts
+                </TabsTrigger>
+                <TabsTrigger value="inspection" className="gap-2">
+                   <LayoutList className="w-4 h-4" /> Inspection (DVI)
+                   {roInspection?.completedAt && <Badge variant="default" className="ml-1 h-4 text-[10px] bg-green-600 hover:bg-green-700">Done</Badge>}
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="estimate" className="mt-6">
+                {/* Line Items */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle>Line Items</CardTitle>
+                    <div className="flex gap-2">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="gap-2">
+                            <Plus className="w-4 h-4" /> Tire Quote
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl">
+                          <DialogHeader>
+                            <DialogTitle>Tire Quote Builder</DialogTitle>
+                          </DialogHeader>
+                          <TireQuoteBuilder 
+                            vehicleTireSize={vehicle?.tireSizeFront} 
+                            onAddTires={handleAddTires} 
+                          />
+                        </DialogContent>
+                      </Dialog>
                       <Button variant="outline" size="sm" className="gap-2">
-                        <Plus className="w-4 h-4" /> Tire Quote
+                        <Plus className="w-4 h-4" /> Add Labor
                       </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-3xl">
-                      <DialogHeader>
-                        <DialogTitle>Tire Quote Builder</DialogTitle>
-                      </DialogHeader>
-                      <TireQuoteBuilder 
-                        vehicleTireSize={vehicle?.tireSizeFront} 
-                        onAddTires={handleAddTires} 
-                      />
-                    </DialogContent>
-                  </Dialog>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Plus className="w-4 h-4" /> Add Labor
-                  </Button>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Plus className="w-4 h-4" /> Add Part
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/50 text-muted-foreground font-medium">
-                      <tr>
-                        <th className="px-4 py-3 text-left">Description</th>
-                        <th className="px-4 py-3 text-center">Type</th>
-                        <th className="px-4 py-3 text-center">Qty</th>
-                        <th className="px-4 py-3 text-right">Unit Price</th>
-                        <th className="px-4 py-3 text-right">Total</th>
-                        <th className="w-[50px]"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {ro.lineItems.map((item) => (
-                        <tr key={item.id} className="group hover:bg-muted/30">
-                          <td className="px-4 py-3 font-medium">
-                            {item.description}
-                            {item.type === 'TIRE' && <Badge variant="secondary" className="ml-2 text-[10px]">In Stock</Badge>}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <Badge variant="outline" className="text-[10px]">{item.type}</Badge>
-                          </td>
-                          <td className="px-4 py-3 text-center">{item.quantity}</td>
-                          <td className="px-4 py-3 text-right">${item.unitPrice.toFixed(2)}</td>
-                          <td className="px-4 py-3 text-right font-medium">
-                            ${(item.unitPrice * item.quantity).toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 text-destructive">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                      {ro.lineItems.length === 0 && (
-                        <tr>
-                          <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground italic">
-                            No items added yet. Add parts or labor to begin estimate.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+                      <Button variant="outline" size="sm" className="gap-2">
+                        <Plus className="w-4 h-4" /> Add Part
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="border rounded-lg overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50 text-muted-foreground font-medium">
+                          <tr>
+                            <th className="px-4 py-3 text-left">Description</th>
+                            <th className="px-4 py-3 text-center">Type</th>
+                            <th className="px-4 py-3 text-center">Qty</th>
+                            <th className="px-4 py-3 text-right">Unit Price</th>
+                            <th className="px-4 py-3 text-right">Total</th>
+                            <th className="w-[50px]"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {ro.lineItems.map((item) => (
+                            <tr key={item.id} className="group hover:bg-muted/30">
+                              <td className="px-4 py-3 font-medium">
+                                {item.description}
+                                {item.type === 'TIRE' && <Badge variant="secondary" className="ml-2 text-[10px]">In Stock</Badge>}
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <Badge variant="outline" className="text-[10px]">{item.type}</Badge>
+                              </td>
+                              <td className="px-4 py-3 text-center">{item.quantity}</td>
+                              <td className="px-4 py-3 text-right">${item.unitPrice.toFixed(2)}</td>
+                              <td className="px-4 py-3 text-right font-medium">
+                                ${(item.unitPrice * item.quantity).toFixed(2)}
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 text-destructive">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                          {ro.lineItems.length === 0 && (
+                            <tr>
+                              <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground italic">
+                                No items added yet. Add parts or labor to begin estimate.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="inspection" className="mt-6">
+                 {roInspection && inspectionTemplate ? (
+                   <InspectionBuilder inspection={roInspection} template={inspectionTemplate} />
+                 ) : (
+                   <Card className="border-dashed">
+                     <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                       <LayoutList className="w-12 h-12 text-muted-foreground mb-4" />
+                       <h3 className="text-lg font-semibold">No Inspection Started</h3>
+                       <p className="text-muted-foreground mb-6 max-w-sm">
+                         Start a new digital vehicle inspection (DVI) to record vehicle condition and findings.
+                       </p>
+                       <Button onClick={handleStartInspection}>
+                         Start 25-Point Inspection
+                       </Button>
+                     </CardContent>
+                   </Card>
+                 )}
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Summary Sidebar */}

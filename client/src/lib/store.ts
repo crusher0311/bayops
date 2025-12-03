@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { 
   Organization, Location, User, Customer, Vehicle, 
-  InventoryItem, RepairOrder, AuditLog, WorkflowDefinition 
+  InventoryItem, RepairOrder, AuditLog, WorkflowDefinition,
+  Inspection, InspectionTemplate, InspectionItemResult 
 } from './types';
 import { 
   MOCK_ORG, MOCK_LOCATIONS, MOCK_USERS, MOCK_CUSTOMERS, 
   MOCK_VEHICLES, MOCK_INVENTORY, MOCK_ROS, MOCK_AUDIT_LOGS,
-  DEFAULT_WORKFLOWS 
+  DEFAULT_WORKFLOWS, MOCK_INSPECTION_TEMPLATES, MOCK_INSPECTIONS 
 } from './mockData';
 
 interface ShopState {
@@ -26,6 +27,10 @@ interface ShopState {
   
   // Settings
   workflows: WorkflowDefinition[];
+  
+  // DVI
+  inspectionTemplates: InspectionTemplate[];
+  inspections: Inspection[];
 
   // Actions
   login: (email: string) => void;
@@ -40,6 +45,11 @@ interface ShopState {
   
   // Workflow Actions
   updateWorkflows: (workflows: WorkflowDefinition[]) => void;
+
+  // DVI Actions
+  createInspection: (roId: string, templateId: string, techId: string) => void;
+  updateInspectionItem: (inspectionId: string, result: InspectionItemResult) => void;
+  completeInspection: (inspectionId: string) => void;
 }
 
 export const useShopStore = create<ShopState>((set, get) => ({
@@ -55,6 +65,8 @@ export const useShopStore = create<ShopState>((set, get) => ({
   ros: MOCK_ROS,
   auditLogs: MOCK_AUDIT_LOGS,
   workflows: DEFAULT_WORKFLOWS,
+  inspectionTemplates: MOCK_INSPECTION_TEMPLATES,
+  inspections: MOCK_INSPECTIONS,
 
   login: (email: string) => {
     const user = get().users.find(u => u.email === email);
@@ -107,4 +119,42 @@ export const useShopStore = create<ShopState>((set, get) => ({
   })),
 
   updateWorkflows: (workflows) => set({ workflows }),
+
+  createInspection: (roId, templateId, techId) => set((state) => {
+    const template = state.inspectionTemplates.find(t => t.id === templateId);
+    if (!template) return {};
+
+    const newInspection: Inspection = {
+      id: `insp-${Date.now()}`,
+      roId,
+      templateId,
+      technicianId: techId,
+      startedAt: new Date().toISOString(),
+      items: template.items.map(item => ({
+        itemId: item.id,
+        status: 'GREEN' // Default to green
+      }))
+    };
+
+    return { inspections: [...state.inspections, newInspection] };
+  }),
+
+  updateInspectionItem: (inspectionId, result) => set((state) => ({
+    inspections: state.inspections.map(insp => 
+      insp.id === inspectionId 
+        ? { 
+            ...insp, 
+            items: insp.items.map(i => i.itemId === result.itemId ? { ...i, ...result } : i) 
+          }
+        : insp
+    )
+  })),
+
+  completeInspection: (inspectionId) => set((state) => ({
+    inspections: state.inspections.map(insp =>
+      insp.id === inspectionId
+        ? { ...insp, completedAt: new Date().toISOString() }
+        : insp
+    )
+  }))
 }));

@@ -63,6 +63,7 @@ export interface WorkflowStage {
   color: string; // Tailwind class or hex
   type: 'SYSTEM' | 'CUSTOM';
   order: number;
+  isEnabled?: boolean;
 }
 
 export interface WorkflowDefinition {
@@ -139,4 +140,37 @@ export interface AuditLog {
   targetId: string;
   details: string; // simplified from prev/new value for MVP
   timestamp: string;
+}
+
+// --- DVI Module Types ---
+
+export type InspectionStatus = 'GREEN' | 'YELLOW' | 'RED';
+
+export interface InspectionTemplateItem {
+  id: string;
+  label: string;
+  category: string; // e.g., "Under Hood", "Under Vehicle", "Tires"
+}
+
+export interface InspectionTemplate {
+  id: string;
+  name: string;
+  items: InspectionTemplateItem[];
+}
+
+export interface InspectionItemResult {
+  itemId: string;
+  status: InspectionStatus;
+  notes?: string;
+  imageUrl?: string; // Mock URL for photos
+}
+
+export interface Inspection {
+  id: string;
+  roId: string;
+  templateId: string;
+  technicianId: string;
+  startedAt: string;
+  completedAt?: string;
+  items: InspectionItemResult[];
 }
