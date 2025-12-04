@@ -17,6 +17,7 @@ import {
   Save,
   Share2,
   X,
+  Trash2,
   Image as ImageIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -50,6 +51,7 @@ interface InspectionFormProps {
   vehicle: Vehicle;
   onSave: (items: InspectionResultItem[]) => void;
   onComplete: () => void;
+  onDelete?: () => void;
   isCompleted?: boolean;
   shareToken?: string | null;
   onShare?: () => void;
@@ -111,6 +113,7 @@ export function InspectionForm({
   vehicle,
   onSave,
   onComplete,
+  onDelete,
   isCompleted = false,
   shareToken,
   onShare,
@@ -329,6 +332,18 @@ export function InspectionForm({
         </div>
         
         <div className="flex items-center gap-3">
+          {onDelete && (
+            <Button 
+              variant="outline" 
+              onClick={onDelete}
+              size="lg"
+              className="text-red-400 border-red-500/50 hover:bg-red-600/20 hover:text-red-300"
+              data-testid="button-delete-inspection"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </Button>
+          )}
           {hasChanges && (
             <Button variant="outline" onClick={handleSave} size="lg" data-testid="button-save-inspection">
               <Save className="w-4 h-4 mr-2" />
@@ -364,10 +379,11 @@ export function InspectionForm({
         <div className="space-y-10 pr-4">
           {categories.map((category) => (
             <div key={category}>
-              <h3 className="text-2xl font-bold text-white mb-5 flex items-center gap-3 pb-2 border-b border-slate-700">
-                <span className="w-2 h-8 bg-blue-500 rounded-full"></span>
-                {category}
-              </h3>
+              <div className="bg-blue-600 rounded-lg px-4 py-3 mb-5">
+                <h3 className="text-2xl font-bold text-white">
+                  {category}
+                </h3>
+              </div>
               
               <div className="space-y-5">
                 {templateItems
@@ -384,12 +400,12 @@ export function InspectionForm({
                       <Card 
                         key={templateItem.id} 
                         className={cn(
-                          "transition-all duration-200 border-l-4 bg-slate-900",
-                          statusConfig ? statusConfig.borderClass : "border-l-slate-600"
+                          "transition-all duration-200 border-l-4 bg-slate-800 border border-slate-600",
+                          statusConfig ? statusConfig.borderClass : "border-l-slate-500"
                         )}
                         data-testid={`inspection-item-${templateItem.id}`}
                       >
-                        <CardContent className="p-6">
+                        <CardContent className="p-6 bg-slate-800">
                           <div className="flex items-start justify-between gap-6">
                             <h4 className="text-xl font-semibold text-white flex-1 leading-tight">
                               {templateItem.label}
@@ -428,7 +444,7 @@ export function InspectionForm({
                             <div className="mt-6 space-y-5">
                               <div>
                                 <div className="flex items-center justify-between mb-3">
-                                  <label className="text-base font-semibold text-slate-200">
+                                  <label className="text-base font-semibold text-white">
                                     Technician Notes
                                   </label>
                                   <Button
@@ -451,7 +467,7 @@ export function InspectionForm({
                                   value={result.finding || ''}
                                   onChange={(e) => updateItem(templateItem.id, { finding: e.target.value })}
                                   placeholder="Describe what you observed..."
-                                  className="min-h-[80px] text-base bg-slate-900/50 border-slate-600 placeholder:text-slate-500"
+                                  className="min-h-[80px] text-base text-white bg-slate-700 border-slate-500 placeholder:text-slate-400"
                                   disabled={isCompleted}
                                   data-testid={`textarea-finding-${templateItem.id}`}
                                 />
@@ -460,7 +476,7 @@ export function InspectionForm({
                               {requiresRecommendation && (
                                 <div>
                                   <div className="flex items-center gap-2 mb-3">
-                                    <label className="text-base font-semibold text-slate-200">
+                                    <label className="text-base font-semibold text-white">
                                       Recommendation for Customer
                                     </label>
                                     <Badge variant="destructive" className="text-xs">Required</Badge>
@@ -470,8 +486,8 @@ export function InspectionForm({
                                     onChange={(e) => updateItem(templateItem.id, { recommendation: e.target.value })}
                                     placeholder="What action should the customer take?"
                                     className={cn(
-                                      "min-h-[80px] text-base bg-slate-900/50",
-                                      missingRecommendation ? "border-red-500 focus:border-red-500" : "border-slate-600"
+                                      "min-h-[80px] text-base text-white bg-slate-700 placeholder:text-slate-400",
+                                      missingRecommendation ? "border-red-500 focus:border-red-500" : "border-slate-500"
                                     )}
                                     disabled={isCompleted}
                                     data-testid={`textarea-recommendation-${templateItem.id}`}
@@ -492,7 +508,7 @@ export function InspectionForm({
                               
                               <div>
                                 <div className="flex items-center gap-2 mb-3">
-                                  <label className="text-base font-semibold text-slate-200">
+                                  <label className="text-base font-semibold text-white">
                                     Photos
                                   </label>
                                   {!isCompleted && (

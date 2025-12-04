@@ -538,6 +538,18 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/inspection-templates/:id", requireAuth, async (req, res) => {
+    try {
+      const deleted = await storage.deleteInspectionTemplate(req.params.id, req.user!.orgId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Template not found or access denied" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Inspections
   app.get("/api/inspections/ro/:roId", requireAuth, async (req, res) => {
     try {

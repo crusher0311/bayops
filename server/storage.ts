@@ -167,6 +167,7 @@ export interface IStorage {
   getInspectionTemplateById(id: string): Promise<InspectionTemplate | undefined>;
   getInspectionTemplatesByOrg(orgId: string): Promise<InspectionTemplate[]>;
   createInspectionTemplate(template: InsertInspectionTemplate): Promise<InspectionTemplate>;
+  deleteInspectionTemplate(id: string, orgId: string): Promise<boolean>;
 
   // Inspections
   getInspection(id: string): Promise<Inspection | undefined>;
@@ -593,6 +594,13 @@ export class DatabaseStorage implements IStorage {
   async createInspectionTemplate(insertTemplate: InsertInspectionTemplate): Promise<InspectionTemplate> {
     const [template] = await db.insert(inspectionTemplates).values(insertTemplate).returning();
     return template;
+  }
+
+  async deleteInspectionTemplate(id: string, orgId: string): Promise<boolean> {
+    const result = await db.delete(inspectionTemplates).where(
+      and(eq(inspectionTemplates.id, id), eq(inspectionTemplates.orgId, orgId))
+    ).returning();
+    return result.length > 0;
   }
 
   // Inspections

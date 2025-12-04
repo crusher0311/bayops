@@ -181,6 +181,24 @@ export default function Inspections() {
     },
   });
 
+  const deleteTemplateMutation = useMutation({
+    mutationFn: async (templateId: string) => {
+      const res = await fetch(`/api/inspection-templates/${templateId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to delete template');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inspection-templates'] });
+      toast({ title: 'Template deleted' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const resetTemplateForm = () => {
     setTemplateForm({
       name: '',
@@ -428,9 +446,24 @@ export default function Inspections() {
                                 <p className="text-sm text-slate-400 mt-1">{template.description}</p>
                               )}
                             </div>
-                            <Badge variant={template.isActive ? 'default' : 'secondary'}>
-                              {template.isActive ? 'Active' : 'Inactive'}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={template.isActive ? 'default' : 'secondary'}>
+                                {template.isActive ? 'Active' : 'Inactive'}
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (confirm('Are you sure you want to delete this template? This cannot be undone.')) {
+                                    deleteTemplateMutation.mutate(template.id);
+                                  }
+                                }}
+                                className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-600/20"
+                                data-testid={`button-delete-template-${template.id}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
                           <div className="text-sm text-slate-400">
                             {template.items.length} inspection items

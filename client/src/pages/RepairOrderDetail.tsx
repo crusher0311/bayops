@@ -333,6 +333,24 @@ export default function RepairOrderDetail() {
     },
   });
 
+  const deleteInspectionMutation = useMutation({
+    mutationFn: async (inspectionId: string) => {
+      const res = await fetch(`/api/inspections/${inspectionId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to delete inspection');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inspections', roId] });
+      toast({ title: 'Inspection deleted' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('estimate');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
@@ -1015,6 +1033,11 @@ export default function RepairOrderDetail() {
                     vehicle={vehicle ? { year: vehicle.year, make: vehicle.make, model: vehicle.model, mileage: vehicle.mileage } : { year: 0, make: '', model: '' }}
                     onSave={(items) => updateInspectionMutation.mutate({ id: roInspection.id, items })}
                     onComplete={() => updateInspectionMutation.mutate({ id: roInspection.id, items: roInspection.items || [], status: 'COMPLETED' })}
+                    onDelete={() => {
+                      if (confirm('Are you sure you want to delete this inspection? This cannot be undone.')) {
+                        deleteInspectionMutation.mutate(roInspection.id);
+                      }
+                    }}
                     isCompleted={roInspection.status === 'COMPLETED'}
                     shareToken={roInspection.shareToken}
                     onShare={() => {
