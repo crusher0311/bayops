@@ -18,12 +18,52 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
 export default function OrganizationSettings() {
   const { user } = useAuthStore();
   const { data: locations = [], isLoading: locationsLoading } = useLocations();
   const { data: users = [] } = useUsers();
   const [newLocationName, setNewLocationName] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const createLocationMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await fetch('/api/locations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          name, 
+          locationType: 'RETAIL',
+          address: '',
+          city: 'New Location',
+          state: 'TX',
+          zip: '00000',
+          phone: '',
+          taxRate: '0.0825',
+          isActive: true,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to create location');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['locations'] });
+      toast({ title: 'Location added', description: 'You can now configure it in Shop Settings.' });
+      setNewLocationName('');
+      setDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
 
   const activeLocations = locations.filter(l => l.isActive).length;
   const estimatedBill = activeLocations * 199;
@@ -126,7 +166,7 @@ export default function OrganizationSettings() {
             </CardTitle>
             <CardDescription>Manage your shops and their billing status.</CardDescription>
           </div>
-          <Dialog>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2" data-testid="button-add-location">
                 <Plus className="w-4 h-4" /> Add Location
@@ -149,8 +189,17 @@ export default function OrganizationSettings() {
                     data-testid="input-location-name"
                   />
                 </div>
-                <Button className="w-full" disabled={!newLocationName} data-testid="button-confirm-add">
-                  Confirm & Add Location
+                <Button 
+                  className="w-full" 
+                  disabled={!newLocationName || createLocationMutation.isPending} 
+                  onClick={() => createLocationMutation.mutate(newLocationName)}
+                  data-testid="button-confirm-add"
+                >
+                  {createLocationMutation.isPending ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Adding...</>
+                  ) : (
+                    'Confirm & Add Location'
+                  )}
                 </Button>
               </div>
             </DialogContent>
