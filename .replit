@@ -20,6 +20,10 @@ localPort = 5001
 externalPort = 3001
 
 [[ports]]
+localPort = 37515
+externalPort = 3003
+
+[[ports]]
 localPort = 37611
 externalPort = 3002
 
@@ -54,3 +58,11 @@ waitForPort = 5000
 [agent]
 mockupState = "FULLSTACK"
 integrations = ["javascript_database:1.0.0", "javascript_openai_ai_integrations:1.0.0"]
+
+[objectStorage]
+defaultBucketID = "replit-objstore-753a7ab2-6b5e-43c5-838b-ab1ced2c7012"
+
+[userenv]
+
+[userenv.shared]
+PRIVATE_OBJECT_DIR = "/bayops-files"
