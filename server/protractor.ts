@@ -213,10 +213,34 @@ export class ProtractorClient {
     return this.request<ProtractorContact>(`/Contact/${id}`);
   }
 
-  // Get all contacts (paginated search with empty string returns all)
+  // Get all contacts - Protractor requires a search pattern, use '*' for all
   async getAllContacts(): Promise<ProtractorContact[]> {
-    const result = await this.request<{ Contacts: ProtractorContact[] }>("/Contact/Search/?searchString=");
-    return result.Contacts || [];
+    try {
+      // Try wildcard search first
+      const result = await this.request<{ Contacts: ProtractorContact[] }>("/Contact/Search/?searchString=*");
+      return result.Contacts || [];
+    } catch (error) {
+      // If wildcard fails, try common patterns and aggregate
+      console.log("[Protractor] Wildcard search failed, trying letter-based search...");
+      const allContacts: Map<string, ProtractorContact> = new Map();
+      
+      // Search by common starting letters
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.split('');
+      for (const letter of letters) {
+        try {
+          const contacts = await this.searchContacts(letter);
+          for (const contact of contacts) {
+            if (contact.ID && !allContacts.has(contact.ID)) {
+              allContacts.set(contact.ID, contact);
+            }
+          }
+        } catch (e) {
+          // Some letters may not have results, continue
+        }
+      }
+      
+      return Array.from(allContacts.values());
+    }
   }
 
   // Get service item (vehicle) by ID
