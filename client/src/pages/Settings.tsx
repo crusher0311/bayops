@@ -33,8 +33,10 @@ import {
   Wrench,
   Save,
   Package,
-  Clock
+  Clock,
+  Upload
 } from 'lucide-react';
+import { ObjectUploader } from '@/components/ObjectUploader';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -1669,16 +1671,59 @@ function BrandingTab({ settings, onRefresh }: { settings: any; onRefresh: () => 
           <CardDescription>Customize the look and feel of your BayOPS instance.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="logoUrl">Logo URL</Label>
-            <Input 
-              id="logoUrl"
-              value={formData.logoUrl}
-              onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
-              placeholder="https://your-domain.com/logo.png"
-              data-testid="input-logo-url"
-            />
-            <p className="text-xs text-muted-foreground">Recommended size: 200x50 pixels, PNG or SVG format</p>
+          <div className="space-y-4">
+            <Label>Logo</Label>
+            <div className="flex items-start gap-4">
+              {formData.logoUrl && (
+                <div className="border rounded-lg p-4 bg-muted/30">
+                  <img 
+                    src={formData.logoUrl.startsWith('/objects/') ? formData.logoUrl : formData.logoUrl} 
+                    alt="Current logo" 
+                    className="h-12 max-w-[200px] object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+              <div className="space-y-2 flex-1">
+                <ObjectUploader
+                  maxNumberOfFiles={1}
+                  maxFileSize={5242880}
+                  allowedFileTypes={['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp']}
+                  onGetUploadParameters={async () => {
+                    const res = await apiRequest('/api/objects/upload', { method: 'POST' });
+                    return { method: 'PUT' as const, url: res.uploadURL };
+                  }}
+                  onComplete={async (result) => {
+                    if (result.successful?.[0]?.uploadURL) {
+                      const res = await apiRequest('/api/settings/branding/logo', {
+                        method: 'PUT',
+                        body: JSON.stringify({ logoURL: result.successful[0].uploadURL }),
+                      });
+                      setFormData({ ...formData, logoUrl: res.objectPath });
+                      toast({ title: 'Logo uploaded successfully' });
+                      onRefresh();
+                    }
+                  }}
+                  buttonVariant="outline"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Logo
+                </ObjectUploader>
+                <p className="text-xs text-muted-foreground">PNG, JPG, SVG or WebP. Max 5MB. Recommended: 200x50px</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="logoUrl" className="text-sm text-muted-foreground">Or enter a logo URL directly</Label>
+              <Input 
+                id="logoUrl"
+                value={formData.logoUrl}
+                onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
+                placeholder="https://your-domain.com/logo.png"
+                data-testid="input-logo-url"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -56,6 +56,8 @@ import {
   insertServiceQueueEntrySchema,
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
+import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import { ObjectPermission } from "./objectAcl";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -2024,6 +2026,58 @@ export async function registerRoutes(
       const branding = await storage.upsertOrgBranding(result.data);
       res.json(branding);
     } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Object Storage routes for file uploads
+  app.post("/api/objects/upload", requireAuth, async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error: any) {
+      console.error("Error getting upload URL:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/objects/:objectPath(*)", async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      objectStorageService.downloadObject(objectFile, res);
+    } catch (error: any) {
+      console.error("Error serving object:", error);
+      if (error instanceof ObjectNotFoundError) {
+        return res.status(404).json({ message: "File not found" });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/settings/branding/logo", requireAuth, async (req, res) => {
+    try {
+      if (!req.body.logoURL) {
+        return res.status(400).json({ message: "logoURL is required" });
+      }
+      const objectStorageService = new ObjectStorageService();
+      const objectPath = objectStorageService.normalizeObjectEntityPath(req.body.logoURL);
+      
+      // Update branding with the new logo path
+      const existing = await storage.getOrgBranding(req.user!.orgId);
+      const branding = await storage.upsertOrgBranding({
+        orgId: req.user!.orgId,
+        logoUrl: objectPath,
+        primaryColor: existing?.primaryColor || '#2563EB',
+        secondaryColor: existing?.secondaryColor || '#1e293b',
+        termsOfService: existing?.termsOfService || '',
+        enableWhiteLabel: existing?.enableWhiteLabel || false,
+        customDomain: existing?.customDomain || '',
+      });
+      res.json({ objectPath, branding });
+    } catch (error: any) {
+      console.error("Error setting logo:", error);
       res.status(500).json({ message: error.message });
     }
   });
