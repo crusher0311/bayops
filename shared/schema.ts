@@ -23,6 +23,9 @@ export const inventoryTypeEnum = pgEnum('inventory_type', ['TIRE', 'PART', 'OTHE
 export const tireCategoryEnum = pgEnum('tire_category', ['ALL_SEASON', 'WINTER', 'PERFORMANCE', 'LT', 'AT']);
 export const inspectionStatusEnum = pgEnum('inspection_status', ['GREEN', 'YELLOW', 'RED']);
 export const workflowStageTypeEnum = pgEnum('workflow_stage_type', ['SYSTEM', 'CUSTOM']);
+export const feeMethodEnum = pgEnum('fee_method', ['PERCENTAGE', 'FIXED']);
+export const feeCalculateOnEnum = pgEnum('fee_calculate_on', ['LABOR', 'PARTS', 'LABOR_PARTS', 'SUBTOTAL']);
+export const discountMethodEnum = pgEnum('discount_method', ['PERCENTAGE', 'FIXED']);
 
 // Organizations
 export const organizations = pgTable("organizations", {
@@ -42,16 +45,22 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   workflows: many(workflows),
 }));
 
-// Locations
+// Locations (Shop Profile)
 export const locations = pgTable("locations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
   name: text("name").notNull(),
   address: text("address").notNull(),
+  addressLine2: text("address_line_2"),
   city: text("city").notNull(),
   state: text("state").notNull(),
   zip: text("zip").notNull(),
   phone: text("phone").notNull(),
+  email: text("email"),
+  website: text("website"),
+  licenseNumber: text("license_number"),
+  taxId: text("tax_id"),
+  logoUrl: text("logo_url"),
   taxRate: decimal("tax_rate", { precision: 5, scale: 4 }).notNull().default('0.0'),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -345,6 +354,337 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   }),
 }));
 
+// ==========================================
+// PHASE 1: CONFIGURATION TABLES
+// ==========================================
+
+// Labor Rates (multiple tiers per location)
+export const laborRates = pgTable("labor_rates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  rate: decimal("rate", { precision: 10, scale: 2 }).notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isDefault: boolean("is_default").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const laborRatesRelations = relations(laborRates, ({ one }) => ({
+  location: one(locations, {
+    fields: [laborRates.locationId],
+    references: [locations.id],
+  }),
+}));
+
+// Shop Fees (auto-apply fees)
+export const shopFees = pgTable("shop_fees", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  method: feeMethodEnum("method").notNull(),
+  calculateOn: feeCalculateOnEnum("calculate_on").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  cap: decimal("cap", { precision: 10, scale: 2 }),
+  isTaxable: boolean("is_taxable").notNull().default(false),
+  autoApply: boolean("auto_apply").notNull().default(true),
+  applyTo: text("apply_to").notNull().default('RO'),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const shopFeesRelations = relations(shopFees, ({ one }) => ({
+  location: one(locations, {
+    fields: [shopFees.locationId],
+    references: [locations.id],
+  }),
+}));
+
+// Discounts
+export const discounts = pgTable("discounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  method: discountMethodEnum("method").notNull(),
+  calculateOn: feeCalculateOnEnum("calculate_on").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  cap: decimal("cap", { precision: 10, scale: 2 }),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const discountsRelations = relations(discounts, ({ one }) => ({
+  location: one(locations, {
+    fields: [discounts.locationId],
+    references: [locations.id],
+  }),
+}));
+
+// Tax Settings
+export const taxSettings = pgTable("tax_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }).unique(),
+  salesTaxRate: decimal("sales_tax_rate", { precision: 5, scale: 4 }).notNull().default('0.0'),
+  taxOnLabor: boolean("tax_on_labor").notNull().default(false),
+  taxOnParts: boolean("tax_on_parts").notNull().default(true),
+  taxOnFees: boolean("tax_on_fees").notNull().default(false),
+  salesTaxCap: decimal("sales_tax_cap", { precision: 10, scale: 2 }),
+  tireTaxEnabled: boolean("tire_tax_enabled").notNull().default(false),
+  tireTaxRate: decimal("tire_tax_rate", { precision: 10, scale: 2 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const taxSettingsRelations = relations(taxSettings, ({ one }) => ({
+  location: one(locations, {
+    fields: [taxSettings.locationId],
+    references: [locations.id],
+  }),
+}));
+
+// Job Categories
+export const jobCategories = pgTable("job_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  code: text("code").notNull(),
+  description: text("description").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const jobCategoriesRelations = relations(jobCategories, ({ one }) => ({
+  location: one(locations, {
+    fields: [jobCategories.locationId],
+    references: [locations.id],
+  }),
+}));
+
+// Payment Types
+export const paymentTypes = pgTable("payment_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const paymentTypesRelations = relations(paymentTypes, ({ one }) => ({
+  location: one(locations, {
+    fields: [paymentTypes.locationId],
+    references: [locations.id],
+  }),
+}));
+
+// Invoice Settings
+export const invoiceSettings = pgTable("invoice_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }).unique(),
+  nextInvoiceNumber: integer("next_invoice_number").notNull().default(1),
+  gpHrMinThreshold: decimal("gp_hr_min_threshold", { precision: 10, scale: 2 }),
+  gpHrMaxThreshold: decimal("gp_hr_max_threshold", { precision: 10, scale: 2 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const invoiceSettingsRelations = relations(invoiceSettings, ({ one }) => ({
+  location: one(locations, {
+    fields: [invoiceSettings.locationId],
+    references: [locations.id],
+  }),
+}));
+
+// RO Settings (Advanced Settings - required fields, tech hours display, etc.)
+export const roSettings = pgTable("ro_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }).unique(),
+  requireOdometerInOut: boolean("require_odometer_in_out").notNull().default(false),
+  requireMarketingSource: boolean("require_marketing_source").notNull().default(false),
+  requireTechOnLabor: boolean("require_tech_on_labor").notNull().default(false),
+  requireJobCategory: boolean("require_job_category").notNull().default(false),
+  requirePurchaseOrders: boolean("require_purchase_orders").notNull().default(false),
+  requireBillingForParts: boolean("require_billing_for_parts").notNull().default(false),
+  requirePaymentCardType: boolean("require_payment_card_type").notNull().default(false),
+  requireDotCodesForTires: boolean("require_dot_codes_for_tires").notNull().default(false),
+  requireDigitalSignature: boolean("require_digital_signature").notNull().default(false),
+  techHoursDisplayOn: text("tech_hours_display_on").notNull().default('RO_POSTED'),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const roSettingsRelations = relations(roSettings, ({ one }) => ({
+  location: one(locations, {
+    fields: [roSettings.locationId],
+    references: [locations.id],
+  }),
+}));
+
+// Parts Markup Matrix
+export const partsMatrices = pgTable("parts_matrices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  isDefault: boolean("is_default").notNull().default(false),
+  autoApplyToPartTypes: text("auto_apply_to_part_types").notNull().default('ALL'),
+  tiers: jsonb("tiers").notNull().$type<Array<{
+    minCost: number;
+    maxCost: number | null;
+    multiplier: number;
+    grossProfit: number;
+    markup: number;
+  }>>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const partsMatricesRelations = relations(partsMatrices, ({ one }) => ({
+  location: one(locations, {
+    fields: [partsMatrices.locationId],
+    references: [locations.id],
+  }),
+}));
+
+// Labor Markup Matrix
+export const laborMatrices = pgTable("labor_matrices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  isDefault: boolean("is_default").notNull().default(false),
+  tiers: jsonb("tiers").notNull().$type<Array<{
+    minHours: number;
+    maxHours: number | null;
+    multiplier: number;
+    markup: number;
+  }>>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const laborMatricesRelations = relations(laborMatrices, ({ one }) => ({
+  location: one(locations, {
+    fields: [laborMatrices.locationId],
+    references: [locations.id],
+  }),
+}));
+
+// Lead Sources (Marketing)
+export const leadSources = pgTable("lead_sources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  isDefault: boolean("is_default").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const leadSourcesRelations = relations(leadSources, ({ one }) => ({
+  location: one(locations, {
+    fields: [leadSources.locationId],
+    references: [locations.id],
+  }),
+}));
+
+// Customer Settings (Required fields configuration)
+export const customerSettings = pgTable("customer_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }).unique(),
+  requireAddress: boolean("require_address").notNull().default(false),
+  requirePhone: boolean("require_phone").notNull().default(false),
+  requireEmail: boolean("require_email").notNull().default(false),
+  requireCustomerSource: boolean("require_customer_source").notNull().default(false),
+  requireBirthday: boolean("require_birthday").notNull().default(false),
+  requireAuthorizedContact: boolean("require_authorized_contact").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const customerSettingsRelations = relations(customerSettings, ({ one }) => ({
+  location: one(locations, {
+    fields: [customerSettings.locationId],
+    references: [locations.id],
+  }),
+}));
+
+// Estimate/Invoice Transparency Settings
+export const transparencySettings = pgTable("transparency_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }).unique(),
+  estimateTerms: text("estimate_terms"),
+  invoiceTerms: text("invoice_terms"),
+  settings: jsonb("settings").notNull().$type<{
+    estimate: {
+      showLaborDescription: boolean;
+      showLaborHours: boolean;
+      showLaborRate: boolean;
+      showLaborTotal: boolean;
+      showPartName: boolean;
+      showPartBrand: boolean;
+      showPartNumber: boolean;
+      showPartQuantity: boolean;
+      showPartRetailPrice: boolean;
+      showPartLineTotal: boolean;
+      showSubletDescription: boolean;
+      showSubletTotal: boolean;
+      showItemizedFees: boolean;
+      showItemizedDiscounts: boolean;
+      showTireTax: boolean;
+      showDeclinedJobs: boolean;
+      showPurposeOfVisit: boolean;
+      showCustomerConcern: boolean;
+      showTimeIn: boolean;
+      showPromisedTime: boolean;
+      showTechnicianOnJobs: boolean;
+      showServiceWriter: boolean;
+    };
+    invoice: {
+      showLaborDescription: boolean;
+      showLaborHours: boolean;
+      showLaborRate: boolean;
+      showLaborTotal: boolean;
+      showPartName: boolean;
+      showPartBrand: boolean;
+      showPartNumber: boolean;
+      showPartQuantity: boolean;
+      showPartRetailPrice: boolean;
+      showPartLineTotal: boolean;
+      showSubletDescription: boolean;
+      showSubletTotal: boolean;
+      showItemizedFees: boolean;
+      showItemizedDiscounts: boolean;
+      showTireTax: boolean;
+      showDeclinedJobs: boolean;
+      showPurposeOfVisit: boolean;
+      showCustomerConcern: boolean;
+      showTimeIn: boolean;
+      showPromisedTime: boolean;
+      showTechnicianOnJobs: boolean;
+      showServiceWriter: boolean;
+    };
+  }>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const transparencySettingsRelations = relations(transparencySettings, ({ one }) => ({
+  location: one(locations, {
+    fields: [transparencySettings.locationId],
+    references: [locations.id],
+  }),
+}));
+
+// Organization Branding (White-label)
+export const orgBranding = pgTable("org_branding", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }).unique(),
+  logoUrl: text("logo_url"),
+  faviconUrl: text("favicon_url"),
+  primaryColor: text("primary_color").default('#2563EB'),
+  secondaryColor: text("secondary_color").default('#0f172a'),
+  accentColor: text("accent_color").default('#8B5CF6'),
+  customDomain: text("custom_domain"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const orgBrandingRelations = relations(orgBranding, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [orgBranding.orgId],
+    references: [organizations.id],
+  }),
+}));
+
 // Insert Schemas
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({
   id: true,
@@ -402,6 +742,77 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
   timestamp: true,
 });
 
+// Phase 1: Configuration Insert Schemas
+export const insertLaborRateSchema = createInsertSchema(laborRates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertShopFeeSchema = createInsertSchema(shopFees).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDiscountSchema = createInsertSchema(discounts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTaxSettingsSchema = createInsertSchema(taxSettings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertJobCategorySchema = createInsertSchema(jobCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPaymentTypeSchema = createInsertSchema(paymentTypes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertInvoiceSettingsSchema = createInsertSchema(invoiceSettings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRoSettingsSchema = createInsertSchema(roSettings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPartsMatrixSchema = createInsertSchema(partsMatrices).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertLaborMatrixSchema = createInsertSchema(laborMatrices).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertLeadSourceSchema = createInsertSchema(leadSources).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCustomerSettingsSchema = createInsertSchema(customerSettings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTransparencySettingsSchema = createInsertSchema(transparencySettings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertOrgBrandingSchema = createInsertSchema(orgBranding).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type Organization = typeof organizations.$inferSelect;
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
@@ -435,3 +846,46 @@ export type InsertInspection = z.infer<typeof insertInspectionSchema>;
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+
+// Phase 1: Configuration Types
+export type LaborRate = typeof laborRates.$inferSelect;
+export type InsertLaborRate = z.infer<typeof insertLaborRateSchema>;
+
+export type ShopFee = typeof shopFees.$inferSelect;
+export type InsertShopFee = z.infer<typeof insertShopFeeSchema>;
+
+export type Discount = typeof discounts.$inferSelect;
+export type InsertDiscount = z.infer<typeof insertDiscountSchema>;
+
+export type TaxSettings = typeof taxSettings.$inferSelect;
+export type InsertTaxSettings = z.infer<typeof insertTaxSettingsSchema>;
+
+export type JobCategory = typeof jobCategories.$inferSelect;
+export type InsertJobCategory = z.infer<typeof insertJobCategorySchema>;
+
+export type PaymentType = typeof paymentTypes.$inferSelect;
+export type InsertPaymentType = z.infer<typeof insertPaymentTypeSchema>;
+
+export type InvoiceSettings = typeof invoiceSettings.$inferSelect;
+export type InsertInvoiceSettings = z.infer<typeof insertInvoiceSettingsSchema>;
+
+export type RoSettings = typeof roSettings.$inferSelect;
+export type InsertRoSettings = z.infer<typeof insertRoSettingsSchema>;
+
+export type PartsMatrix = typeof partsMatrices.$inferSelect;
+export type InsertPartsMatrix = z.infer<typeof insertPartsMatrixSchema>;
+
+export type LaborMatrix = typeof laborMatrices.$inferSelect;
+export type InsertLaborMatrix = z.infer<typeof insertLaborMatrixSchema>;
+
+export type LeadSource = typeof leadSources.$inferSelect;
+export type InsertLeadSource = z.infer<typeof insertLeadSourceSchema>;
+
+export type CustomerSettings = typeof customerSettings.$inferSelect;
+export type InsertCustomerSettings = z.infer<typeof insertCustomerSettingsSchema>;
+
+export type TransparencySettings = typeof transparencySettings.$inferSelect;
+export type InsertTransparencySettings = z.infer<typeof insertTransparencySettingsSchema>;
+
+export type OrgBranding = typeof orgBranding.$inferSelect;
+export type InsertOrgBranding = z.infer<typeof insertOrgBrandingSchema>;
