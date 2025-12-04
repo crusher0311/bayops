@@ -15,6 +15,7 @@ import RepairOrderDetail from "@/pages/RepairOrderDetail";
 import NewRepairOrder from "@/pages/NewRepairOrder";
 import Inventory from "@/pages/Inventory";
 import Customers from "@/pages/Customers";
+import Appointments from "@/pages/Appointments";
 import Settings from "@/pages/Settings";
 import OrganizationSettings from "@/pages/OrganizationSettings";
 import MasterDashboard from "@/pages/MasterDashboard";
@@ -62,6 +63,7 @@ function ProtectedRouter() {
       <Route path="/ros/:id" component={RepairOrderDetail} />
       <Route path="/inventory" component={Inventory} />
       <Route path="/customers" component={Customers} />
+      <Route path="/appointments" component={Appointments} />
       <Route path="/reports" component={Dashboard} />
       <Route path="/settings" component={Settings} />
       <Route path="/org-settings" component={OrganizationSettings} />
