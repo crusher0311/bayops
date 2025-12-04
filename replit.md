@@ -81,8 +81,10 @@ Settings page with 6 tabs for comprehensive shop configuration:
 - `GEOAPIFY_API_KEY`: Address autocomplete
 - `VEHICLE_DATABASES_API_KEY`: Labor guide API
 - `AI_INTEGRATIONS_OPENAI_*`: Replit AI (auto-configured)
-- `PARTSTECH_USERNAME`: PartsTech account username
-- `PARTSTECH_API_KEY`: PartsTech API key
+- `PARTSTECH_USERNAME`: PartsTech shop/user account username
+- `PARTSTECH_API_KEY`: PartsTech shop/user API key
+- `PARTSTECH_PARTNER_ID`: PartsTech integration partner ID (developer credentials)
+- `PARTSTECH_PARTNER_KEY`: PartsTech integration partner API key (developer credentials)
 
 ## Design System
 - **Colors**: Slate grays (#0f172a), Blue (#2563EB) for primary actions, Purple gradient for AI features

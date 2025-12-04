@@ -8,6 +8,8 @@ const PARTSTECH_API_BASE = 'https://api.partstech.com';
 interface PartstechCredentials {
   username: string;
   apiKey: string;
+  partnerId: string;
+  partnerKey: string;
 }
 
 interface AccessTokenResponse {
@@ -60,12 +62,18 @@ let cachedToken: { token: string; expiresAt: number } | null = null;
 function getCredentials(): PartstechCredentials {
   const username = process.env.PARTSTECH_USERNAME;
   const apiKey = process.env.PARTSTECH_API_KEY;
+  const partnerId = process.env.PARTSTECH_PARTNER_ID;
+  const partnerKey = process.env.PARTSTECH_PARTNER_KEY;
 
   if (!username || !apiKey) {
-    throw new Error('PartsTech credentials not configured. Please set PARTSTECH_USERNAME and PARTSTECH_API_KEY.');
+    throw new Error('PartsTech user credentials not configured. Please set PARTSTECH_USERNAME and PARTSTECH_API_KEY.');
   }
 
-  return { username, apiKey };
+  if (!partnerId || !partnerKey) {
+    throw new Error('PartsTech partner credentials not configured. Please set PARTSTECH_PARTNER_ID and PARTSTECH_PARTNER_KEY.');
+  }
+
+  return { username, apiKey, partnerId, partnerKey };
 }
 
 /**
@@ -90,6 +98,10 @@ async function getAccessToken(): Promise<string> {
         user: {
           id: credentials.username,
           key: credentials.apiKey,
+        },
+        partner: {
+          id: credentials.partnerId,
+          key: credentials.partnerKey,
         },
       },
     }),
@@ -314,8 +326,13 @@ export async function getCategories(): Promise<Array<{ id: string; name: string;
 }
 
 /**
- * Check if PartsTech is configured
+ * Check if PartsTech is configured (requires both user and partner credentials)
  */
 export function isPartstechConfigured(): boolean {
-  return !!(process.env.PARTSTECH_USERNAME && process.env.PARTSTECH_API_KEY);
+  return !!(
+    process.env.PARTSTECH_USERNAME && 
+    process.env.PARTSTECH_API_KEY &&
+    process.env.PARTSTECH_PARTNER_ID &&
+    process.env.PARTSTECH_PARTNER_KEY
+  );
 }
