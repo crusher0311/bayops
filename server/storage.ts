@@ -10,6 +10,20 @@ import {
   inspectionTemplates,
   inspections,
   auditLogs,
+  laborRates,
+  shopFees,
+  discounts,
+  taxSettings,
+  jobCategories,
+  paymentTypes,
+  invoiceSettings,
+  roSettings,
+  partsMatrices,
+  laborMatrices,
+  leadSources,
+  customerSettings,
+  transparencySettings,
+  orgBranding,
   type User,
   type InsertUser,
   type Organization,
@@ -32,6 +46,34 @@ import {
   type InsertInspection,
   type AuditLog,
   type InsertAuditLog,
+  type LaborRate,
+  type InsertLaborRate,
+  type ShopFee,
+  type InsertShopFee,
+  type Discount,
+  type InsertDiscount,
+  type TaxSettings,
+  type InsertTaxSettings,
+  type JobCategory,
+  type InsertJobCategory,
+  type PaymentType,
+  type InsertPaymentType,
+  type InvoiceSettings,
+  type InsertInvoiceSettings,
+  type RoSettings,
+  type InsertRoSettings,
+  type PartsMatrix,
+  type InsertPartsMatrix,
+  type LaborMatrix,
+  type InsertLaborMatrix,
+  type LeadSource,
+  type InsertLeadSource,
+  type CustomerSettings,
+  type InsertCustomerSettings,
+  type TransparencySettings,
+  type InsertTransparencySettings,
+  type OrgBranding,
+  type InsertOrgBranding,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray, desc, sql } from "drizzle-orm";
@@ -106,6 +148,82 @@ export interface IStorage {
   // Audit Logs
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
   getAuditLogsByOrg(orgId: string, limit?: number): Promise<AuditLog[]>;
+
+  // ==========================================
+  // PHASE 1: CONFIGURATION SETTINGS
+  // ==========================================
+
+  // Labor Rates
+  getLaborRatesByLocation(locationId: string): Promise<LaborRate[]>;
+  createLaborRate(rate: InsertLaborRate): Promise<LaborRate>;
+  updateLaborRate(id: string, updates: Partial<InsertLaborRate>): Promise<LaborRate | undefined>;
+  deleteLaborRate(id: string): Promise<boolean>;
+
+  // Shop Fees
+  getShopFeesByLocation(locationId: string): Promise<ShopFee[]>;
+  createShopFee(fee: InsertShopFee): Promise<ShopFee>;
+  updateShopFee(id: string, updates: Partial<InsertShopFee>): Promise<ShopFee | undefined>;
+  deleteShopFee(id: string): Promise<boolean>;
+
+  // Discounts
+  getDiscountsByLocation(locationId: string): Promise<Discount[]>;
+  createDiscount(discount: InsertDiscount): Promise<Discount>;
+  updateDiscount(id: string, updates: Partial<InsertDiscount>): Promise<Discount | undefined>;
+  deleteDiscount(id: string): Promise<boolean>;
+
+  // Tax Settings
+  getTaxSettingsByLocation(locationId: string): Promise<TaxSettings | undefined>;
+  upsertTaxSettings(settings: InsertTaxSettings): Promise<TaxSettings>;
+
+  // Job Categories
+  getJobCategoriesByLocation(locationId: string): Promise<JobCategory[]>;
+  createJobCategory(category: InsertJobCategory): Promise<JobCategory>;
+  updateJobCategory(id: string, updates: Partial<InsertJobCategory>): Promise<JobCategory | undefined>;
+  deleteJobCategory(id: string): Promise<boolean>;
+
+  // Payment Types
+  getPaymentTypesByLocation(locationId: string): Promise<PaymentType[]>;
+  createPaymentType(type: InsertPaymentType): Promise<PaymentType>;
+  updatePaymentType(id: string, updates: Partial<InsertPaymentType>): Promise<PaymentType | undefined>;
+  deletePaymentType(id: string): Promise<boolean>;
+
+  // Invoice Settings
+  getInvoiceSettingsByLocation(locationId: string): Promise<InvoiceSettings | undefined>;
+  upsertInvoiceSettings(settings: InsertInvoiceSettings): Promise<InvoiceSettings>;
+
+  // RO Settings
+  getRoSettingsByLocation(locationId: string): Promise<RoSettings | undefined>;
+  upsertRoSettings(settings: InsertRoSettings): Promise<RoSettings>;
+
+  // Parts Matrix
+  getPartsMatricesByLocation(locationId: string): Promise<PartsMatrix[]>;
+  createPartsMatrix(matrix: InsertPartsMatrix): Promise<PartsMatrix>;
+  updatePartsMatrix(id: string, updates: Partial<InsertPartsMatrix>): Promise<PartsMatrix | undefined>;
+  deletePartsMatrix(id: string): Promise<boolean>;
+
+  // Labor Matrix
+  getLaborMatricesByLocation(locationId: string): Promise<LaborMatrix[]>;
+  createLaborMatrix(matrix: InsertLaborMatrix): Promise<LaborMatrix>;
+  updateLaborMatrix(id: string, updates: Partial<InsertLaborMatrix>): Promise<LaborMatrix | undefined>;
+  deleteLaborMatrix(id: string): Promise<boolean>;
+
+  // Lead Sources
+  getLeadSourcesByLocation(locationId: string): Promise<LeadSource[]>;
+  createLeadSource(source: InsertLeadSource): Promise<LeadSource>;
+  updateLeadSource(id: string, updates: Partial<InsertLeadSource>): Promise<LeadSource | undefined>;
+  deleteLeadSource(id: string): Promise<boolean>;
+
+  // Customer Settings
+  getCustomerSettingsByLocation(locationId: string): Promise<CustomerSettings | undefined>;
+  upsertCustomerSettings(settings: InsertCustomerSettings): Promise<CustomerSettings>;
+
+  // Transparency Settings
+  getTransparencySettingsByLocation(locationId: string): Promise<TransparencySettings | undefined>;
+  upsertTransparencySettings(settings: InsertTransparencySettings): Promise<TransparencySettings>;
+
+  // Org Branding
+  getOrgBranding(orgId: string): Promise<OrgBranding | undefined>;
+  upsertOrgBranding(branding: InsertOrgBranding): Promise<OrgBranding>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -399,6 +517,266 @@ export class DatabaseStorage implements IStorage {
 
   async getAuditLogsByOrg(orgId: string, limit: number = 100): Promise<AuditLog[]> {
     return db.select().from(auditLogs).where(eq(auditLogs.orgId, orgId)).orderBy(desc(auditLogs.timestamp)).limit(limit);
+  }
+
+  // ==========================================
+  // PHASE 1: CONFIGURATION SETTINGS IMPLEMENTATIONS
+  // ==========================================
+
+  // Labor Rates
+  async getLaborRatesByLocation(locationId: string): Promise<LaborRate[]> {
+    return db.select().from(laborRates).where(eq(laborRates.locationId, locationId)).orderBy(laborRates.sortOrder);
+  }
+
+  async createLaborRate(rate: InsertLaborRate): Promise<LaborRate> {
+    const [created] = await db.insert(laborRates).values(rate).returning();
+    return created;
+  }
+
+  async updateLaborRate(id: string, updates: Partial<InsertLaborRate>): Promise<LaborRate | undefined> {
+    const [updated] = await db.update(laborRates).set(updates).where(eq(laborRates.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deleteLaborRate(id: string): Promise<boolean> {
+    const result = await db.delete(laborRates).where(eq(laborRates.id, id));
+    return true;
+  }
+
+  // Shop Fees
+  async getShopFeesByLocation(locationId: string): Promise<ShopFee[]> {
+    return db.select().from(shopFees).where(eq(shopFees.locationId, locationId)).orderBy(shopFees.sortOrder);
+  }
+
+  async createShopFee(fee: InsertShopFee): Promise<ShopFee> {
+    const [created] = await db.insert(shopFees).values(fee).returning();
+    return created;
+  }
+
+  async updateShopFee(id: string, updates: Partial<InsertShopFee>): Promise<ShopFee | undefined> {
+    const [updated] = await db.update(shopFees).set(updates).where(eq(shopFees.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deleteShopFee(id: string): Promise<boolean> {
+    await db.delete(shopFees).where(eq(shopFees.id, id));
+    return true;
+  }
+
+  // Discounts
+  async getDiscountsByLocation(locationId: string): Promise<Discount[]> {
+    return db.select().from(discounts).where(eq(discounts.locationId, locationId)).orderBy(discounts.sortOrder);
+  }
+
+  async createDiscount(discount: InsertDiscount): Promise<Discount> {
+    const [created] = await db.insert(discounts).values(discount).returning();
+    return created;
+  }
+
+  async updateDiscount(id: string, updates: Partial<InsertDiscount>): Promise<Discount | undefined> {
+    const [updated] = await db.update(discounts).set(updates).where(eq(discounts.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deleteDiscount(id: string): Promise<boolean> {
+    await db.delete(discounts).where(eq(discounts.id, id));
+    return true;
+  }
+
+  // Tax Settings
+  async getTaxSettingsByLocation(locationId: string): Promise<TaxSettings | undefined> {
+    const [settings] = await db.select().from(taxSettings).where(eq(taxSettings.locationId, locationId));
+    return settings || undefined;
+  }
+
+  async upsertTaxSettings(settings: InsertTaxSettings): Promise<TaxSettings> {
+    const existing = await this.getTaxSettingsByLocation(settings.locationId);
+    if (existing) {
+      const [updated] = await db.update(taxSettings).set(settings).where(eq(taxSettings.locationId, settings.locationId)).returning();
+      return updated;
+    }
+    const [created] = await db.insert(taxSettings).values(settings).returning();
+    return created;
+  }
+
+  // Job Categories
+  async getJobCategoriesByLocation(locationId: string): Promise<JobCategory[]> {
+    return db.select().from(jobCategories).where(eq(jobCategories.locationId, locationId)).orderBy(jobCategories.sortOrder);
+  }
+
+  async createJobCategory(category: InsertJobCategory): Promise<JobCategory> {
+    const [created] = await db.insert(jobCategories).values(category).returning();
+    return created;
+  }
+
+  async updateJobCategory(id: string, updates: Partial<InsertJobCategory>): Promise<JobCategory | undefined> {
+    const [updated] = await db.update(jobCategories).set(updates).where(eq(jobCategories.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deleteJobCategory(id: string): Promise<boolean> {
+    await db.delete(jobCategories).where(eq(jobCategories.id, id));
+    return true;
+  }
+
+  // Payment Types
+  async getPaymentTypesByLocation(locationId: string): Promise<PaymentType[]> {
+    return db.select().from(paymentTypes).where(eq(paymentTypes.locationId, locationId)).orderBy(paymentTypes.sortOrder);
+  }
+
+  async createPaymentType(type: InsertPaymentType): Promise<PaymentType> {
+    const [created] = await db.insert(paymentTypes).values(type).returning();
+    return created;
+  }
+
+  async updatePaymentType(id: string, updates: Partial<InsertPaymentType>): Promise<PaymentType | undefined> {
+    const [updated] = await db.update(paymentTypes).set(updates).where(eq(paymentTypes.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deletePaymentType(id: string): Promise<boolean> {
+    await db.delete(paymentTypes).where(eq(paymentTypes.id, id));
+    return true;
+  }
+
+  // Invoice Settings
+  async getInvoiceSettingsByLocation(locationId: string): Promise<InvoiceSettings | undefined> {
+    const [settings] = await db.select().from(invoiceSettings).where(eq(invoiceSettings.locationId, locationId));
+    return settings || undefined;
+  }
+
+  async upsertInvoiceSettings(settings: InsertInvoiceSettings): Promise<InvoiceSettings> {
+    const existing = await this.getInvoiceSettingsByLocation(settings.locationId);
+    if (existing) {
+      const [updated] = await db.update(invoiceSettings).set(settings).where(eq(invoiceSettings.locationId, settings.locationId)).returning();
+      return updated;
+    }
+    const [created] = await db.insert(invoiceSettings).values(settings).returning();
+    return created;
+  }
+
+  // RO Settings
+  async getRoSettingsByLocation(locationId: string): Promise<RoSettings | undefined> {
+    const [settings] = await db.select().from(roSettings).where(eq(roSettings.locationId, locationId));
+    return settings || undefined;
+  }
+
+  async upsertRoSettings(settings: InsertRoSettings): Promise<RoSettings> {
+    const existing = await this.getRoSettingsByLocation(settings.locationId);
+    if (existing) {
+      const [updated] = await db.update(roSettings).set(settings).where(eq(roSettings.locationId, settings.locationId)).returning();
+      return updated;
+    }
+    const [created] = await db.insert(roSettings).values(settings).returning();
+    return created;
+  }
+
+  // Parts Matrix
+  async getPartsMatricesByLocation(locationId: string): Promise<PartsMatrix[]> {
+    return db.select().from(partsMatrices).where(eq(partsMatrices.locationId, locationId));
+  }
+
+  async createPartsMatrix(matrix: InsertPartsMatrix): Promise<PartsMatrix> {
+    const [created] = await db.insert(partsMatrices).values(matrix).returning();
+    return created;
+  }
+
+  async updatePartsMatrix(id: string, updates: Partial<InsertPartsMatrix>): Promise<PartsMatrix | undefined> {
+    const [updated] = await db.update(partsMatrices).set(updates).where(eq(partsMatrices.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deletePartsMatrix(id: string): Promise<boolean> {
+    await db.delete(partsMatrices).where(eq(partsMatrices.id, id));
+    return true;
+  }
+
+  // Labor Matrix
+  async getLaborMatricesByLocation(locationId: string): Promise<LaborMatrix[]> {
+    return db.select().from(laborMatrices).where(eq(laborMatrices.locationId, locationId));
+  }
+
+  async createLaborMatrix(matrix: InsertLaborMatrix): Promise<LaborMatrix> {
+    const [created] = await db.insert(laborMatrices).values(matrix).returning();
+    return created;
+  }
+
+  async updateLaborMatrix(id: string, updates: Partial<InsertLaborMatrix>): Promise<LaborMatrix | undefined> {
+    const [updated] = await db.update(laborMatrices).set(updates).where(eq(laborMatrices.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deleteLaborMatrix(id: string): Promise<boolean> {
+    await db.delete(laborMatrices).where(eq(laborMatrices.id, id));
+    return true;
+  }
+
+  // Lead Sources
+  async getLeadSourcesByLocation(locationId: string): Promise<LeadSource[]> {
+    return db.select().from(leadSources).where(eq(leadSources.locationId, locationId)).orderBy(leadSources.sortOrder);
+  }
+
+  async createLeadSource(source: InsertLeadSource): Promise<LeadSource> {
+    const [created] = await db.insert(leadSources).values(source).returning();
+    return created;
+  }
+
+  async updateLeadSource(id: string, updates: Partial<InsertLeadSource>): Promise<LeadSource | undefined> {
+    const [updated] = await db.update(leadSources).set(updates).where(eq(leadSources.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deleteLeadSource(id: string): Promise<boolean> {
+    await db.delete(leadSources).where(eq(leadSources.id, id));
+    return true;
+  }
+
+  // Customer Settings
+  async getCustomerSettingsByLocation(locationId: string): Promise<CustomerSettings | undefined> {
+    const [settings] = await db.select().from(customerSettings).where(eq(customerSettings.locationId, locationId));
+    return settings || undefined;
+  }
+
+  async upsertCustomerSettings(settings: InsertCustomerSettings): Promise<CustomerSettings> {
+    const existing = await this.getCustomerSettingsByLocation(settings.locationId);
+    if (existing) {
+      const [updated] = await db.update(customerSettings).set(settings).where(eq(customerSettings.locationId, settings.locationId)).returning();
+      return updated;
+    }
+    const [created] = await db.insert(customerSettings).values(settings).returning();
+    return created;
+  }
+
+  // Transparency Settings
+  async getTransparencySettingsByLocation(locationId: string): Promise<TransparencySettings | undefined> {
+    const [settings] = await db.select().from(transparencySettings).where(eq(transparencySettings.locationId, locationId));
+    return settings || undefined;
+  }
+
+  async upsertTransparencySettings(settings: InsertTransparencySettings): Promise<TransparencySettings> {
+    const existing = await this.getTransparencySettingsByLocation(settings.locationId);
+    if (existing) {
+      const [updated] = await db.update(transparencySettings).set(settings).where(eq(transparencySettings.locationId, settings.locationId)).returning();
+      return updated;
+    }
+    const [created] = await db.insert(transparencySettings).values(settings).returning();
+    return created;
+  }
+
+  // Org Branding
+  async getOrgBranding(orgId: string): Promise<OrgBranding | undefined> {
+    const [branding] = await db.select().from(orgBranding).where(eq(orgBranding.orgId, orgId));
+    return branding || undefined;
+  }
+
+  async upsertOrgBranding(branding: InsertOrgBranding): Promise<OrgBranding> {
+    const existing = await this.getOrgBranding(branding.orgId);
+    if (existing) {
+      const [updated] = await db.update(orgBranding).set(branding).where(eq(orgBranding.orgId, branding.orgId)).returning();
+      return updated;
+    }
+    const [created] = await db.insert(orgBranding).values(branding).returning();
+    return created;
   }
 }
 
