@@ -94,7 +94,7 @@ function App() {
         <Switch>
           <Route path="/inspection/:token" component={InspectionReport} />
           <Route path="/authorize/:token" component={CustomerAuthorization} />
-          <Route path="/checkin/:locationId" component={SelfCheckIn} />
+          <Route path="/checkin/:locationId/:token" component={SelfCheckIn} />
           <Route component={ProtectedRouter} />
         </Switch>
       </TooltipProvider>

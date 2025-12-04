@@ -935,13 +935,19 @@ export async function registerRoutes(
 
   // PUBLIC SELF CHECK-IN ROUTES
   
-  // Get location info for self check-in (public)
-  app.get("/api/public/location/:locationId", async (req, res) => {
+  // Get location info for self check-in (public, requires token)
+  app.get("/api/public/location/:locationId/:token", async (req, res) => {
     try {
       const location = await storage.getLocation(req.params.locationId);
       if (!location) {
         return res.status(404).json({ message: "Location not found" });
       }
+      
+      // Validate check-in token
+      if (!location.checkInToken || location.checkInToken !== req.params.token) {
+        return res.status(403).json({ message: "Invalid check-in link" });
+      }
+      
       res.json({
         id: location.id,
         name: location.name,
@@ -953,16 +959,16 @@ export async function registerRoutes(
     }
   });
 
-  // Customer lookup for self check-in (public)
+  // Customer lookup for self check-in (public, requires token)
   app.post("/api/public/customer-lookup", async (req, res) => {
     try {
-      const { locationId, method, value } = req.body;
+      const { locationId, token, method, value } = req.body;
       
-      if (!locationId || !method || !value) {
+      if (!locationId || !token || !method || !value) {
         return res.status(400).json({ message: "Missing required fields" });
       }
       
-      if (typeof locationId !== 'string' || typeof method !== 'string' || typeof value !== 'string') {
+      if (typeof locationId !== 'string' || typeof token !== 'string' || typeof method !== 'string' || typeof value !== 'string') {
         return res.status(400).json({ message: "Invalid field types" });
       }
       
@@ -973,6 +979,11 @@ export async function registerRoutes(
       const location = await storage.getLocation(locationId);
       if (!location) {
         return res.status(404).json({ message: "Location not found" });
+      }
+      
+      // Validate check-in token
+      if (!location.checkInToken || location.checkInToken !== token) {
+        return res.status(403).json({ message: "Invalid check-in link" });
       }
 
       if (method === 'phone') {
@@ -1060,17 +1071,17 @@ export async function registerRoutes(
     }
   });
 
-  // Self check-in submission (public)
+  // Self check-in submission (public, requires token)
   app.post("/api/public/self-checkin", async (req, res) => {
     try {
-      const { locationId, customer, vehicle, serviceDescription } = req.body;
+      const { locationId, token, customer, vehicle, serviceDescription } = req.body;
       
-      if (!locationId || !customer || !vehicle) {
+      if (!locationId || !token || !customer || !vehicle) {
         return res.status(400).json({ message: "Missing required fields" });
       }
       
-      if (typeof locationId !== 'string') {
-        return res.status(400).json({ message: "Invalid location ID" });
+      if (typeof locationId !== 'string' || typeof token !== 'string') {
+        return res.status(400).json({ message: "Invalid location ID or token" });
       }
       
       if (!customer.firstName || !customer.lastName || !customer.phone) {
@@ -1088,6 +1099,11 @@ export async function registerRoutes(
       const location = await storage.getLocation(locationId);
       if (!location) {
         return res.status(404).json({ message: "Location not found" });
+      }
+      
+      // Validate check-in token
+      if (!location.checkInToken || location.checkInToken !== token) {
+        return res.status(403).json({ message: "Invalid check-in link" });
       }
 
       // Validate customer ID belongs to this location AND organization if provided

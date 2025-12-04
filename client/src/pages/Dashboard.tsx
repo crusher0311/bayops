@@ -37,8 +37,11 @@ export default function Dashboard() {
     }
   }, [locations, currentLocationId, setCurrentLocation]);
 
-  const currentLocation = locations.find(l => l.id === currentLocationId);
-  const checkInUrl = currentLocationId ? `${window.location.origin}/checkin/${currentLocationId}` : '';
+  const currentLocation = locations.find(l => l.id === currentLocationId) as any;
+  const checkInToken = currentLocation?.checkInToken;
+  const checkInUrl = currentLocationId && checkInToken 
+    ? `${window.location.origin}/checkin/${currentLocationId}/${checkInToken}` 
+    : '';
 
   const downloadQRCode = () => {
     if (!qrRef.current) return;

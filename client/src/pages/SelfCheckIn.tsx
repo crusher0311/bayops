@@ -40,8 +40,9 @@ interface CustomerInfo {
 }
 
 export default function SelfCheckIn() {
-  const [, params] = useRoute('/checkin/:locationId');
+  const [, params] = useRoute('/checkin/:locationId/:token');
   const locationId = params?.locationId || '';
+  const checkInToken = params?.token || '';
   const { toast } = useToast();
 
   const [step, setStep] = useState<Step>('lookup');
@@ -52,14 +53,18 @@ export default function SelfCheckIn() {
   const [serviceDescription, setServiceDescription] = useState('');
   const [createdRoNumber, setCreatedRoNumber] = useState('');
 
-  const { data: location } = useQuery({
-    queryKey: ['public-location', locationId],
+  const { data: location, isError: locationError } = useQuery({
+    queryKey: ['public-location', locationId, checkInToken],
     queryFn: async () => {
-      const res = await fetch(`/api/public/location/${locationId}`);
-      if (!res.ok) return null;
+      const res = await fetch(`/api/public/location/${locationId}/${checkInToken}`);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Invalid link');
+      }
       return res.json();
     },
-    enabled: !!locationId,
+    enabled: !!locationId && !!checkInToken,
+    retry: false,
   });
 
   const lookupMutation = useMutation({
@@ -69,6 +74,7 @@ export default function SelfCheckIn() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           locationId,
+          token: checkInToken,
           method: lookupMethod,
           value: lookupValue,
         }),
@@ -115,6 +121,7 @@ export default function SelfCheckIn() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           locationId,
+          token: checkInToken,
           customer: customerInfo,
           vehicle: vehicleInfo,
           serviceDescription,
@@ -172,6 +179,24 @@ export default function SelfCheckIn() {
     setServiceDescription('');
     setCreatedRoNumber('');
   };
+
+  if (locationError || (!location && locationId && checkInToken)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <Card className="border-slate-700 bg-slate-800/50 backdrop-blur max-w-md mx-4">
+          <CardContent className="py-12 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/20 mb-6">
+              <Car className="w-8 h-8 text-red-400" />
+            </div>
+            <h2 className="text-xl font-bold text-white mb-2">Invalid Check-In Link</h2>
+            <p className="text-slate-400">
+              This check-in link is invalid or has expired. Please scan the QR code at the shop to get a valid link.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
