@@ -27,6 +27,11 @@ export const feeMethodEnum = pgEnum('fee_method', ['PERCENTAGE', 'FIXED']);
 export const feeCalculateOnEnum = pgEnum('fee_calculate_on', ['LABOR', 'PARTS', 'LABOR_PARTS', 'SUBTOTAL']);
 export const discountMethodEnum = pgEnum('discount_method', ['PERCENTAGE', 'FIXED']);
 
+// Wholesale/B2B Enums
+export const locationTypeEnum = pgEnum('location_type', ['RETAIL', 'WHOLESALE', 'DISTRIBUTION']);
+export const customerAccountTypeEnum = pgEnum('customer_account_type', ['RETAIL', 'WHOLESALE', 'DEALER', 'FLEET']);
+export const paymentTermsEnum = pgEnum('payment_terms', ['DUE_ON_RECEIPT', 'NET_15', 'NET_30', 'NET_45', 'NET_60', 'NET_90']);
+
 // Organizations
 export const organizations = pgTable("organizations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -50,6 +55,8 @@ export const locations = pgTable("locations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
   name: text("name").notNull(),
+  locationType: locationTypeEnum("location_type").notNull().default('RETAIL'),
+  parentLocationId: varchar("parent_location_id"),
   address: text("address").notNull(),
   addressLine2: text("address_line_2"),
   city: text("city").notNull(),
@@ -109,6 +116,16 @@ export const customers = pgTable("customers", {
   phone: text("phone").notNull(),
   address: text("address").notNull(),
   marketingConsent: boolean("marketing_consent").notNull().default(false),
+  accountType: customerAccountTypeEnum("account_type").notNull().default('RETAIL'),
+  companyName: text("company_name"),
+  taxExempt: boolean("tax_exempt").notNull().default(false),
+  resaleCertNumber: text("resale_cert_number"),
+  paymentTerms: paymentTermsEnum("payment_terms").notNull().default('DUE_ON_RECEIPT'),
+  creditLimit: decimal("credit_limit", { precision: 10, scale: 2 }),
+  currentBalance: decimal("current_balance", { precision: 10, scale: 2 }).notNull().default('0.00'),
+  pricingTierId: varchar("pricing_tier_id"),
+  accountNumber: text("account_number"),
+  notes: text("notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -626,6 +643,152 @@ export const laborMatricesRelations = relations(laborMatrices, ({ one }) => ({
   location: one(locations, {
     fields: [laborMatrices.locationId],
     references: [locations.id],
+  }),
+}));
+
+// ==========================================
+// WHOLESALE / B2B PRICING
+// ==========================================
+
+// Pricing Tiers (for wholesale/dealer accounts)
+export const pricingTiers = pgTable("pricing_tiers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  description: text("description"),
+  discountType: discountMethodEnum("discount_type").notNull().default('PERCENTAGE'),
+  discountValue: decimal("discount_value", { precision: 10, scale: 2 }).notNull(),
+  applyToTires: boolean("apply_to_tires").notNull().default(true),
+  applyToParts: boolean("apply_to_parts").notNull().default(true),
+  applyToLabor: boolean("apply_to_labor").notNull().default(false),
+  minOrderAmount: decimal("min_order_amount", { precision: 10, scale: 2 }),
+  volumeTiers: jsonb("volume_tiers").$type<Array<{
+    minQuantity: number;
+    discountMultiplier: number;
+  }>>(),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const pricingTiersRelations = relations(pricingTiers, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [pricingTiers.orgId],
+    references: [organizations.id],
+  }),
+  customers: many(customers),
+}));
+
+// Wholesale Orders (B2B bulk orders separate from retail ROs)
+export const wholesaleOrders = pgTable("wholesale_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  orderNumber: serial("order_number"),
+  customerId: varchar("customer_id").notNull().references(() => customers.id, { onDelete: 'cascade' }),
+  poNumber: text("po_number"),
+  status: text("status").notNull().default('DRAFT'),
+  lineItems: jsonb("line_items").notNull().$type<Array<{
+    id: string;
+    inventoryItemId: string;
+    sku: string;
+    description: string;
+    quantity: number;
+    unitCost: number;
+    unitPrice: number;
+    discount: number;
+    lineTotal: number;
+  }>>(),
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull().default('0.00'),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).notNull().default('0.00'),
+  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).notNull().default('0.00'),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull().default('0.00'),
+  notes: text("notes"),
+  shippingAddress: text("shipping_address"),
+  requestedDate: timestamp("requested_date"),
+  promisedDate: timestamp("promised_date"),
+  shippedDate: timestamp("shipped_date"),
+  deliveredDate: timestamp("delivered_date"),
+  salesRepId: varchar("sales_rep_id").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const wholesaleOrdersRelations = relations(wholesaleOrders, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [wholesaleOrders.orgId],
+    references: [organizations.id],
+  }),
+  location: one(locations, {
+    fields: [wholesaleOrders.locationId],
+    references: [locations.id],
+  }),
+  customer: one(customers, {
+    fields: [wholesaleOrders.customerId],
+    references: [customers.id],
+  }),
+  salesRep: one(users, {
+    fields: [wholesaleOrders.salesRepId],
+    references: [users.id],
+  }),
+}));
+
+// Customer Statements (for tracking A/R aging)
+export const customerStatements = pgTable("customer_statements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  customerId: varchar("customer_id").notNull().references(() => customers.id, { onDelete: 'cascade' }),
+  statementDate: timestamp("statement_date").notNull().defaultNow(),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  openingBalance: decimal("opening_balance", { precision: 10, scale: 2 }).notNull().default('0.00'),
+  totalCharges: decimal("total_charges", { precision: 10, scale: 2 }).notNull().default('0.00'),
+  totalPayments: decimal("total_payments", { precision: 10, scale: 2 }).notNull().default('0.00'),
+  closingBalance: decimal("closing_balance", { precision: 10, scale: 2 }).notNull().default('0.00'),
+  current: decimal("current", { precision: 10, scale: 2 }).notNull().default('0.00'),
+  days30: decimal("days_30", { precision: 10, scale: 2 }).notNull().default('0.00'),
+  days60: decimal("days_60", { precision: 10, scale: 2 }).notNull().default('0.00'),
+  days90: decimal("days_90", { precision: 10, scale: 2 }).notNull().default('0.00'),
+  days90Plus: decimal("days_90_plus", { precision: 10, scale: 2 }).notNull().default('0.00'),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const customerStatementsRelations = relations(customerStatements, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [customerStatements.orgId],
+    references: [organizations.id],
+  }),
+  customer: one(customers, {
+    fields: [customerStatements.customerId],
+    references: [customers.id],
+  }),
+}));
+
+// Customer Transactions (ledger for A/R tracking)
+export const customerTransactions = pgTable("customer_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  customerId: varchar("customer_id").notNull().references(() => customers.id, { onDelete: 'cascade' }),
+  type: text("type").notNull(),
+  referenceType: text("reference_type"),
+  referenceId: varchar("reference_id"),
+  description: text("description").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  runningBalance: decimal("running_balance", { precision: 10, scale: 2 }).notNull(),
+  dueDate: timestamp("due_date"),
+  paidDate: timestamp("paid_date"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const customerTransactionsRelations = relations(customerTransactions, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [customerTransactions.orgId],
+    references: [organizations.id],
+  }),
+  customer: one(customers, {
+    fields: [customerTransactions.customerId],
+    references: [customers.id],
   }),
 }));
 
@@ -1166,6 +1329,29 @@ export const insertOrgBrandingSchema = createInsertSchema(orgBranding).omit({
   createdAt: true,
 });
 
+// Wholesale / B2B Insert Schemas
+export const insertPricingTierSchema = createInsertSchema(pricingTiers).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertWholesaleOrderSchema = createInsertSchema(wholesaleOrders).omit({
+  id: true,
+  orderNumber: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCustomerStatementSchema = createInsertSchema(customerStatements).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCustomerTransactionSchema = createInsertSchema(customerTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Phase 2: Operational Workflows Insert Schemas
 export const insertServiceBaySchema = createInsertSchema(serviceBays).omit({
   id: true,
@@ -1319,3 +1505,16 @@ export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 
 export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+
+// Wholesale / B2B Types
+export type PricingTier = typeof pricingTiers.$inferSelect;
+export type InsertPricingTier = z.infer<typeof insertPricingTierSchema>;
+
+export type WholesaleOrder = typeof wholesaleOrders.$inferSelect;
+export type InsertWholesaleOrder = z.infer<typeof insertWholesaleOrderSchema>;
+
+export type CustomerStatement = typeof customerStatements.$inferSelect;
+export type InsertCustomerStatement = z.infer<typeof insertCustomerStatementSchema>;
+
+export type CustomerTransaction = typeof customerTransactions.$inferSelect;
+export type InsertCustomerTransaction = z.infer<typeof insertCustomerTransactionSchema>;

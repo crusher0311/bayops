@@ -34,6 +34,10 @@ import {
   partOrderItems,
   invoices,
   payments,
+  pricingTiers,
+  wholesaleOrders,
+  customerStatements,
+  customerTransactions,
   type User,
   type InsertUser,
   type Organization,
@@ -104,6 +108,14 @@ import {
   type InsertInvoice,
   type Payment,
   type InsertPayment,
+  type PricingTier,
+  type InsertPricingTier,
+  type WholesaleOrder,
+  type InsertWholesaleOrder,
+  type CustomerStatement,
+  type InsertCustomerStatement,
+  type CustomerTransaction,
+  type InsertCustomerTransaction,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray, desc, sql } from "drizzle-orm";
@@ -331,6 +343,37 @@ export interface IStorage {
   // Payments
   getPaymentsByInvoice(invoiceId: string): Promise<Payment[]>;
   createPayment(payment: InsertPayment): Promise<Payment>;
+
+  // ==========================================
+  // WHOLESALE / B2B
+  // ==========================================
+
+  // Pricing Tiers
+  getPricingTiersByOrg(orgId: string): Promise<PricingTier[]>;
+  getPricingTier(id: string, orgId: string): Promise<PricingTier | undefined>;
+  createPricingTier(tier: InsertPricingTier): Promise<PricingTier>;
+  updatePricingTier(id: string, orgId: string, updates: Partial<InsertPricingTier>): Promise<PricingTier | undefined>;
+  deletePricingTier(id: string, orgId: string): Promise<boolean>;
+
+  // Wholesale Orders
+  getWholesaleOrdersByLocation(locationId: string, orgId: string): Promise<WholesaleOrder[]>;
+  getWholesaleOrdersByCustomer(customerId: string, orgId: string): Promise<WholesaleOrder[]>;
+  getWholesaleOrder(id: string, orgId: string): Promise<WholesaleOrder | undefined>;
+  createWholesaleOrder(order: InsertWholesaleOrder): Promise<WholesaleOrder>;
+  updateWholesaleOrder(id: string, orgId: string, updates: Partial<InsertWholesaleOrder>): Promise<WholesaleOrder | undefined>;
+  deleteWholesaleOrder(id: string, orgId: string): Promise<boolean>;
+
+  // Customer Transactions (A/R Ledger)
+  getCustomerTransactions(customerId: string, orgId: string): Promise<CustomerTransaction[]>;
+  createCustomerTransaction(transaction: InsertCustomerTransaction): Promise<CustomerTransaction>;
+
+  // Customer Statements
+  getCustomerStatements(customerId: string, orgId: string): Promise<CustomerStatement[]>;
+  createCustomerStatement(statement: InsertCustomerStatement): Promise<CustomerStatement>;
+
+  // Wholesale-specific customer queries
+  getWholesaleCustomers(orgId: string): Promise<Customer[]>;
+  getCustomersWithBalance(orgId: string): Promise<Customer[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1278,6 +1321,130 @@ export class DatabaseStorage implements IStorage {
       });
     }
     return created;
+  }
+
+  // ==========================================
+  // WHOLESALE / B2B
+  // ==========================================
+
+  // Pricing Tiers
+  async getPricingTiersByOrg(orgId: string): Promise<PricingTier[]> {
+    return db.select().from(pricingTiers)
+      .where(eq(pricingTiers.orgId, orgId))
+      .orderBy(pricingTiers.sortOrder);
+  }
+
+  async getPricingTier(id: string, orgId: string): Promise<PricingTier | undefined> {
+    const [tier] = await db.select().from(pricingTiers)
+      .where(and(eq(pricingTiers.id, id), eq(pricingTiers.orgId, orgId)));
+    return tier || undefined;
+  }
+
+  async createPricingTier(tier: InsertPricingTier): Promise<PricingTier> {
+    const [created] = await db.insert(pricingTiers).values(tier).returning();
+    return created;
+  }
+
+  async updatePricingTier(id: string, orgId: string, updates: Partial<InsertPricingTier>): Promise<PricingTier | undefined> {
+    const [updated] = await db.update(pricingTiers)
+      .set(updates)
+      .where(and(eq(pricingTiers.id, id), eq(pricingTiers.orgId, orgId)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deletePricingTier(id: string, orgId: string): Promise<boolean> {
+    await db.delete(pricingTiers)
+      .where(and(eq(pricingTiers.id, id), eq(pricingTiers.orgId, orgId)));
+    return true;
+  }
+
+  // Wholesale Orders
+  async getWholesaleOrdersByLocation(locationId: string, orgId: string): Promise<WholesaleOrder[]> {
+    return db.select().from(wholesaleOrders)
+      .where(and(eq(wholesaleOrders.locationId, locationId), eq(wholesaleOrders.orgId, orgId)))
+      .orderBy(desc(wholesaleOrders.createdAt));
+  }
+
+  async getWholesaleOrdersByCustomer(customerId: string, orgId: string): Promise<WholesaleOrder[]> {
+    return db.select().from(wholesaleOrders)
+      .where(and(eq(wholesaleOrders.customerId, customerId), eq(wholesaleOrders.orgId, orgId)))
+      .orderBy(desc(wholesaleOrders.createdAt));
+  }
+
+  async getWholesaleOrder(id: string, orgId: string): Promise<WholesaleOrder | undefined> {
+    const [order] = await db.select().from(wholesaleOrders)
+      .where(and(eq(wholesaleOrders.id, id), eq(wholesaleOrders.orgId, orgId)));
+    return order || undefined;
+  }
+
+  async createWholesaleOrder(order: InsertWholesaleOrder): Promise<WholesaleOrder> {
+    const [created] = await db.insert(wholesaleOrders).values(order).returning();
+    return created;
+  }
+
+  async updateWholesaleOrder(id: string, orgId: string, updates: Partial<InsertWholesaleOrder>): Promise<WholesaleOrder | undefined> {
+    const [updated] = await db.update(wholesaleOrders)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(wholesaleOrders.id, id), eq(wholesaleOrders.orgId, orgId)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteWholesaleOrder(id: string, orgId: string): Promise<boolean> {
+    await db.delete(wholesaleOrders)
+      .where(and(eq(wholesaleOrders.id, id), eq(wholesaleOrders.orgId, orgId)));
+    return true;
+  }
+
+  // Customer Transactions (A/R Ledger)
+  async getCustomerTransactions(customerId: string, orgId: string): Promise<CustomerTransaction[]> {
+    return db.select().from(customerTransactions)
+      .where(and(eq(customerTransactions.customerId, customerId), eq(customerTransactions.orgId, orgId)))
+      .orderBy(desc(customerTransactions.createdAt));
+  }
+
+  async createCustomerTransaction(transaction: InsertCustomerTransaction): Promise<CustomerTransaction> {
+    const [created] = await db.insert(customerTransactions).values(transaction).returning();
+    // Update customer balance
+    const customer = await this.getCustomer(transaction.customerId, transaction.orgId);
+    if (customer) {
+      await this.updateCustomer(transaction.customerId, transaction.orgId, {
+        currentBalance: transaction.runningBalance,
+      });
+    }
+    return created;
+  }
+
+  // Customer Statements
+  async getCustomerStatements(customerId: string, orgId: string): Promise<CustomerStatement[]> {
+    return db.select().from(customerStatements)
+      .where(and(eq(customerStatements.customerId, customerId), eq(customerStatements.orgId, orgId)))
+      .orderBy(desc(customerStatements.statementDate));
+  }
+
+  async createCustomerStatement(statement: InsertCustomerStatement): Promise<CustomerStatement> {
+    const [created] = await db.insert(customerStatements).values(statement).returning();
+    return created;
+  }
+
+  // Wholesale-specific customer queries
+  async getWholesaleCustomers(orgId: string): Promise<Customer[]> {
+    return db.select().from(customers)
+      .where(and(
+        eq(customers.orgId, orgId),
+        inArray(customers.accountType, ['WHOLESALE', 'DEALER', 'FLEET'])
+      ))
+      .orderBy(customers.companyName, customers.lastName);
+  }
+
+  async getCustomersWithBalance(orgId: string): Promise<Customer[]> {
+    return db.select().from(customers)
+      .where(and(
+        eq(customers.orgId, orgId),
+        sql`CAST(${customers.currentBalance} AS DECIMAL) > 0`
+      ))
+      .orderBy(desc(customers.currentBalance));
   }
 }
 

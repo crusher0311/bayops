@@ -2576,5 +2576,225 @@ export async function registerRoutes(
     }
   });
 
+  // ==========================================
+  // WHOLESALE / B2B ROUTES
+  // ==========================================
+
+  // Pricing Tiers
+  app.get("/api/pricing-tiers", requireAuth, async (req, res) => {
+    try {
+      const tiers = await storage.getPricingTiersByOrg(req.user!.orgId);
+      res.json(tiers);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/pricing-tiers/:id", requireAuth, async (req, res) => {
+    try {
+      const tier = await storage.getPricingTier(req.params.id, req.user!.orgId);
+      if (!tier) {
+        return res.status(404).json({ message: "Pricing tier not found" });
+      }
+      res.json(tier);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/pricing-tiers", requireAuth, async (req, res) => {
+    try {
+      const tier = await storage.createPricingTier({
+        ...req.body,
+        orgId: req.user!.orgId,
+      });
+      res.status(201).json(tier);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/pricing-tiers/:id", requireAuth, async (req, res) => {
+    try {
+      const tier = await storage.updatePricingTier(req.params.id, req.user!.orgId, req.body);
+      if (!tier) {
+        return res.status(404).json({ message: "Pricing tier not found" });
+      }
+      res.json(tier);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/pricing-tiers/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deletePricingTier(req.params.id, req.user!.orgId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Wholesale Orders
+  app.get("/api/wholesale-orders", requireAuth, async (req, res) => {
+    try {
+      const { locationId, customerId } = req.query;
+      let orders;
+      if (customerId) {
+        const customer = await storage.getCustomer(customerId as string, req.user!.orgId);
+        if (!customer) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+        orders = await storage.getWholesaleOrdersByCustomer(customerId as string, req.user!.orgId);
+      } else if (locationId) {
+        const location = await storage.getLocation(locationId as string);
+        if (!location || location.orgId !== req.user!.orgId) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+        orders = await storage.getWholesaleOrdersByLocation(locationId as string, req.user!.orgId);
+      } else {
+        return res.status(400).json({ message: "locationId or customerId is required" });
+      }
+      res.json(orders);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/wholesale-orders/:id", requireAuth, async (req, res) => {
+    try {
+      const order = await storage.getWholesaleOrder(req.params.id, req.user!.orgId);
+      if (!order) {
+        return res.status(404).json({ message: "Wholesale order not found" });
+      }
+      res.json(order);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/wholesale-orders", requireAuth, async (req, res) => {
+    try {
+      const { locationId, customerId } = req.body;
+      const location = await storage.getLocation(locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied to location" });
+      }
+      const customer = await storage.getCustomer(customerId, req.user!.orgId);
+      if (!customer) {
+        return res.status(403).json({ message: "Access denied to customer" });
+      }
+      const order = await storage.createWholesaleOrder({
+        ...req.body,
+        orgId: req.user!.orgId,
+      });
+      res.status(201).json(order);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/wholesale-orders/:id", requireAuth, async (req, res) => {
+    try {
+      const order = await storage.updateWholesaleOrder(req.params.id, req.user!.orgId, req.body);
+      if (!order) {
+        return res.status(404).json({ message: "Wholesale order not found" });
+      }
+      res.json(order);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/wholesale-orders/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteWholesaleOrder(req.params.id, req.user!.orgId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Wholesale Customers
+  app.get("/api/wholesale-customers", requireAuth, async (req, res) => {
+    try {
+      const customers = await storage.getWholesaleCustomers(req.user!.orgId);
+      res.json(customers);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/customers-with-balance", requireAuth, async (req, res) => {
+    try {
+      const customers = await storage.getCustomersWithBalance(req.user!.orgId);
+      res.json(customers);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Customer Transactions (A/R Ledger)
+  app.get("/api/customers/:id/transactions", requireAuth, async (req, res) => {
+    try {
+      const customer = await storage.getCustomer(req.params.id, req.user!.orgId);
+      if (!customer) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const transactions = await storage.getCustomerTransactions(req.params.id, req.user!.orgId);
+      res.json(transactions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/customers/:id/transactions", requireAuth, async (req, res) => {
+    try {
+      const customer = await storage.getCustomer(req.params.id, req.user!.orgId);
+      if (!customer) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const transaction = await storage.createCustomerTransaction({
+        ...req.body,
+        customerId: req.params.id,
+        orgId: req.user!.orgId,
+      });
+      res.status(201).json(transaction);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Customer Statements
+  app.get("/api/customers/:id/statements", requireAuth, async (req, res) => {
+    try {
+      const customer = await storage.getCustomer(req.params.id, req.user!.orgId);
+      if (!customer) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const statements = await storage.getCustomerStatements(req.params.id, req.user!.orgId);
+      res.json(statements);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/customers/:id/statements", requireAuth, async (req, res) => {
+    try {
+      const customer = await storage.getCustomer(req.params.id, req.user!.orgId);
+      if (!customer) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const statement = await storage.createCustomerStatement({
+        ...req.body,
+        customerId: req.params.id,
+        orgId: req.user!.orgId,
+      });
+      res.status(201).json(statement);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }
