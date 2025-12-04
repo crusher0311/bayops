@@ -3439,7 +3439,7 @@ export async function registerRoutes(
     }
   });
 
-  // Add canned job to repair order (materialize template into RO line items)
+  // Add canned job to repair order (materialize template into RO jobs)
   app.post("/api/repair-orders/:roId/add-canned-job/:templateId", requireAuth, async (req, res) => {
     try {
       const ro = await storage.getRepairOrder(req.params.roId, req.user!.orgId);
@@ -3460,67 +3460,54 @@ export async function registerRoutes(
       // Get template parts
       const parts = await storage.getCannedJobPartsByTemplate(template.id);
 
-      // Get existing line items to determine next number
-      const currentItems = ro.lineItems as any[] || [];
-      const maxJobNum = currentItems
-        .filter((item: any) => item.type === 'LABOR')
-        .reduce((max: number, item: any) => Math.max(max, item.jobNumber || 0), 0);
-      const nextJobNum = maxJobNum + 1;
-
       // Get labor rate from location settings
       const laborRates = await storage.getLaborRatesByLocation(ro.locationId);
       const defaultRate = laborRates.find(r => r.isDefault) || laborRates[0];
-      const laborRate = template.laborRate || defaultRate?.rate || '100.00';
+      const laborRate = parseFloat(template.laborRate as string) || parseFloat(defaultRate?.rate as string) || 100.00;
+      const laborHours = parseFloat(template.laborHours as string) || 1;
 
-      // Create labor line item
-      const laborItem = {
-        id: crypto.randomUUID(),
+      // Create line items for this job
+      const lineItems: any[] = [];
+
+      // Add labor line item
+      lineItems.push({
+        id: `li-${Date.now()}`,
         type: 'LABOR',
-        jobNumber: nextJobNum,
         description: template.name,
-        notes: template.defaultNotes || template.description || '',
-        hours: parseFloat(template.laborHours as string),
-        rate: parseFloat(laborRate as string),
-        quantity: 1,
-        unitPrice: parseFloat(laborRate as string) * parseFloat(template.laborHours as string),
-        total: parseFloat(laborRate as string) * parseFloat(template.laborHours as string),
-        categoryId: template.categoryId,
-        status: 'PENDING',
+        quantity: laborHours,
+        unitCost: 0,
+        unitPrice: laborRate,
+        approved: false,
+      });
+
+      // Add part line items
+      parts.forEach((part, index) => {
+        lineItems.push({
+          id: `li-${Date.now()}-${index}`,
+          type: 'PART',
+          description: part.description,
+          partNumber: part.partNumber || '',
+          quantity: parseFloat(part.quantity as string) || 1,
+          unitCost: part.unitCost ? parseFloat(part.unitCost as string) : 0,
+          unitPrice: part.unitPrice ? parseFloat(part.unitPrice as string) : 0,
+          approved: false,
+        });
+      });
+
+      // Create new job
+      const newJob = {
+        id: `job-${Date.now()}`,
+        name: template.name,
+        description: template.description || template.defaultNotes || '',
+        lineItems,
       };
 
-      // Create part line items
-      const partItems = parts.map((part, index) => ({
-        id: crypto.randomUUID(),
-        type: 'PART',
-        jobNumber: nextJobNum,
-        description: part.description,
-        partNumber: part.partNumber || '',
-        quantity: parseFloat(part.quantity as string),
-        unitCost: part.unitCost ? parseFloat(part.unitCost as string) : 0,
-        unitPrice: part.unitPrice ? parseFloat(part.unitPrice as string) : 0,
-        total: (part.unitPrice ? parseFloat(part.unitPrice as string) : 0) * parseFloat(part.quantity as string),
-        inventoryItemId: part.inventoryItemId,
-        status: 'PENDING',
-      }));
-
-      // Add to existing line items
-      const updatedLineItems = [...currentItems, laborItem, ...partItems];
-
-      // Recalculate totals
-      const laborTotal = updatedLineItems
-        .filter((item: any) => item.type === 'LABOR')
-        .reduce((sum: number, item: any) => sum + (item.total || 0), 0);
-      const partsTotal = updatedLineItems
-        .filter((item: any) => item.type === 'PART' || item.type === 'TIRE')
-        .reduce((sum: number, item: any) => sum + (item.total || 0), 0);
-      const subtotal = laborTotal + partsTotal;
+      // Add to existing jobs array
+      const currentJobs = (ro.jobs as any[]) || [];
+      const updatedJobs = [...currentJobs, newJob];
 
       await storage.updateRepairOrder(ro.id, req.user!.orgId, {
-        lineItems: updatedLineItems,
-        laborTotal: laborTotal.toFixed(2),
-        partsTotal: partsTotal.toFixed(2),
-        subtotal: subtotal.toFixed(2),
-        total: subtotal.toFixed(2), // Will be recalculated with fees/taxes on frontend
+        jobs: updatedJobs,
       });
 
       const updatedRo = await storage.getRepairOrder(ro.id, req.user!.orgId);
