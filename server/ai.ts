@@ -386,3 +386,151 @@ Keep the tone helpful and not pushy.`;
     return "";
   }
 }
+
+// ==========================================
+// AI Work Order Generation from DVI
+// ==========================================
+
+interface DVIFinding {
+  itemLabel: string;
+  category: string;
+  status: 'YELLOW' | 'RED';
+  finding?: string;
+  recommendation?: string;
+}
+
+interface GeneratedLineItem {
+  type: 'LABOR' | 'PART';
+  description: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+interface GeneratedJob {
+  name: string;
+  description: string;
+  lineItems: GeneratedLineItem[];
+  priority: 'high' | 'medium';
+  sourceItemLabel: string;
+}
+
+interface GenerateJobsFromDVIResult {
+  jobs: GeneratedJob[];
+  summary: string;
+}
+
+export async function generateJobsFromDVI(
+  findings: DVIFinding[],
+  vehicle: VehicleInfo,
+  laborRate: number = 150
+): Promise<GenerateJobsFromDVIResult> {
+  const defaultResult: GenerateJobsFromDVIResult = { jobs: [], summary: '' };
+
+  if (findings.length === 0) {
+    return { jobs: [], summary: 'No items requiring attention were found in the inspection.' };
+  }
+
+  try {
+    const prompt = `You are an experienced automotive service advisor. Based on the following digital vehicle inspection findings, generate recommended repair jobs with labor and parts estimates.
+
+Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.mileage ? ` with ${vehicle.mileage.toLocaleString()} miles` : ''}
+Shop Labor Rate: $${laborRate}/hour
+
+Inspection Findings Requiring Attention:
+${findings.map((f, i) => `
+${i + 1}. ${f.itemLabel} (${f.category}) - ${f.status === 'RED' ? 'URGENT' : 'NEEDS ATTENTION'}
+   Finding: ${f.finding || 'Requires service'}
+   Tech Recommendation: ${f.recommendation || 'Service recommended'}
+`).join('\n')}
+
+Generate repair jobs in the following JSON format:
+{
+  "jobs": [
+    {
+      "name": "Short descriptive job name (e.g., 'Front Brake Pad Replacement')",
+      "description": "2-3 sentence customer-friendly description of the repair",
+      "priority": "high" or "medium" (RED items = high, YELLOW = medium),
+      "sourceItemLabel": "The inspection item label this job addresses",
+      "lineItems": [
+        {
+          "type": "LABOR",
+          "description": "Description of labor (e.g., 'Replace front brake pads')",
+          "quantity": 1.5,
+          "unitPrice": ${laborRate}
+        },
+        {
+          "type": "PART",
+          "description": "Part description (e.g., 'Front Brake Pads - Ceramic')",
+          "quantity": 1,
+          "unitPrice": 89.99
+        }
+      ]
+    }
+  ],
+  "summary": "A brief 1-2 sentence summary of all recommended work"
+}
+
+Guidelines:
+- Create one job per distinct repair/service needed
+- You may combine related findings into a single job if they're part of the same repair
+- Labor quantities are in hours (0.5 = 30 min, 1.0 = 1 hour, etc.)
+- Use realistic part prices for a ${vehicle.year} ${vehicle.make} ${vehicle.model}
+- For LABOR items, unitPrice should be the hourly rate (${laborRate})
+- Each job should have at least one labor line item
+- Include parts when they would typically be needed for that repair
+- Priority: RED findings = "high", YELLOW findings = "medium"`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 2000,
+      temperature: 0.5,
+      response_format: { type: "json_object" },
+    });
+
+    const content = response.choices[0]?.message?.content || "{}";
+    const parsed = JSON.parse(content);
+
+    if (!Array.isArray(parsed.jobs)) {
+      return defaultResult;
+    }
+
+    const validJobs: GeneratedJob[] = parsed.jobs
+      .filter((job: any): job is Record<string, any> =>
+        typeof job === 'object' &&
+        job !== null &&
+        typeof job.name === 'string' &&
+        typeof job.description === 'string' &&
+        Array.isArray(job.lineItems)
+      )
+      .map((job: any) => ({
+        name: job.name,
+        description: job.description,
+        priority: job.priority === 'high' ? 'high' : 'medium',
+        sourceItemLabel: typeof job.sourceItemLabel === 'string' ? job.sourceItemLabel : '',
+        lineItems: job.lineItems
+          .filter((li: any): li is Record<string, any> =>
+            typeof li === 'object' &&
+            li !== null &&
+            (li.type === 'LABOR' || li.type === 'PART') &&
+            typeof li.description === 'string' &&
+            typeof li.quantity === 'number' &&
+            typeof li.unitPrice === 'number'
+          )
+          .map((li: any) => ({
+            type: li.type as 'LABOR' | 'PART',
+            description: li.description,
+            quantity: li.quantity,
+            unitPrice: li.unitPrice,
+          })),
+      }));
+
+    return {
+      jobs: validJobs,
+      summary: typeof parsed.summary === 'string' ? parsed.summary : '',
+    };
+  } catch (error) {
+    console.error('AI generate jobs from DVI error:', error);
+    return defaultResult;
+  }
+}

@@ -715,6 +715,72 @@ export default function RepairOrderDetail() {
     },
   });
 
+  const generateJobsFromDVIMutation = useMutation({
+    mutationFn: async (inspectionId: string) => {
+      const res = await fetch('/api/inspections/ai/generate-jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ inspectionId, laborRate: 150 }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to generate jobs');
+      }
+      return res.json() as Promise<{
+        jobs: Array<{
+          name: string;
+          description: string;
+          priority: 'high' | 'medium';
+          sourceItemLabel: string;
+          lineItems: Array<{
+            type: 'LABOR' | 'PART';
+            description: string;
+            quantity: number;
+            unitPrice: number;
+          }>;
+        }>;
+        summary: string;
+      }>;
+    },
+    onSuccess: (data) => {
+      if (data.jobs.length === 0) {
+        toast({ title: 'No recommended services', description: 'No items requiring attention found in the inspection.' });
+        return;
+      }
+      
+      const currentJobs = ro?.jobs || [];
+      const newJobs = data.jobs.map((job, index) => ({
+        id: `job-${Date.now()}-${index}`,
+        name: job.name,
+        description: job.description,
+        lineItems: job.lineItems.map((li, liIndex) => ({
+          id: `li-${Date.now()}-${index}-${liIndex}`,
+          type: li.type,
+          description: li.description,
+          quantity: li.quantity,
+          unitCost: li.type === 'PART' ? li.unitPrice * 0.6 : 0,
+          unitPrice: li.unitPrice,
+          approved: false,
+        })),
+      }));
+      
+      updateRO.mutate({
+        id: roId,
+        jobs: [...currentJobs, ...newJobs],
+      });
+      
+      setActiveTab('estimate');
+      toast({ 
+        title: 'Work Order Generated!', 
+        description: `Added ${data.jobs.length} service(s) from inspection findings.` 
+      });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('estimate');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
@@ -1685,6 +1751,8 @@ export default function RepairOrderDetail() {
                     }}
                     isCompleted={!!roInspection.completedAt}
                     shareToken={roInspection.shareToken}
+                    onGenerateJobs={() => generateJobsFromDVIMutation.mutate(roInspection.id)}
+                    isGeneratingJobs={generateJobsFromDVIMutation.isPending}
                   />
                 ) : (
                   <Card className="border-dashed">

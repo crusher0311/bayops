@@ -15,6 +15,7 @@ import {
   Wrench,
   Building2,
   LayoutGrid,
+  Kanban,
   Calendar,
   Truck,
   Clock,
@@ -38,6 +39,7 @@ export function Sidebar() {
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
     { icon: ClipboardList, label: 'Job Board', href: '/job-board' },
+    { icon: Kanban, label: 'Dispatch Board', href: '/dispatch' },
     { icon: FileText, label: 'Repair Orders', href: '/ros' },
     { icon: ClipboardCheck, label: 'Inspections', href: '/inspections' },
     { icon: Calendar, label: 'Appointments', href: '/appointments' },

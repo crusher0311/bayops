@@ -9,6 +9,7 @@ import {
   generateServiceDescription,
   generateAuthorizationRequest,
   improveJobDescription,
+  generateJobsFromDVI,
 } from "./ai";
 import {
   sendSMS,
@@ -889,6 +890,80 @@ export async function registerRoutes(
       res.json({ summary });
     } catch (error: any) {
       console.error('DVI AI summary error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // DVI AI - Generate jobs from inspection findings
+  app.post("/api/inspections/ai/generate-jobs", requireAuth, async (req, res) => {
+    try {
+      const { inspectionId, laborRate } = req.body;
+      
+      if (!inspectionId) {
+        return res.status(400).json({ message: "Inspection ID is required" });
+      }
+
+      // Get the inspection with all related data
+      const inspection = await storage.getInspectionById(inspectionId);
+      if (!inspection) {
+        return res.status(404).json({ message: "Inspection not found" });
+      }
+
+      // Get the RO and vehicle info
+      const repairOrder = await storage.getRepairOrderById(inspection.roId);
+      if (!repairOrder) {
+        return res.status(404).json({ message: "Repair order not found" });
+      }
+
+      const vehicle = repairOrder.vehicleId 
+        ? await storage.getVehicle(repairOrder.vehicleId)
+        : null;
+      
+      if (!vehicle) {
+        return res.status(400).json({ message: "Vehicle information not found" });
+      }
+
+      // Get the template to get item labels
+      const template = await storage.getInspectionTemplateById(inspection.templateId);
+      const templateItems = (template?.items as any[]) || [];
+      const templateItemMap = new Map(templateItems.map(ti => [ti.id, ti]));
+
+      // Filter for RED and YELLOW items only
+      const items = (inspection.items as any[]) || [];
+      const findings = items
+        .filter(item => item.status === 'RED' || item.status === 'YELLOW')
+        .map(item => {
+          const templateItem = templateItemMap.get(item.itemId);
+          return {
+            itemLabel: templateItem?.label || item.itemId,
+            category: templateItem?.category || 'General',
+            status: item.status as 'RED' | 'YELLOW',
+            finding: item.finding,
+            recommendation: item.recommendation,
+          };
+        });
+
+      if (findings.length === 0) {
+        return res.json({ 
+          jobs: [], 
+          summary: 'No items requiring attention were found in this inspection.' 
+        });
+      }
+
+      const result = await generateJobsFromDVI(
+        findings,
+        { 
+          year: vehicle.year, 
+          make: vehicle.make, 
+          model: vehicle.model,
+          mileage: vehicle.mileage || repairOrder.odometerIn || null,
+        },
+        laborRate || 150
+      );
+
+      res.json(result);
+    } catch (error: any) {
+      console.error('DVI AI generate jobs error:', error);
       res.status(500).json({ message: error.message });
     }
   });

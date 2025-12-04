@@ -30,6 +30,7 @@ import QuickCheckIn from "@/pages/QuickCheckIn";
 import CustomerAuthorization from "@/pages/CustomerAuthorization";
 import SelfCheckIn from "@/pages/SelfCheckIn";
 import ServiceQueue from "@/pages/ServiceQueue";
+import DispatchBoard from "@/pages/DispatchBoard";
 
 function ProtectedRouter() {
   const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
@@ -68,6 +69,7 @@ function ProtectedRouter() {
       <Route path="/" component={Dashboard} />
       <Route path="/master-dashboard" component={MasterDashboard} />
       <Route path="/job-board" component={JobBoard} />
+      <Route path="/dispatch" component={DispatchBoard} />
       <Route path="/ros" component={RepairOrders} />
       <Route path="/ros/new" component={NewRepairOrder} />
       <Route path="/quick-checkin" component={QuickCheckIn} />

@@ -31,7 +31,8 @@ import {
   Mail,
   MessageSquare,
   Copy,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Wrench
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -75,6 +76,8 @@ interface InspectionFormProps {
   isCompleted?: boolean;
   shareToken?: string | null;
   onShare?: () => void;
+  onGenerateJobs?: () => void;
+  isGeneratingJobs?: boolean;
 }
 
 const STATUS_CONFIG = {
@@ -138,6 +141,8 @@ export function InspectionForm({
   isCompleted = false,
   shareToken,
   onShare,
+  onGenerateJobs,
+  isGeneratingJobs = false,
 }: InspectionFormProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -439,6 +444,27 @@ export function InspectionForm({
             >
               <Share2 className="w-4 h-4 mr-2" />
               Send to Customer
+            </Button>
+          )}
+          {isCompleted && onGenerateJobs && (totalStats.yellow > 0 || totalStats.red > 0) && (
+            <Button 
+              onClick={onGenerateJobs}
+              disabled={isGeneratingJobs}
+              size="lg"
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+              data-testid="button-generate-jobs-from-dvi"
+            >
+              {isGeneratingJobs ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating Work Order...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Create Work Order from Findings
+                </>
+              )}
             </Button>
           )}
           {!isCompleted && (
