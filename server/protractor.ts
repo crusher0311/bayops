@@ -154,23 +154,24 @@ export class ProtractorClient {
 
   // Make authenticated API request
   private async request<T>(endpoint: string, options: RequestInit = {}, locationId?: string): Promise<T> {
-    const url = `${PROTRACTOR_BASE_URL}${endpoint}`;
+    // Build URL with authentication as query parameters (per Swagger docs)
+    const urlObj = new URL(`${PROTRACTOR_BASE_URL}${endpoint}`);
+    urlObj.searchParams.set("connectionid", this.connectionId);
+    urlObj.searchParams.set("apiKey", this.apiKey);
+    urlObj.searchParams.set("authentication", this.authentication);
     
+    // Add locationId if provided
+    if (locationId) {
+      urlObj.searchParams.set("locationId", locationId);
+    }
+
     const headers: Record<string, string> = {
-      "connectionId": this.connectionId,
-      "apiKey": this.apiKey,
-      "authentication": this.authentication,
       "Accept": "application/json",
       "Content-Type": "application/json",
       ...(options.headers as Record<string, string> || {}),
     };
 
-    // Add locationId header if provided (required for most data endpoints)
-    if (locationId) {
-      headers["locationId"] = locationId;
-    }
-
-    const response = await fetch(url, {
+    const response = await fetch(urlObj.toString(), {
       ...options,
       headers,
     });
