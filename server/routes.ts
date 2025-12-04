@@ -18,6 +18,7 @@ import {
   generateInspectionEmail,
   isMessagingConfigured,
 } from "./messaging";
+import { createProtractorClient, createProtractorClientFromEnv } from "./protractor";
 import { 
   insertUserSchema,
   insertOrganizationSchema,
@@ -3788,5 +3789,515 @@ export async function registerRoutes(
     }
   });
 
+  // ==========================================
+  // PROTRACTOR INTEGRATION ROUTES
+  // ==========================================
+
+  // Get Protractor connection for a location
+  app.get("/api/integrations/protractor/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+
+      const connection = await storage.getProtractorConnection(req.params.locationId);
+      if (!connection) {
+        return res.json({ connected: false });
+      }
+
+      res.json({
+        connected: true,
+        isActive: connection.isActive,
+        lastSyncAt: connection.lastSyncAt,
+        lastError: connection.lastError,
+        createdAt: connection.createdAt,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Save Protractor credentials for a location
+  app.post("/api/integrations/protractor/:locationId/credentials", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+
+      const { connectionId, apiKey, authentication } = req.body;
+      if (!connectionId || !apiKey || !authentication) {
+        return res.status(400).json({ message: "connectionId, apiKey, and authentication are required" });
+      }
+
+      // Check if connection already exists
+      const existing = await storage.getProtractorConnection(req.params.locationId);
+      
+      if (existing) {
+        const updated = await storage.updateProtractorConnection(existing.id, {
+          connectionId,
+          apiKey,
+          authentication,
+          isActive: true,
+          lastError: null,
+        });
+        return res.json({ success: true, connection: updated });
+      }
+
+      const connection = await storage.createProtractorConnection({
+        locationId: req.params.locationId,
+        connectionId,
+        apiKey,
+        authentication,
+      });
+
+      res.json({ success: true, connection });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Test Protractor connection
+  app.post("/api/integrations/protractor/:locationId/test", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+
+      // Allow testing with provided credentials or saved credentials
+      let connectionId = req.body.connectionId;
+      let apiKey = req.body.apiKey;
+      let authentication = req.body.authentication;
+
+      if (!connectionId || !apiKey || !authentication) {
+        const connection = await storage.getProtractorConnection(req.params.locationId);
+        if (!connection) {
+          return res.status(400).json({ message: "No credentials provided or saved" });
+        }
+        connectionId = connection.connectionId;
+        apiKey = connection.apiKey;
+        authentication = connection.authentication;
+      }
+
+      const client = createProtractorClient(connectionId, apiKey, authentication);
+      const result = await client.testConnection();
+
+      if (result.success) {
+        // Update last sync time on success
+        const connection = await storage.getProtractorConnection(req.params.locationId);
+        if (connection) {
+          await storage.updateProtractorConnection(connection.id, {
+            lastSyncAt: new Date(),
+            lastError: null,
+          });
+        }
+      }
+
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
+  // Delete Protractor connection
+  app.delete("/api/integrations/protractor/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+
+      await storage.deleteProtractorConnection(req.params.locationId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get import jobs for a location
+  app.get("/api/integrations/protractor/:locationId/jobs", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+
+      const jobs = await storage.getProtractorImportJobs(req.params.locationId);
+      res.json(jobs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Start an import job
+  app.post("/api/integrations/protractor/:locationId/import", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+
+      const connection = await storage.getProtractorConnection(req.params.locationId);
+      if (!connection) {
+        return res.status(400).json({ message: "Protractor not connected for this location" });
+      }
+
+      const { importType, startDate, endDate } = req.body;
+      if (!importType) {
+        return res.status(400).json({ message: "importType is required" });
+      }
+
+      // Create the import job
+      const job = await storage.createProtractorImportJob({
+        connectionId: connection.id,
+        locationId: req.params.locationId,
+        importType,
+        status: 'PENDING',
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+      });
+
+      // Start the import process asynchronously
+      runProtractorImport(job.id, connection, location, req.user!.orgId).catch(err => {
+        console.error(`Import job ${job.id} failed:`, err);
+      });
+
+      res.json({ success: true, job });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get import job status
+  app.get("/api/integrations/protractor/jobs/:jobId", requireAuth, async (req, res) => {
+    try {
+      const job = await storage.getProtractorImportJob(req.params.jobId);
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+
+      const location = await storage.getLocation(job.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+
+      res.json(job);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Quick test using environment variables (for demo purposes)
+  app.post("/api/integrations/protractor/test-env", requireAuth, async (req, res) => {
+    try {
+      const client = createProtractorClientFromEnv();
+      if (!client) {
+        return res.status(400).json({ success: false, message: "Protractor credentials not configured in environment" });
+      }
+
+      const result = await client.testConnection();
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
+  // Fetch contacts from Protractor (preview)
+  app.get("/api/integrations/protractor/:locationId/preview/contacts", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+
+      const connection = await storage.getProtractorConnection(req.params.locationId);
+      if (!connection) {
+        return res.status(400).json({ message: "Protractor not connected" });
+      }
+
+      const client = createProtractorClient(connection.connectionId, connection.apiKey, connection.authentication);
+      const contacts = await client.getAllContacts();
+      
+      res.json({ count: contacts.length, contacts: contacts.slice(0, 20) }); // Return first 20 for preview
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
+}
+
+// Import orchestrator function
+async function runProtractorImport(
+  jobId: string, 
+  connection: any, 
+  location: any, 
+  orgId: string
+) {
+  const client = createProtractorClient(
+    connection.connectionId, 
+    connection.apiKey, 
+    connection.authentication
+  );
+
+  const job = await storage.getProtractorImportJob(jobId);
+  if (!job) return;
+
+  try {
+    await storage.updateProtractorImportJob(jobId, {
+      status: 'RUNNING',
+      startedAt: new Date(),
+    });
+
+    const errors: Array<{ record: string; error: string; timestamp: string }> = [];
+    let totalRecords = 0;
+    let processedRecords = 0;
+    let failedRecords = 0;
+
+    // Get the default workflow for creating ROs
+    const workflow = await storage.getDefaultWorkflow(orgId);
+    if (!workflow) {
+      throw new Error("No default workflow found");
+    }
+
+    // Import contacts (customers)
+    if (job.importType === 'FULL' || job.importType === 'CUSTOMERS') {
+      console.log(`[Protractor Import ${jobId}] Fetching contacts...`);
+      const contacts = await client.getAllContacts();
+      totalRecords += contacts.length;
+
+      for (const contact of contacts) {
+        try {
+          // Check if customer already exists by protractorId
+          const existing = await storage.getCustomerByProtractorId(orgId, contact.ID);
+          
+          const customerData = {
+            orgId,
+            firstName: contact.Name?.FirstName || 'Unknown',
+            lastName: contact.Name?.LastName || contact.FileAs || 'Customer',
+            email: contact.Email || '',
+            phone: contact.Phone1 || '',
+            address: contact.Address ? 
+              `${contact.Address.Street || ''}, ${contact.Address.City || ''}, ${contact.Address.Province || ''} ${contact.Address.PostalCode || ''}`.trim() 
+              : '',
+            companyName: contact.Company || null,
+            marketingConsent: !contact.NoEmail && !contact.NoMessaging,
+            notes: contact.Note || null,
+            protractorId: contact.ID,
+          };
+
+          if (existing) {
+            await storage.updateCustomer(existing.id, customerData);
+          } else {
+            await storage.createCustomer(customerData);
+          }
+          processedRecords++;
+        } catch (err: any) {
+          failedRecords++;
+          errors.push({
+            record: `Contact: ${contact.FileAs || contact.ID}`,
+            error: err.message,
+            timestamp: new Date().toISOString(),
+          });
+        }
+
+        // Update progress periodically
+        if (processedRecords % 10 === 0) {
+          await storage.updateProtractorImportJob(jobId, {
+            totalRecords,
+            processedRecords,
+            failedRecords,
+            errorLog: errors,
+          });
+        }
+      }
+    }
+
+    // Import vehicles
+    if (job.importType === 'FULL' || job.importType === 'VEHICLES') {
+      console.log(`[Protractor Import ${jobId}] Fetching vehicles...`);
+      
+      // Get all customers with protractor IDs to fetch their vehicles
+      const customersWithProtractor = await storage.getCustomersByOrg(orgId);
+      const protractorCustomers = customersWithProtractor.filter(c => c.protractorId);
+
+      for (const customer of protractorCustomers) {
+        try {
+          const vehicles = await client.getServiceItemsByOwner(customer.protractorId!);
+          totalRecords += vehicles.length;
+
+          for (const vehicle of vehicles) {
+            try {
+              const existing = await storage.getVehicleByProtractorId(vehicle.ID);
+
+              const vehicleData = {
+                customerId: customer.id,
+                vin: vehicle.VIN || '',
+                year: vehicle.Year || 0,
+                make: vehicle.Make || 'Unknown',
+                model: vehicle.Model || 'Unknown',
+                trim: vehicle.SubModel || null,
+                licensePlate: vehicle.LicensePlate || vehicle.LookUp || '',
+                mileage: vehicle.Mileage || null,
+                color: vehicle.Color || null,
+                notes: vehicle.Note || null,
+                protractorId: vehicle.ID,
+              };
+
+              if (existing) {
+                await storage.updateVehicle(existing.id, vehicleData);
+              } else {
+                await storage.createVehicle(vehicleData);
+              }
+              processedRecords++;
+            } catch (err: any) {
+              failedRecords++;
+              errors.push({
+                record: `Vehicle: ${vehicle.VIN || vehicle.ID}`,
+                error: err.message,
+                timestamp: new Date().toISOString(),
+              });
+            }
+          }
+        } catch (err: any) {
+          errors.push({
+            record: `Vehicles for customer: ${customer.firstName} ${customer.lastName}`,
+            error: err.message,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      }
+    }
+
+    // Import work orders / invoices
+    if (job.importType === 'FULL' || job.importType === 'WORK_ORDERS' || job.importType === 'INVOICES') {
+      console.log(`[Protractor Import ${jobId}] Fetching invoices...`);
+      
+      const startDate = job.startDate || new Date(Date.now() - 365 * 24 * 60 * 60 * 1000); // Default to last year
+      const endDate = job.endDate || new Date();
+
+      try {
+        const invoices = await client.getInvoices(startDate, endDate);
+        totalRecords += invoices.length;
+
+        for (const invoice of invoices) {
+          try {
+            // Find customer by protractor contact ID
+            const customer = invoice.ContactID ? 
+              await storage.getCustomerByProtractorId(orgId, invoice.ContactID) : null;
+            
+            // Find vehicle by protractor service item ID
+            const vehicle = invoice.ServiceItemID ?
+              await storage.getVehicleByProtractorId(invoice.ServiceItemID) : null;
+
+            if (!customer || !vehicle) {
+              // Skip if we don't have the customer or vehicle
+              failedRecords++;
+              errors.push({
+                record: `Invoice: ${invoice.Number || invoice.ID}`,
+                error: `Missing customer (${invoice.ContactID}) or vehicle (${invoice.ServiceItemID})`,
+                timestamp: new Date().toISOString(),
+              });
+              continue;
+            }
+
+            const existing = await storage.getRepairOrderByProtractorId(orgId, invoice.ID);
+
+            // Map service packages to jobs
+            const jobs = (invoice.ServicePackages || []).map((pkg: any, idx: number) => ({
+              id: `job-${idx}`,
+              name: pkg.Title || 'Service',
+              description: pkg.Description || '',
+              lineItems: (pkg.Lines || []).map((line: any, lineIdx: number) => ({
+                id: `line-${idx}-${lineIdx}`,
+                type: line.Type === 'Labor' ? 'LABOR' : line.Type === 'Material' ? 'PART' : 'FEE',
+                description: line.Description || '',
+                quantity: line.Quantity || 1,
+                unitCost: line.Cost || 0,
+                unitPrice: line.SellPrice || 0,
+                approved: true,
+                manufacturer: line.Manufacturer || null,
+                partNumber: line.PartNumber || null,
+              })),
+            }));
+
+            const roData = {
+              orgId,
+              locationId: location.id,
+              customerId: customer.id,
+              vehicleId: vehicle.id,
+              advisorId: null as any, // Will need to map service advisor
+              workflowId: workflow.id,
+              status: 'INVOICED',
+              jobs,
+              notes: invoice.Note || '',
+              odometerIn: invoice.Mileage || 0,
+              completedAt: invoice.CompletedDate ? new Date(invoice.CompletedDate) : null,
+              protractorId: invoice.ID,
+              protractorInvoiceNumber: invoice.InvoiceNumber || invoice.Number,
+            };
+
+            if (existing) {
+              await storage.updateRepairOrder(existing.id, roData);
+            } else {
+              // For new ROs, we need an advisor - use the first available user
+              const users = await storage.getUsersByOrg(orgId);
+              const advisor = users.find(u => u.role === 'ADVISOR' || u.role === 'OWNER' || u.role === 'MANAGER');
+              if (advisor) {
+                roData.advisorId = advisor.id;
+                await storage.createRepairOrder(roData);
+              }
+            }
+            processedRecords++;
+          } catch (err: any) {
+            failedRecords++;
+            errors.push({
+              record: `Invoice: ${invoice.Number || invoice.ID}`,
+              error: err.message,
+              timestamp: new Date().toISOString(),
+            });
+          }
+        }
+      } catch (err: any) {
+        errors.push({
+          record: 'Invoices fetch',
+          error: err.message,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+
+    // Complete the job
+    await storage.updateProtractorImportJob(jobId, {
+      status: 'COMPLETED',
+      totalRecords,
+      processedRecords,
+      failedRecords,
+      errorLog: errors,
+      completedAt: new Date(),
+    });
+
+    // Update connection last sync time
+    await storage.updateProtractorConnection(connection.id, {
+      lastSyncAt: new Date(),
+      lastError: failedRecords > 0 ? `${failedRecords} records failed` : null,
+    });
+
+    console.log(`[Protractor Import ${jobId}] Complete: ${processedRecords}/${totalRecords} records, ${failedRecords} failed`);
+
+  } catch (error: any) {
+    console.error(`[Protractor Import ${jobId}] Error:`, error);
+    
+    await storage.updateProtractorImportJob(jobId, {
+      status: 'FAILED',
+      completedAt: new Date(),
+      errorLog: [{ record: 'Job', error: error.message, timestamp: new Date().toISOString() }],
+    });
+
+    await storage.updateProtractorConnection(connection.id, {
+      lastError: error.message,
+    });
+  }
 }

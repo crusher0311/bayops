@@ -127,6 +127,7 @@ export const customers = pgTable("customers", {
   pricingTierId: varchar("pricing_tier_id"),
   accountNumber: text("account_number"),
   notes: text("notes"),
+  protractorId: varchar("protractor_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -160,6 +161,7 @@ export const vehicles = pgTable("vehicles", {
   tireSizeFront: text("tire_size_front"),
   tireSizeRear: text("tire_size_rear"),
   notes: text("notes"),
+  protractorId: varchar("protractor_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -239,6 +241,8 @@ export const repairOrders = pgTable("repair_orders", {
   customerSignature: text("customer_signature"),
   authorizationSentAt: timestamp("authorization_sent_at"),
   authorizationSentVia: text("authorization_sent_via"),
+  protractorId: varchar("protractor_id"),
+  protractorInvoiceNumber: integer("protractor_invoice_number"),
 });
 
 export const repairOrdersRelations = relations(repairOrders, ({ one, many }) => ({
@@ -1659,3 +1663,95 @@ export type InsertCannedJobPart = z.infer<typeof insertCannedJobPartSchema>;
 
 export type ServiceQueueEntry = typeof serviceQueueEntries.$inferSelect;
 export type InsertServiceQueueEntry = z.infer<typeof insertServiceQueueEntrySchema>;
+
+// ==========================================
+// PROTRACTOR INTEGRATION
+// ==========================================
+
+// Import Job Status Enum
+export const protractorImportStatusEnum = pgEnum('protractor_import_status', [
+  'PENDING',
+  'RUNNING',
+  'COMPLETED',
+  'FAILED',
+  'CANCELLED'
+]);
+
+// Import Job Type Enum
+export const protractorImportTypeEnum = pgEnum('protractor_import_type', [
+  'FULL',
+  'CUSTOMERS',
+  'VEHICLES',
+  'WORK_ORDERS',
+  'INVOICES'
+]);
+
+// Protractor Connections - Store API credentials per location
+export const protractorConnections = pgTable("protractor_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }).unique(),
+  connectionId: text("connection_id").notNull(),
+  apiKey: text("api_key").notNull(),
+  authentication: text("authentication").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  lastSyncAt: timestamp("last_sync_at"),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const protractorConnectionsRelations = relations(protractorConnections, ({ one, many }) => ({
+  location: one(locations, {
+    fields: [protractorConnections.locationId],
+    references: [locations.id],
+  }),
+  importJobs: many(protractorImportJobs),
+}));
+
+// Protractor Import Jobs - Track import progress
+export const protractorImportJobs = pgTable("protractor_import_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  connectionId: varchar("connection_id").notNull().references(() => protractorConnections.id, { onDelete: 'cascade' }),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  importType: protractorImportTypeEnum("import_type").notNull(),
+  status: protractorImportStatusEnum("status").notNull().default('PENDING'),
+  totalRecords: integer("total_records").notNull().default(0),
+  processedRecords: integer("processed_records").notNull().default(0),
+  failedRecords: integer("failed_records").notNull().default(0),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  errorLog: jsonb("error_log").$type<Array<{ record: string; error: string; timestamp: string }>>(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const protractorImportJobsRelations = relations(protractorImportJobs, ({ one }) => ({
+  connection: one(protractorConnections, {
+    fields: [protractorImportJobs.connectionId],
+    references: [protractorConnections.id],
+  }),
+  location: one(locations, {
+    fields: [protractorImportJobs.locationId],
+    references: [locations.id],
+  }),
+}));
+
+// Insert schemas
+export const insertProtractorConnectionSchema = createInsertSchema(protractorConnections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProtractorImportJobSchema = createInsertSchema(protractorImportJobs).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types
+export type ProtractorConnection = typeof protractorConnections.$inferSelect;
+export type InsertProtractorConnection = z.infer<typeof insertProtractorConnectionSchema>;
+
+export type ProtractorImportJob = typeof protractorImportJobs.$inferSelect;
+export type InsertProtractorImportJob = z.infer<typeof insertProtractorImportJobSchema>;

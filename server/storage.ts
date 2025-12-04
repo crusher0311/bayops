@@ -41,6 +41,8 @@ import {
   cannedJobTemplates,
   cannedJobParts,
   serviceQueueEntries,
+  protractorConnections,
+  protractorImportJobs,
   type User,
   type InsertUser,
   type Organization,
@@ -123,6 +125,10 @@ import {
   type InsertCannedJobTemplate,
   type CannedJobPart,
   type InsertCannedJobPart,
+  type ProtractorConnection,
+  type InsertProtractorConnection,
+  type ProtractorImportJob,
+  type InsertProtractorImportJob,
   type ServiceQueueEntry,
   type InsertServiceQueueEntry,
 } from "@shared/schema";
@@ -1594,6 +1600,94 @@ export class DatabaseStorage implements IStorage {
         inArray(serviceQueueEntries.status, ['WAITING', 'IN_PROGRESS'])
       ));
     return result[0]?.maxPosition || 1;
+  }
+
+  // ==========================================
+  // PROTRACTOR INTEGRATION
+  // ==========================================
+
+  // Protractor Connections
+  async getProtractorConnection(locationId: string): Promise<ProtractorConnection | undefined> {
+    const [connection] = await db.select().from(protractorConnections)
+      .where(eq(protractorConnections.locationId, locationId));
+    return connection || undefined;
+  }
+
+  async getProtractorConnectionById(id: string): Promise<ProtractorConnection | undefined> {
+    const [connection] = await db.select().from(protractorConnections)
+      .where(eq(protractorConnections.id, id));
+    return connection || undefined;
+  }
+
+  async createProtractorConnection(connection: InsertProtractorConnection): Promise<ProtractorConnection> {
+    const [created] = await db.insert(protractorConnections).values(connection).returning();
+    return created;
+  }
+
+  async updateProtractorConnection(id: string, updates: Partial<InsertProtractorConnection>): Promise<ProtractorConnection | undefined> {
+    const [updated] = await db.update(protractorConnections)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(protractorConnections.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteProtractorConnection(locationId: string): Promise<boolean> {
+    await db.delete(protractorConnections).where(eq(protractorConnections.locationId, locationId));
+    return true;
+  }
+
+  // Protractor Import Jobs
+  async getProtractorImportJobs(locationId: string): Promise<ProtractorImportJob[]> {
+    return db.select().from(protractorImportJobs)
+      .where(eq(protractorImportJobs.locationId, locationId))
+      .orderBy(sql`${protractorImportJobs.createdAt} DESC`);
+  }
+
+  async getProtractorImportJob(id: string): Promise<ProtractorImportJob | undefined> {
+    const [job] = await db.select().from(protractorImportJobs)
+      .where(eq(protractorImportJobs.id, id));
+    return job || undefined;
+  }
+
+  async createProtractorImportJob(job: InsertProtractorImportJob): Promise<ProtractorImportJob> {
+    const [created] = await db.insert(protractorImportJobs).values(job).returning();
+    return created;
+  }
+
+  async updateProtractorImportJob(id: string, updates: Partial<InsertProtractorImportJob>): Promise<ProtractorImportJob | undefined> {
+    const [updated] = await db.update(protractorImportJobs)
+      .set(updates)
+      .where(eq(protractorImportJobs.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Customer lookup by protractorId
+  async getCustomerByProtractorId(orgId: string, protractorId: string): Promise<Customer | undefined> {
+    const [customer] = await db.select().from(customers)
+      .where(and(
+        eq(customers.orgId, orgId),
+        eq(customers.protractorId, protractorId)
+      ));
+    return customer || undefined;
+  }
+
+  // Vehicle lookup by protractorId
+  async getVehicleByProtractorId(protractorId: string): Promise<Vehicle | undefined> {
+    const [vehicle] = await db.select().from(vehicles)
+      .where(eq(vehicles.protractorId, protractorId));
+    return vehicle || undefined;
+  }
+
+  // Repair order lookup by protractorId
+  async getRepairOrderByProtractorId(orgId: string, protractorId: string): Promise<RepairOrder | undefined> {
+    const [ro] = await db.select().from(repairOrders)
+      .where(and(
+        eq(repairOrders.orgId, orgId),
+        eq(repairOrders.protractorId, protractorId)
+      ));
+    return ro || undefined;
   }
 }
 
