@@ -20,8 +20,11 @@ import {
   ArrowRight,
   ScanLine,
   Plus,
-  Zap
+  Zap,
+  CreditCard
 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import type { Customer, Vehicle, Workflow } from '@shared/schema';
 
@@ -40,12 +43,23 @@ export default function QuickCheckIn() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const [lookupMethod, setLookupMethod] = useState<'vin' | 'plate'>('vin');
   const [vin, setVin] = useState('');
+  const [plate, setPlate] = useState('');
+  const [plateState, setPlateState] = useState('');
   const [isDecoding, setIsDecoding] = useState(false);
   const [decodedVehicle, setDecodedVehicle] = useState<VehicleDecodeResult | null>(null);
   const [existingVehicle, setExistingVehicle] = useState<Vehicle | null>(null);
   const [existingCustomer, setExistingCustomer] = useState<Customer | null>(null);
   const [step, setStep] = useState<'vin' | 'customer' | 'confirm'>('vin');
+
+  const US_STATES = [
+    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+    'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+    'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+    'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+    'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
+  ];
   
   const [newCustomer, setNewCustomer] = useState({
     firstName: '',
@@ -118,6 +132,101 @@ export default function QuickCheckIn() {
       }
     } catch (error) {
       toast({ title: 'VIN Decode Failed', description: 'Could not decode VIN. Please enter vehicle details manually.', variant: 'destructive' });
+    } finally {
+      setIsDecoding(false);
+    }
+  };
+
+  const lookupPlate = async () => {
+    if (!plate.trim() || !plateState) {
+      toast({ title: 'Missing Info', description: 'Please enter plate number and select state', variant: 'destructive' });
+      return;
+    }
+
+    setIsDecoding(true);
+    try {
+      // First check if we have this plate in our system
+      const existingByPlate = allVehicles.find(v => 
+        v.licensePlate?.toUpperCase().replace(/[^A-Z0-9]/g, '') === plate.toUpperCase().replace(/[^A-Z0-9]/g, '')
+      );
+      
+      if (existingByPlate) {
+        setExistingVehicle(existingByPlate);
+        setVin(existingByPlate.vin || '');
+        const customer = allCustomers.find(c => c.id === existingByPlate.customerId);
+        if (customer) {
+          setExistingCustomer(customer);
+          setStep('confirm');
+        } else {
+          setStep('customer');
+        }
+        setDecodedVehicle({
+          year: existingByPlate.year,
+          make: existingByPlate.make,
+          model: existingByPlate.model,
+        });
+        return;
+      }
+
+      // Try to look up plate via API
+      const res = await fetch(`/api/plate-lookup?plate=${encodeURIComponent(plate)}&state=${plateState}`);
+      
+      if (!res.ok) {
+        const error = await res.json();
+        if (res.status === 404) {
+          toast({ 
+            title: 'Plate Not Found', 
+            description: 'No vehicle found for this plate. Try entering the VIN instead.', 
+            variant: 'destructive' 
+          });
+        } else if (res.status === 403) {
+          toast({ 
+            title: 'Feature Unavailable', 
+            description: 'License plate lookup requires API upgrade. Use VIN lookup instead.', 
+            variant: 'destructive' 
+          });
+        } else {
+          throw new Error(error.message || 'Plate lookup failed');
+        }
+        return;
+      }
+      
+      const data = await res.json();
+      
+      if (data.vin) {
+        setVin(data.vin);
+        // Check if this VIN exists in our system
+        const existingByVin = allVehicles.find(v => v.vin?.toUpperCase() === data.vin.toUpperCase());
+        if (existingByVin) {
+          setExistingVehicle(existingByVin);
+          const customer = allCustomers.find(c => c.id === existingByVin.customerId);
+          if (customer) {
+            setExistingCustomer(customer);
+            setStep('confirm');
+          } else {
+            setStep('customer');
+          }
+        } else {
+          setStep('customer');
+        }
+      }
+      
+      setDecodedVehicle({
+        year: data.year,
+        make: data.make,
+        model: data.model,
+        submodel: data.trim,
+      });
+      
+      if (!existingCustomer && step !== 'confirm') {
+        setStep('customer');
+      }
+    } catch (error: any) {
+      toast({ 
+        title: 'Plate Lookup Failed', 
+        description: error.message || 'Could not look up plate. Try entering VIN instead.', 
+        variant: 'destructive' 
+      });
     } finally {
       setIsDecoding(false);
     }
@@ -198,7 +307,7 @@ export default function QuickCheckIn() {
           make: decodedVehicle.make,
           model: decodedVehicle.model,
           trim: decodedVehicle.submodel || null,
-          licensePlate: '',
+          licensePlate: plate ? plate.toUpperCase() : '',
           mileage: parseInt(odometer) || 0,
         });
         vehicleId = vehicle.id;
@@ -232,7 +341,7 @@ export default function QuickCheckIn() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Fast Customer Check-In</h1>
           <p className="text-muted-foreground">
-            Scan or enter a VIN to instantly check in a customer
+            Enter VIN or license plate to instantly check in a customer
           </p>
         </div>
 
@@ -242,8 +351,8 @@ export default function QuickCheckIn() {
             step === 'vin' ? "bg-primary text-primary-foreground" : 
             (step === 'customer' || step === 'confirm') ? "bg-green-500 text-white" : "bg-muted"
           )}>
-            {(step === 'customer' || step === 'confirm') ? <Check className="w-4 h-4" /> : <ScanLine className="w-4 h-4" />}
-            <span className="font-medium">VIN</span>
+            {(step === 'customer' || step === 'confirm') ? <Check className="w-4 h-4" /> : <Car className="w-4 h-4" />}
+            <span className="font-medium">Vehicle</span>
           </div>
           <div className="w-8 h-0.5 bg-muted" />
           <div className={cn(
@@ -269,42 +378,98 @@ export default function QuickCheckIn() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ScanLine className="w-5 h-5" />
-                Enter or Scan VIN
+                Vehicle Lookup
               </CardTitle>
               <CardDescription>
-                The vehicle will be automatically decoded and matched to existing records
+                Enter VIN or license plate to find the vehicle
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>VIN (17 characters)</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={vin}
-                    onChange={(e) => setVin(e.target.value.toUpperCase().slice(0, 17))}
-                    placeholder="Enter VIN..."
-                    className="font-mono text-lg tracking-wider"
-                    data-testid="input-vin"
-                  />
+              <Tabs value={lookupMethod} onValueChange={(v) => setLookupMethod(v as 'vin' | 'plate')}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="vin" className="gap-2" data-testid="tab-vin">
+                    <ScanLine className="w-4 h-4" />
+                    VIN
+                  </TabsTrigger>
+                  <TabsTrigger value="plate" className="gap-2" data-testid="tab-plate">
+                    <CreditCard className="w-4 h-4" />
+                    License Plate
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              {lookupMethod === 'vin' ? (
+                <div className="space-y-2">
+                  <Label>VIN (17 characters)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={vin}
+                      onChange={(e) => setVin(e.target.value.toUpperCase().slice(0, 17))}
+                      placeholder="Enter VIN..."
+                      className="font-mono text-lg tracking-wider"
+                      data-testid="input-vin"
+                    />
+                    <Button 
+                      onClick={decodeVin} 
+                      disabled={vin.length !== 17 || isDecoding}
+                      data-testid="button-decode-vin"
+                    >
+                      {isDecoding ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Search className="w-4 h-4 mr-2" />
+                          Lookup
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {vin.length}/17 characters
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="col-span-2 space-y-2">
+                      <Label>License Plate</Label>
+                      <Input
+                        value={plate}
+                        onChange={(e) => setPlate(e.target.value.toUpperCase())}
+                        placeholder="ABC1234"
+                        className="font-mono text-lg tracking-wider"
+                        data-testid="input-plate"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>State</Label>
+                      <Select value={plateState} onValueChange={setPlateState}>
+                        <SelectTrigger data-testid="select-plate-state">
+                          <SelectValue placeholder="State" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {US_STATES.map(state => (
+                            <SelectItem key={state} value={state}>{state}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                   <Button 
-                    onClick={decodeVin} 
-                    disabled={vin.length !== 17 || isDecoding}
-                    data-testid="button-decode-vin"
+                    onClick={lookupPlate} 
+                    disabled={!plate.trim() || !plateState || isDecoding}
+                    className="w-full"
+                    data-testid="button-lookup-plate"
                   >
                     {isDecoding ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
                     ) : (
-                      <>
-                        <Search className="w-4 h-4 mr-2" />
-                        Lookup
-                      </>
+                      <Search className="w-4 h-4 mr-2" />
                     )}
+                    Look Up Plate
                   </Button>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  {vin.length}/17 characters
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         )}
