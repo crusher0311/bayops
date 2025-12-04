@@ -987,8 +987,8 @@ export async function registerRoutes(
       }
 
       if (method === 'phone') {
-        // Look up customer by phone
-        const customers = await storage.getCustomersByLocation(locationId);
+        // Look up customer by phone (scoped to organization)
+        const customers = await storage.getCustomersByOrg(location.organizationId);
         const customer = customers.find(c => 
           c.phone?.replace(/\D/g, '') === value.replace(/\D/g, '')
         );
@@ -1021,8 +1021,8 @@ export async function registerRoutes(
       }
       
       if (method === 'vin') {
-        // First try to find existing vehicle
-        const vehicles = await storage.getVehiclesByLocation(locationId);
+        // First try to find existing vehicle (scoped to organization)
+        const vehicles = await storage.getVehiclesByOrg(location.organizationId);
         const existingVehicle = vehicles.find(v => v.vin?.toUpperCase() === value.toUpperCase());
         
         if (existingVehicle) {
