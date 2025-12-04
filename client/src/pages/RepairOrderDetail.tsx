@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRoute, Link } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -263,7 +263,7 @@ export default function RepairOrderDetail() {
       const template = inspectionTemplates.find((t: any) => t.id === templateId);
       const initialItems = (template?.items || []).map((item: any) => ({
         itemId: item.id,
-        status: 'GREEN' as const,
+        status: null,
         finding: null,
         recommendation: null,
         photos: [],
@@ -334,7 +334,21 @@ export default function RepairOrderDetail() {
   });
 
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('estimate');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  
+  useEffect(() => {
+    if (activeTab === 'inspection' && 
+        !roInspection && 
+        !inspectionLoading && 
+        inspectionTemplates.length > 0 && 
+        !createInspectionMutation.isPending) {
+      const firstTemplate = inspectionTemplates[0];
+      if (firstTemplate) {
+        createInspectionMutation.mutate(firstTemplate.id);
+      }
+    }
+  }, [activeTab, roInspection, inspectionLoading, inspectionTemplates]);
 
   const [newJobName, setNewJobName] = useState('');
   const [isAddJobDialogOpen, setIsAddJobDialogOpen] = useState(false);
@@ -803,7 +817,7 @@ export default function RepairOrderDetail() {
               </CardContent>
             </Card>
 
-            <Tabs defaultValue="estimate" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="w-full justify-start">
                 <TabsTrigger value="estimate" className="gap-2">
                    <FileText className="w-4 h-4" /> Estimate & Parts
@@ -986,9 +1000,12 @@ export default function RepairOrderDetail() {
               </TabsContent>
 
               <TabsContent value="inspection" className="mt-6">
-                {inspectionLoading ? (
-                  <div className="flex items-center justify-center py-12">
+                {inspectionLoading || createInspectionMutation.isPending ? (
+                  <div className="flex flex-col items-center justify-center py-12 gap-4">
                     <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                    <p className="text-muted-foreground">
+                      {createInspectionMutation.isPending ? 'Starting inspection...' : 'Loading...'}
+                    </p>
                   </div>
                 ) : roInspection ? (
                   <InspectionForm
@@ -1014,15 +1031,24 @@ export default function RepairOrderDetail() {
                   <Card className="border-dashed">
                     <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                       <ClipboardCheck className="w-12 h-12 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-semibold">Start Vehicle Inspection</h3>
+                      <h3 className="text-lg font-semibold">
+                        {inspectionTemplates.length === 0 ? 'No Inspection Templates' : 'Start Vehicle Inspection'}
+                      </h3>
                       <p className="text-muted-foreground mb-6 max-w-sm">
-                        Select an inspection template to begin the digital vehicle inspection process.
+                        {inspectionTemplates.length === 0 
+                          ? 'Create an inspection template first to start inspections.'
+                          : 'Select a template to begin the digital vehicle inspection.'}
                       </p>
-                      
-                      {inspectionTemplates.length > 0 ? (
-                        <div className="flex flex-col items-center gap-4 w-full max-w-xs">
+                      {inspectionTemplates.length === 0 ? (
+                        <Link href="/inspections">
+                          <Button data-testid="button-create-template">
+                            Create Template
+                          </Button>
+                        </Link>
+                      ) : (
+                        <div className="flex flex-col items-center gap-3 w-full max-w-xs">
                           <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
-                            <SelectTrigger data-testid="select-inspection-template">
+                            <SelectTrigger className="w-full" data-testid="select-inspection-template">
                               <SelectValue placeholder="Select a template" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1036,17 +1062,11 @@ export default function RepairOrderDetail() {
                           <Button 
                             onClick={() => selectedTemplateId && createInspectionMutation.mutate(selectedTemplateId)}
                             disabled={!selectedTemplateId || createInspectionMutation.isPending}
+                            className="w-full"
                             data-testid="button-start-inspection"
                           >
                             {createInspectionMutation.isPending ? 'Starting...' : 'Start Inspection'}
                           </Button>
-                        </div>
-                      ) : (
-                        <div className="text-sm text-muted-foreground">
-                          No inspection templates available.{' '}
-                          <Link href="/inspections" className="text-primary hover:underline">
-                            Create templates
-                          </Link>
                         </div>
                       )}
                     </CardContent>
