@@ -38,6 +38,9 @@ import {
   wholesaleOrders,
   customerStatements,
   customerTransactions,
+  cannedJobTemplates,
+  cannedJobParts,
+  serviceQueueEntries,
   type User,
   type InsertUser,
   type Organization,
@@ -116,6 +119,12 @@ import {
   type InsertCustomerStatement,
   type CustomerTransaction,
   type InsertCustomerTransaction,
+  type CannedJobTemplate,
+  type InsertCannedJobTemplate,
+  type CannedJobPart,
+  type InsertCannedJobPart,
+  type ServiceQueueEntry,
+  type InsertServiceQueueEntry,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray, desc, sql } from "drizzle-orm";
@@ -377,6 +386,28 @@ export interface IStorage {
   // Wholesale-specific customer queries
   getWholesaleCustomers(orgId: string): Promise<Customer[]>;
   getCustomersWithBalance(orgId: string): Promise<Customer[]>;
+
+  // Canned Job Templates
+  getCannedJobTemplatesByLocation(locationId: string): Promise<CannedJobTemplate[]>;
+  getCannedJobTemplate(id: string): Promise<CannedJobTemplate | undefined>;
+  createCannedJobTemplate(template: InsertCannedJobTemplate): Promise<CannedJobTemplate>;
+  updateCannedJobTemplate(id: string, updates: Partial<InsertCannedJobTemplate>): Promise<CannedJobTemplate | undefined>;
+  deleteCannedJobTemplate(id: string): Promise<boolean>;
+
+  // Canned Job Parts
+  getCannedJobPartsByTemplate(templateId: string): Promise<CannedJobPart[]>;
+  createCannedJobPart(part: InsertCannedJobPart): Promise<CannedJobPart>;
+  updateCannedJobPart(id: string, updates: Partial<InsertCannedJobPart>): Promise<CannedJobPart | undefined>;
+  deleteCannedJobPart(id: string): Promise<boolean>;
+  deleteCannedJobPartsByTemplate(templateId: string): Promise<boolean>;
+
+  // Service Queue
+  getServiceQueueByLocation(locationId: string): Promise<ServiceQueueEntry[]>;
+  getServiceQueueEntry(id: string): Promise<ServiceQueueEntry | undefined>;
+  createServiceQueueEntry(entry: InsertServiceQueueEntry): Promise<ServiceQueueEntry>;
+  updateServiceQueueEntry(id: string, updates: Partial<InsertServiceQueueEntry>): Promise<ServiceQueueEntry | undefined>;
+  deleteServiceQueueEntry(id: string): Promise<boolean>;
+  getNextQueuePosition(locationId: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1462,6 +1493,107 @@ export class DatabaseStorage implements IStorage {
         sql`CAST(${customers.currentBalance} AS DECIMAL) > 0`
       ))
       .orderBy(desc(customers.currentBalance));
+  }
+
+  // Canned Job Templates
+  async getCannedJobTemplatesByLocation(locationId: string): Promise<CannedJobTemplate[]> {
+    return db.select().from(cannedJobTemplates)
+      .where(eq(cannedJobTemplates.locationId, locationId))
+      .orderBy(cannedJobTemplates.sortOrder, cannedJobTemplates.name);
+  }
+
+  async getCannedJobTemplate(id: string): Promise<CannedJobTemplate | undefined> {
+    const [template] = await db.select().from(cannedJobTemplates)
+      .where(eq(cannedJobTemplates.id, id));
+    return template || undefined;
+  }
+
+  async createCannedJobTemplate(template: InsertCannedJobTemplate): Promise<CannedJobTemplate> {
+    const [created] = await db.insert(cannedJobTemplates).values(template).returning();
+    return created;
+  }
+
+  async updateCannedJobTemplate(id: string, updates: Partial<InsertCannedJobTemplate>): Promise<CannedJobTemplate | undefined> {
+    const [updated] = await db.update(cannedJobTemplates)
+      .set(updates)
+      .where(eq(cannedJobTemplates.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteCannedJobTemplate(id: string): Promise<boolean> {
+    const result = await db.delete(cannedJobTemplates).where(eq(cannedJobTemplates.id, id));
+    return true;
+  }
+
+  // Canned Job Parts
+  async getCannedJobPartsByTemplate(templateId: string): Promise<CannedJobPart[]> {
+    return db.select().from(cannedJobParts)
+      .where(eq(cannedJobParts.templateId, templateId));
+  }
+
+  async createCannedJobPart(part: InsertCannedJobPart): Promise<CannedJobPart> {
+    const [created] = await db.insert(cannedJobParts).values(part).returning();
+    return created;
+  }
+
+  async updateCannedJobPart(id: string, updates: Partial<InsertCannedJobPart>): Promise<CannedJobPart | undefined> {
+    const [updated] = await db.update(cannedJobParts)
+      .set(updates)
+      .where(eq(cannedJobParts.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteCannedJobPart(id: string): Promise<boolean> {
+    await db.delete(cannedJobParts).where(eq(cannedJobParts.id, id));
+    return true;
+  }
+
+  async deleteCannedJobPartsByTemplate(templateId: string): Promise<boolean> {
+    await db.delete(cannedJobParts).where(eq(cannedJobParts.templateId, templateId));
+    return true;
+  }
+
+  // Service Queue
+  async getServiceQueueByLocation(locationId: string): Promise<ServiceQueueEntry[]> {
+    return db.select().from(serviceQueueEntries)
+      .where(eq(serviceQueueEntries.locationId, locationId))
+      .orderBy(serviceQueueEntries.position, serviceQueueEntries.checkInTime);
+  }
+
+  async getServiceQueueEntry(id: string): Promise<ServiceQueueEntry | undefined> {
+    const [entry] = await db.select().from(serviceQueueEntries)
+      .where(eq(serviceQueueEntries.id, id));
+    return entry || undefined;
+  }
+
+  async createServiceQueueEntry(entry: InsertServiceQueueEntry): Promise<ServiceQueueEntry> {
+    const [created] = await db.insert(serviceQueueEntries).values(entry).returning();
+    return created;
+  }
+
+  async updateServiceQueueEntry(id: string, updates: Partial<InsertServiceQueueEntry>): Promise<ServiceQueueEntry | undefined> {
+    const [updated] = await db.update(serviceQueueEntries)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(serviceQueueEntries.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteServiceQueueEntry(id: string): Promise<boolean> {
+    await db.delete(serviceQueueEntries).where(eq(serviceQueueEntries.id, id));
+    return true;
+  }
+
+  async getNextQueuePosition(locationId: string): Promise<number> {
+    const result = await db.select({ maxPosition: sql<number>`COALESCE(MAX(${serviceQueueEntries.position}), 0) + 1` })
+      .from(serviceQueueEntries)
+      .where(and(
+        eq(serviceQueueEntries.locationId, locationId),
+        inArray(serviceQueueEntries.status, ['WAITING', 'IN_PROGRESS'])
+      ));
+    return result[0]?.maxPosition || 1;
   }
 }
 
