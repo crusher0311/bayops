@@ -12,7 +12,8 @@ import {
   Wrench,
   Building2,
   LayoutGrid,
-  Calendar
+  Calendar,
+  Truck
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -25,6 +26,7 @@ export function Sidebar() {
     { icon: FileText, label: 'Repair Orders', href: '/ros' },
     { icon: Calendar, label: 'Appointments', href: '/appointments' },
     { icon: Users, label: 'Customers', href: '/customers' },
+    { icon: Truck, label: 'Parts', href: '/parts' },
     { icon: Package, label: 'Inventory', href: '/inventory' },
     { icon: BarChart3, label: 'Reports', href: '/reports' },
     { icon: Settings, label: 'Settings', href: '/settings' },
