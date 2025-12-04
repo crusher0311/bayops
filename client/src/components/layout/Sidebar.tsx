@@ -14,7 +14,8 @@ import {
   LayoutGrid,
   Calendar,
   Truck,
-  Clock
+  Clock,
+  Receipt
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -29,6 +30,7 @@ export function Sidebar() {
     { icon: Users, label: 'Customers', href: '/customers' },
     { icon: Truck, label: 'Parts', href: '/parts' },
     { icon: Clock, label: 'Time Tracking', href: '/time-tracking' },
+    { icon: Receipt, label: 'Invoices', href: '/invoices' },
     { icon: Package, label: 'Inventory', href: '/inventory' },
     { icon: BarChart3, label: 'Reports', href: '/reports' },
     { icon: Settings, label: 'Settings', href: '/settings' },

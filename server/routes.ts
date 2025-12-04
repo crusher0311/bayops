@@ -1868,9 +1868,36 @@ export async function registerRoutes(
   app.post("/api/invoices", requireAuth, async (req, res) => {
     try {
       const invoiceNumber = await storage.getNextInvoiceNumber(req.body.locationId);
+      
+      const ro = await storage.getRepairOrder(req.body.repairOrderId, req.user!.orgId);
+      if (!ro) {
+        return res.status(404).json({ message: "Repair order not found" });
+      }
+      
+      let subtotal = 0;
+      const jobs = (ro.jobs as any[]) || [];
+      for (const job of jobs) {
+        const lineItems = job.lineItems || [];
+        for (const item of lineItems) {
+          const quantity = Number(item.quantity) || 0;
+          const unitPrice = Number(item.unitPrice) || 0;
+          subtotal += quantity * unitPrice;
+        }
+      }
+      
+      const taxRate = 0.0825;
+      const taxAmount = subtotal * taxRate;
+      const total = subtotal + taxAmount;
+      
       const result = insertInvoiceSchema.safeParse({
         ...req.body,
         invoiceNumber,
+        subtotal: subtotal.toFixed(2),
+        taxAmount: taxAmount.toFixed(2),
+        discountAmount: '0.00',
+        total: total.toFixed(2),
+        amountPaid: '0.00',
+        amountDue: total.toFixed(2),
       });
       if (!result.success) {
         return res.status(400).json({ message: fromZodError(result.error).toString() });
@@ -1909,6 +1936,27 @@ export async function registerRoutes(
         return res.status(400).json({ message: fromZodError(result.error).toString() });
       }
       const payment = await storage.createPayment(result.data);
+      
+      const invoice = await storage.getInvoice(result.data.invoiceId);
+      if (invoice) {
+        const newAmountPaid = parseFloat(invoice.amountPaid) + parseFloat(result.data.amount);
+        const newAmountDue = parseFloat(invoice.total) - newAmountPaid;
+        let newStatus = invoice.status;
+        
+        if (newAmountDue <= 0) {
+          newStatus = 'PAID';
+        } else if (newAmountPaid > 0) {
+          newStatus = 'PARTIAL';
+        }
+        
+        await storage.updateInvoice(invoice.id, {
+          amountPaid: newAmountPaid.toFixed(2),
+          amountDue: Math.max(0, newAmountDue).toFixed(2),
+          status: newStatus,
+          paidAt: newStatus === 'PAID' ? new Date() : null,
+        });
+      }
+      
       res.status(201).json(payment);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
