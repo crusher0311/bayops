@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { useCustomers, useCreateCustomer, useUpdateCustomer } from '@/lib/hooks';
+import { useCustomers, useCreateCustomer, useUpdateCustomer, useVehiclesByCustomer } from '@/lib/hooks';
 import { 
   Table, 
   TableBody, 
@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, Phone, Mail, MapPin, Loader2, Pencil } from 'lucide-react';
+import { Plus, Search, Phone, Mail, MapPin, Loader2, Pencil, ChevronDown, ChevronRight, Car } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   Dialog,
@@ -24,7 +24,67 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Checkbox } from '@/components/ui/checkbox';
-import type { Customer } from '@shared/schema';
+import type { Customer, Vehicle } from '@shared/schema';
+
+function CustomerVehicles({ customerId }: { customerId: string }) {
+  const { data: vehicles = [], isLoading } = useVehiclesByCustomer(customerId);
+
+  if (isLoading) {
+    return (
+      <div className="p-4 flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        Loading vehicles...
+      </div>
+    );
+  }
+
+  if (vehicles.length === 0) {
+    return (
+      <div className="p-4 text-muted-foreground text-sm">
+        No vehicles on file for this customer.
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 bg-muted/30">
+      <div className="text-sm font-medium mb-3 flex items-center gap-2">
+        <Car className="w-4 h-4" />
+        Vehicles ({vehicles.length})
+      </div>
+      <div className="grid gap-2">
+        {vehicles.map((vehicle: Vehicle) => (
+          <div 
+            key={vehicle.id} 
+            className="bg-background p-3 rounded-md border flex items-center justify-between"
+            data-testid={`vehicle-card-${vehicle.id}`}
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                <Car className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <div className="font-medium">
+                  {vehicle.year} {vehicle.make} {vehicle.model}
+                </div>
+                <div className="text-sm text-muted-foreground flex gap-4">
+                  {vehicle.vin && <span>VIN: {vehicle.vin}</span>}
+                  {vehicle.licensePlate && <span>Plate: {vehicle.licensePlate}</span>}
+                  {vehicle.color && <span>Color: {vehicle.color}</span>}
+                </div>
+              </div>
+            </div>
+            {vehicle.engine && (
+              <div className="text-sm text-muted-foreground">
+                {vehicle.engine}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function Customers() {
   const [search, setSearch] = useState('');
@@ -34,6 +94,7 @@ export default function Customers() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [expandedCustomerId, setExpandedCustomerId] = useState<string | null>(null);
   const [newCustomer, setNewCustomer] = useState({
     firstName: '',
     lastName: '',
@@ -86,6 +147,10 @@ export default function Customers() {
     }
   };
 
+  const toggleCustomerExpand = (customerId: string) => {
+    setExpandedCustomerId(expandedCustomerId === customerId ? null : customerId);
+  };
+
   if (isLoading) {
     return (
       <AppLayout>
@@ -102,7 +167,7 @@ export default function Customers() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
           <p className="text-muted-foreground mt-1">
-            Directory of all customers and their fleet.
+            Directory of all customers and their fleet. Click a row to see vehicles.
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -209,6 +274,7 @@ export default function Customers() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-8"></TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Contact</TableHead>
               <TableHead>Address</TableHead>
@@ -219,54 +285,78 @@ export default function Customers() {
           <TableBody>
             {customers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   No customers found. Add your first customer!
                 </TableCell>
               </TableRow>
             ) : (
               customers.map((customer) => (
-                <TableRow key={customer.id} data-testid={`row-customer-${customer.id}`}>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{customer.firstName} {customer.lastName}</span>
-                      {customer.marketingConsent && (
-                        <span className="text-[10px] text-green-600 bg-green-50 w-fit px-1.5 rounded">Marketing Opt-In</span>
+                <>
+                  <TableRow 
+                    key={customer.id} 
+                    data-testid={`row-customer-${customer.id}`}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => toggleCustomerExpand(customer.id)}
+                  >
+                    <TableCell className="w-8">
+                      {expandedCustomerId === customer.id ? (
+                        <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
                       )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-1 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-3 h-3 text-muted-foreground" />
-                        {customer.phone}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{customer.firstName} {customer.lastName}</span>
+                        {customer.marketingConsent && (
+                          <span className="text-[10px] text-green-600 bg-green-50 w-fit px-1.5 rounded">Marketing Opt-In</span>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-3 h-3 text-muted-foreground" />
-                        {customer.email}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-3 h-3 text-muted-foreground" />
+                          {customer.phone || '-'}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Mail className="w-3 h-3 text-muted-foreground" />
+                          {customer.email || '-'}
+                        </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="w-3 h-3" />
-                      {customer.address}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {format(new Date(customer.createdAt), 'MMM d, yyyy')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => handleEditCustomer(customer)}
-                      data-testid={`button-edit-${customer.id}`}
-                    >
-                      <Pencil className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <MapPin className="w-3 h-3" />
+                        {customer.address || '-'}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {format(new Date(customer.createdAt), 'MMM d, yyyy')}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditCustomer(customer);
+                        }}
+                        data-testid={`button-edit-${customer.id}`}
+                      >
+                        <Pencil className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                  {expandedCustomerId === customer.id && (
+                    <TableRow key={`${customer.id}-vehicles`}>
+                      <TableCell colSpan={6} className="p-0">
+                        <CustomerVehicles customerId={customer.id} />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
               ))
             )}
           </TableBody>
