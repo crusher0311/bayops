@@ -51,6 +51,9 @@ import {
   insertPartOrderItemSchema,
   insertInvoiceSchema,
   insertPaymentSchema,
+  insertCannedJobTemplateSchema,
+  insertCannedJobPartSchema,
+  insertServiceQueueEntrySchema,
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 
@@ -3278,6 +3281,384 @@ export async function registerRoutes(
       } else {
         res.status(500).json({ message: sendResult.error || "Failed to send" });
       }
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ========== CANNED JOB TEMPLATES ==========
+
+  // Get canned job templates for a location
+  app.get("/api/locations/:locationId/canned-jobs", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+
+      const templates = await storage.getCannedJobTemplatesByLocation(req.params.locationId);
+      
+      // Fetch parts for each template
+      const templatesWithParts = await Promise.all(
+        templates.map(async (template) => {
+          const parts = await storage.getCannedJobPartsByTemplate(template.id);
+          return { ...template, parts };
+        })
+      );
+
+      res.json(templatesWithParts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get single canned job template
+  app.get("/api/canned-jobs/:id", requireAuth, async (req, res) => {
+    try {
+      const template = await storage.getCannedJobTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      const location = await storage.getLocation(template.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      const parts = await storage.getCannedJobPartsByTemplate(template.id);
+      res.json({ ...template, parts });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Create canned job template
+  app.post("/api/locations/:locationId/canned-jobs", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+
+      const result = insertCannedJobTemplateSchema.safeParse({
+        ...req.body,
+        locationId: req.params.locationId,
+      });
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+
+      const template = await storage.createCannedJobTemplate(result.data);
+
+      // Create parts if provided
+      if (req.body.parts && Array.isArray(req.body.parts)) {
+        for (const part of req.body.parts) {
+          await storage.createCannedJobPart({
+            ...part,
+            templateId: template.id,
+          });
+        }
+      }
+
+      const parts = await storage.getCannedJobPartsByTemplate(template.id);
+      res.status(201).json({ ...template, parts });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update canned job template
+  app.patch("/api/canned-jobs/:id", requireAuth, async (req, res) => {
+    try {
+      const template = await storage.getCannedJobTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      const location = await storage.getLocation(template.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      const updated = await storage.updateCannedJobTemplate(req.params.id, req.body);
+
+      // Update parts if provided
+      if (req.body.parts && Array.isArray(req.body.parts)) {
+        await storage.deleteCannedJobPartsByTemplate(template.id);
+        for (const part of req.body.parts) {
+          await storage.createCannedJobPart({
+            ...part,
+            templateId: template.id,
+          });
+        }
+      }
+
+      const parts = await storage.getCannedJobPartsByTemplate(template.id);
+      res.json({ ...updated, parts });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Delete canned job template
+  app.delete("/api/canned-jobs/:id", requireAuth, async (req, res) => {
+    try {
+      const template = await storage.getCannedJobTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      const location = await storage.getLocation(template.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      await storage.deleteCannedJobTemplate(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Add canned job to repair order (materialize template into RO line items)
+  app.post("/api/repair-orders/:roId/add-canned-job/:templateId", requireAuth, async (req, res) => {
+    try {
+      const ro = await storage.getRepairOrder(req.params.roId, req.user!.orgId);
+      if (!ro) {
+        return res.status(404).json({ message: "Repair order not found" });
+      }
+
+      const template = await storage.getCannedJobTemplate(req.params.templateId);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      const location = await storage.getLocation(template.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      // Get template parts
+      const parts = await storage.getCannedJobPartsByTemplate(template.id);
+
+      // Get existing line items to determine next number
+      const currentItems = ro.lineItems as any[] || [];
+      const maxJobNum = currentItems
+        .filter((item: any) => item.type === 'LABOR')
+        .reduce((max: number, item: any) => Math.max(max, item.jobNumber || 0), 0);
+      const nextJobNum = maxJobNum + 1;
+
+      // Get labor rate from location settings
+      const laborRates = await storage.getLaborRatesByLocation(ro.locationId);
+      const defaultRate = laborRates.find(r => r.isDefault) || laborRates[0];
+      const laborRate = template.laborRate || defaultRate?.rate || '100.00';
+
+      // Create labor line item
+      const laborItem = {
+        id: crypto.randomUUID(),
+        type: 'LABOR',
+        jobNumber: nextJobNum,
+        description: template.name,
+        notes: template.defaultNotes || template.description || '',
+        hours: parseFloat(template.laborHours as string),
+        rate: parseFloat(laborRate as string),
+        quantity: 1,
+        unitPrice: parseFloat(laborRate as string) * parseFloat(template.laborHours as string),
+        total: parseFloat(laborRate as string) * parseFloat(template.laborHours as string),
+        categoryId: template.categoryId,
+        status: 'PENDING',
+      };
+
+      // Create part line items
+      const partItems = parts.map((part, index) => ({
+        id: crypto.randomUUID(),
+        type: 'PART',
+        jobNumber: nextJobNum,
+        description: part.description,
+        partNumber: part.partNumber || '',
+        quantity: parseFloat(part.quantity as string),
+        unitCost: part.unitCost ? parseFloat(part.unitCost as string) : 0,
+        unitPrice: part.unitPrice ? parseFloat(part.unitPrice as string) : 0,
+        total: (part.unitPrice ? parseFloat(part.unitPrice as string) : 0) * parseFloat(part.quantity as string),
+        inventoryItemId: part.inventoryItemId,
+        status: 'PENDING',
+      }));
+
+      // Add to existing line items
+      const updatedLineItems = [...currentItems, laborItem, ...partItems];
+
+      // Recalculate totals
+      const laborTotal = updatedLineItems
+        .filter((item: any) => item.type === 'LABOR')
+        .reduce((sum: number, item: any) => sum + (item.total || 0), 0);
+      const partsTotal = updatedLineItems
+        .filter((item: any) => item.type === 'PART' || item.type === 'TIRE')
+        .reduce((sum: number, item: any) => sum + (item.total || 0), 0);
+      const subtotal = laborTotal + partsTotal;
+
+      await storage.updateRepairOrder(ro.id, req.user!.orgId, {
+        lineItems: updatedLineItems,
+        laborTotal: laborTotal.toFixed(2),
+        partsTotal: partsTotal.toFixed(2),
+        subtotal: subtotal.toFixed(2),
+        total: subtotal.toFixed(2), // Will be recalculated with fees/taxes on frontend
+      });
+
+      const updatedRo = await storage.getRepairOrder(ro.id, req.user!.orgId);
+      res.json(updatedRo);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ========== SERVICE QUEUE ==========
+
+  // Get service queue for a location
+  app.get("/api/locations/:locationId/service-queue", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+
+      const entries = await storage.getServiceQueueByLocation(req.params.locationId);
+      res.json(entries);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Create service queue entry (manual add)
+  app.post("/api/locations/:locationId/service-queue", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+
+      const position = await storage.getNextQueuePosition(req.params.locationId);
+
+      const result = insertServiceQueueEntrySchema.safeParse({
+        ...req.body,
+        locationId: req.params.locationId,
+        position,
+        checkInSource: req.body.checkInSource || 'WALK_IN',
+      });
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+
+      const entry = await storage.createServiceQueueEntry(result.data);
+      res.status(201).json(entry);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update service queue entry (status change, bay/tech assignment)
+  app.patch("/api/service-queue/:id", requireAuth, async (req, res) => {
+    try {
+      const entry = await storage.getServiceQueueEntry(req.params.id);
+      if (!entry) {
+        return res.status(404).json({ message: "Queue entry not found" });
+      }
+
+      const location = await storage.getLocation(entry.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Queue entry not found" });
+      }
+
+      // Handle status changes
+      const updates: any = { ...req.body };
+      if (req.body.status === 'IN_PROGRESS' && !entry.startTime) {
+        updates.startTime = new Date();
+      }
+      if (req.body.status === 'COMPLETE' && !entry.completedTime) {
+        updates.completedTime = new Date();
+      }
+
+      const updated = await storage.updateServiceQueueEntry(req.params.id, updates);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Delete service queue entry
+  app.delete("/api/service-queue/:id", requireAuth, async (req, res) => {
+    try {
+      const entry = await storage.getServiceQueueEntry(req.params.id);
+      if (!entry) {
+        return res.status(404).json({ message: "Queue entry not found" });
+      }
+
+      const location = await storage.getLocation(entry.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Queue entry not found" });
+      }
+
+      await storage.deleteServiceQueueEntry(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Start service from queue (creates RO and updates queue entry)
+  app.post("/api/service-queue/:id/start-service", requireAuth, async (req, res) => {
+    try {
+      const entry = await storage.getServiceQueueEntry(req.params.id);
+      if (!entry) {
+        return res.status(404).json({ message: "Queue entry not found" });
+      }
+
+      const location = await storage.getLocation(entry.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Queue entry not found" });
+      }
+
+      // Create RO from queue entry if customer/vehicle info exists
+      if (entry.customerId && entry.vehicleId) {
+        const workflow = await storage.getDefaultWorkflow(location.orgId);
+        const stages = (workflow?.stages as any[]) || [];
+        const firstStage = stages[0]?.name || 'New';
+
+        const roNumber = `RO-${Date.now().toString(36).toUpperCase()}`;
+        const ro = await storage.createRepairOrder({
+          orgId: location.orgId,
+          locationId: entry.locationId,
+          customerId: entry.customerId,
+          vehicleId: entry.vehicleId,
+          roNumber,
+          status: firstStage,
+          advisorId: req.user!.id,
+          technicianId: entry.assignedTechId || null,
+          notes: entry.serviceDescription || entry.notes || '',
+          lineItems: [],
+          laborTotal: '0',
+          partsTotal: '0',
+          subtotal: '0',
+          taxTotal: '0',
+          total: '0',
+        });
+
+        // Update queue entry with RO reference and status
+        await storage.updateServiceQueueEntry(entry.id, {
+          repairOrderId: ro.id,
+          status: 'IN_PROGRESS',
+          startTime: new Date(),
+        });
+
+        return res.json({ entry: await storage.getServiceQueueEntry(entry.id), repairOrder: ro });
+      }
+
+      // Just update status if no customer/vehicle
+      await storage.updateServiceQueueEntry(entry.id, {
+        status: 'IN_PROGRESS',
+        startTime: new Date(),
+      });
+
+      res.json({ entry: await storage.getServiceQueueEntry(entry.id) });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
