@@ -1202,6 +1202,113 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
   }),
 }));
 
+// Service Queue Status Enum
+export const queueStatusEnum = pgEnum('queue_status', ['WAITING', 'IN_PROGRESS', 'COMPLETE']);
+export const checkInSourceEnum = pgEnum('check_in_source', ['SELF_CHECKIN', 'WALK_IN', 'APPOINTMENT', 'DROP_OFF']);
+
+// Canned Job Templates - Pre-built service packages
+export const cannedJobTemplates = pgTable("canned_job_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  categoryId: varchar("category_id").references(() => jobCategories.id, { onDelete: 'set null' }),
+  name: text("name").notNull(),
+  description: text("description"),
+  laborHours: decimal("labor_hours", { precision: 6, scale: 2 }).notNull().default('1.0'),
+  laborRate: decimal("labor_rate", { precision: 10, scale: 2 }),
+  defaultNotes: text("default_notes"),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const cannedJobTemplatesRelations = relations(cannedJobTemplates, ({ one, many }) => ({
+  location: one(locations, {
+    fields: [cannedJobTemplates.locationId],
+    references: [locations.id],
+  }),
+  category: one(jobCategories, {
+    fields: [cannedJobTemplates.categoryId],
+    references: [jobCategories.id],
+  }),
+  parts: many(cannedJobParts),
+}));
+
+// Canned Job Parts - Default parts for a canned job template
+export const cannedJobParts = pgTable("canned_job_parts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").notNull().references(() => cannedJobTemplates.id, { onDelete: 'cascade' }),
+  inventoryItemId: varchar("inventory_item_id").references(() => inventoryItems.id, { onDelete: 'set null' }),
+  description: text("description").notNull(),
+  partNumber: text("part_number"),
+  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull().default('1'),
+  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }),
+  isRequired: boolean("is_required").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const cannedJobPartsRelations = relations(cannedJobParts, ({ one }) => ({
+  template: one(cannedJobTemplates, {
+    fields: [cannedJobParts.templateId],
+    references: [cannedJobTemplates.id],
+  }),
+  inventoryItem: one(inventoryItems, {
+    fields: [cannedJobParts.inventoryItemId],
+    references: [inventoryItems.id],
+  }),
+}));
+
+// Service Queue - Waitlist/Queue management
+export const serviceQueueEntries = pgTable("service_queue_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  customerId: varchar("customer_id").references(() => customers.id, { onDelete: 'set null' }),
+  vehicleId: varchar("vehicle_id").references(() => vehicles.id, { onDelete: 'set null' }),
+  repairOrderId: varchar("repair_order_id").references(() => repairOrders.id, { onDelete: 'set null' }),
+  checkInSource: checkInSourceEnum("check_in_source").notNull().default('WALK_IN'),
+  status: queueStatusEnum("status").notNull().default('WAITING'),
+  position: integer("position").notNull().default(0),
+  customerName: text("customer_name"),
+  vehicleInfo: text("vehicle_info"),
+  serviceDescription: text("service_description"),
+  estimatedMinutes: integer("estimated_minutes"),
+  assignedBayId: varchar("assigned_bay_id").references(() => serviceBays.id, { onDelete: 'set null' }),
+  assignedTechId: varchar("assigned_tech_id").references(() => users.id, { onDelete: 'set null' }),
+  notes: text("notes"),
+  checkInTime: timestamp("check_in_time").notNull().defaultNow(),
+  startTime: timestamp("start_time"),
+  completedTime: timestamp("completed_time"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const serviceQueueEntriesRelations = relations(serviceQueueEntries, ({ one }) => ({
+  location: one(locations, {
+    fields: [serviceQueueEntries.locationId],
+    references: [locations.id],
+  }),
+  customer: one(customers, {
+    fields: [serviceQueueEntries.customerId],
+    references: [customers.id],
+  }),
+  vehicle: one(vehicles, {
+    fields: [serviceQueueEntries.vehicleId],
+    references: [vehicles.id],
+  }),
+  repairOrder: one(repairOrders, {
+    fields: [serviceQueueEntries.repairOrderId],
+    references: [repairOrders.id],
+  }),
+  assignedBay: one(serviceBays, {
+    fields: [serviceQueueEntries.assignedBayId],
+    references: [serviceBays.id],
+  }),
+  assignedTech: one(users, {
+    fields: [serviceQueueEntries.assignedTechId],
+    references: [users.id],
+  }),
+}));
+
 // Insert Schemas
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({
   id: true,
@@ -1405,6 +1512,23 @@ export const insertPaymentSchema = createInsertSchema(payments).omit({
   createdAt: true,
 });
 
+// Canned Jobs & Service Queue Insert Schemas
+export const insertCannedJobTemplateSchema = createInsertSchema(cannedJobTemplates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCannedJobPartSchema = createInsertSchema(cannedJobParts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertServiceQueueEntrySchema = createInsertSchema(serviceQueueEntries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type Organization = typeof organizations.$inferSelect;
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
@@ -1525,3 +1649,13 @@ export type InsertCustomerStatement = z.infer<typeof insertCustomerStatementSche
 
 export type CustomerTransaction = typeof customerTransactions.$inferSelect;
 export type InsertCustomerTransaction = z.infer<typeof insertCustomerTransactionSchema>;
+
+// Canned Jobs & Service Queue Types
+export type CannedJobTemplate = typeof cannedJobTemplates.$inferSelect;
+export type InsertCannedJobTemplate = z.infer<typeof insertCannedJobTemplateSchema>;
+
+export type CannedJobPart = typeof cannedJobParts.$inferSelect;
+export type InsertCannedJobPart = z.infer<typeof insertCannedJobPartSchema>;
+
+export type ServiceQueueEntry = typeof serviceQueueEntries.$inferSelect;
+export type InsertServiceQueueEntry = z.infer<typeof insertServiceQueueEntrySchema>;
