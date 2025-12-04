@@ -1688,23 +1688,29 @@ function BrandingTab({ settings, onRefresh }: { settings: any; onRefresh: () => 
               )}
               <div className="space-y-2 flex-1">
                 <ObjectUploader
-                  maxNumberOfFiles={1}
                   maxFileSize={5242880}
                   allowedFileTypes={['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp']}
-                  onGetUploadParameters={async () => {
-                    const res = await apiRequest('/api/objects/upload', { method: 'POST' });
-                    return { method: 'PUT' as const, url: res.uploadURL };
-                  }}
-                  onComplete={async (result) => {
-                    if (result.successful?.[0]?.uploadURL) {
-                      const res = await apiRequest('/api/settings/branding/logo', {
-                        method: 'PUT',
-                        body: JSON.stringify({ logoURL: result.successful[0].uploadURL }),
-                      });
-                      setFormData({ ...formData, logoUrl: res.objectPath });
-                      toast({ title: 'Logo uploaded successfully' });
-                      onRefresh();
-                    }
+                  onUpload={async (file) => {
+                    const reader = new FileReader();
+                    const base64Data = await new Promise<string>((resolve, reject) => {
+                      reader.onload = () => {
+                        const result = reader.result as string;
+                        resolve(result.split(',')[1]);
+                      };
+                      reader.onerror = reject;
+                      reader.readAsDataURL(file);
+                    });
+                    
+                    const res = await apiRequest('/api/settings/branding/logo', {
+                      method: 'POST',
+                      body: JSON.stringify({ 
+                        fileData: base64Data, 
+                        contentType: file.type 
+                      }),
+                    });
+                    setFormData({ ...formData, logoUrl: res.objectPath });
+                    toast({ title: 'Logo uploaded successfully' });
+                    onRefresh();
                   }}
                   buttonVariant="outline"
                 >

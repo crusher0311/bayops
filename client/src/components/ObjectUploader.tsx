@@ -6,25 +6,18 @@ import { Progress } from "@/components/ui/progress";
 import { Loader2, Upload, X, CheckCircle2 } from "lucide-react";
 
 interface ObjectUploaderProps {
-  maxNumberOfFiles?: number;
   maxFileSize?: number;
   allowedFileTypes?: string[];
-  onGetUploadParameters: () => Promise<{
-    method: "PUT";
-    url: string;
-  }>;
-  onComplete?: (result: { successful: Array<{ uploadURL: string }> }) => void;
+  onUpload: (file: File) => Promise<void>;
   buttonClassName?: string;
   buttonVariant?: "default" | "outline" | "secondary" | "ghost" | "link" | "destructive";
   children: ReactNode;
 }
 
 export function ObjectUploader({
-  maxNumberOfFiles = 1,
   maxFileSize = 10485760,
   allowedFileTypes,
-  onGetUploadParameters,
-  onComplete,
+  onUpload,
   buttonClassName,
   buttonVariant = "outline",
   children,
@@ -61,29 +54,12 @@ export function ObjectUploader({
 
     try {
       setUploading(true);
-      setUploadProgress(10);
-
-      const { url } = await onGetUploadParameters();
       setUploadProgress(30);
 
-      const response = await fetch(url, {
-        method: 'PUT',
-        body: selectedFile,
-        headers: {
-          'Content-Type': selectedFile.type,
-        },
-      });
-
-      setUploadProgress(90);
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
+      await onUpload(selectedFile);
 
       setUploadProgress(100);
       setUploadComplete(true);
-      
-      onComplete?.({ successful: [{ uploadURL: url.split('?')[0] }] });
       
       setTimeout(() => {
         setShowModal(false);
