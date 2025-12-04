@@ -28,6 +28,7 @@ import MasterDashboard from "@/pages/MasterDashboard";
 import Login from "@/pages/Login";
 import QuickCheckIn from "@/pages/QuickCheckIn";
 import CustomerAuthorization from "@/pages/CustomerAuthorization";
+import SelfCheckIn from "@/pages/SelfCheckIn";
 
 function ProtectedRouter() {
   const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
@@ -93,6 +94,7 @@ function App() {
         <Switch>
           <Route path="/inspection/:token" component={InspectionReport} />
           <Route path="/authorize/:token" component={CustomerAuthorization} />
+          <Route path="/checkin/:locationId" component={SelfCheckIn} />
           <Route component={ProtectedRouter} />
         </Switch>
       </TooltipProvider>

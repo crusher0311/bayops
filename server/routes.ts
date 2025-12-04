@@ -933,6 +933,240 @@ export async function registerRoutes(
     }
   });
 
+  // PUBLIC SELF CHECK-IN ROUTES
+  
+  // Get location info for self check-in (public)
+  app.get("/api/public/location/:locationId", async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      res.json({
+        id: location.id,
+        name: location.name,
+        address: location.address,
+        phone: location.phone,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Customer lookup for self check-in (public)
+  app.post("/api/public/customer-lookup", async (req, res) => {
+    try {
+      const { locationId, method, value } = req.body;
+      
+      if (!locationId || !method || !value) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      if (typeof locationId !== 'string' || typeof method !== 'string' || typeof value !== 'string') {
+        return res.status(400).json({ message: "Invalid field types" });
+      }
+      
+      if (!['phone', 'vin'].includes(method)) {
+        return res.status(400).json({ message: "Invalid lookup method" });
+      }
+
+      const location = await storage.getLocation(locationId);
+      if (!location) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+
+      if (method === 'phone') {
+        // Look up customer by phone
+        const customers = await storage.getCustomersByLocation(locationId);
+        const customer = customers.find(c => 
+          c.phone?.replace(/\D/g, '') === value.replace(/\D/g, '')
+        );
+        
+        if (customer) {
+          // Find their most recent vehicle
+          const vehicles = await storage.getVehiclesByCustomer(customer.id);
+          const vehicle = vehicles[0];
+          
+          return res.json({
+            customer: {
+              id: customer.id,
+              firstName: customer.firstName,
+              lastName: customer.lastName,
+              phone: customer.phone,
+              email: customer.email,
+            },
+            vehicle: vehicle ? {
+              id: vehicle.id,
+              vin: vehicle.vin,
+              year: vehicle.year,
+              make: vehicle.make,
+              model: vehicle.model,
+              trim: vehicle.trim,
+            } : null,
+          });
+        }
+        
+        return res.status(404).json({ message: "No customer found with that phone number" });
+      }
+      
+      if (method === 'vin') {
+        // First try to find existing vehicle
+        const vehicles = await storage.getVehiclesByLocation(locationId);
+        const existingVehicle = vehicles.find(v => v.vin?.toUpperCase() === value.toUpperCase());
+        
+        if (existingVehicle) {
+          const customer = await storage.getCustomer(existingVehicle.customerId);
+          return res.json({
+            customer: customer ? {
+              id: customer.id,
+              firstName: customer.firstName,
+              lastName: customer.lastName,
+              phone: customer.phone,
+              email: customer.email,
+            } : null,
+            vehicle: {
+              id: existingVehicle.id,
+              vin: existingVehicle.vin,
+              year: existingVehicle.year,
+              make: existingVehicle.make,
+              model: existingVehicle.model,
+              trim: existingVehicle.trim,
+            },
+          });
+        }
+        
+        // Decode VIN for new vehicles
+        const decoded = await decodeVIN(value);
+        if (decoded) {
+          return res.json({
+            customer: null,
+            vehicle: null,
+            decoded: {
+              year: decoded.year,
+              make: decoded.make,
+              model: decoded.model,
+              trim: decoded.trim,
+            },
+          });
+        }
+        
+        return res.status(404).json({ message: "Could not decode VIN" });
+      }
+      
+      return res.status(400).json({ message: "Invalid lookup method" });
+    } catch (error: any) {
+      console.error('Customer lookup error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Self check-in submission (public)
+  app.post("/api/public/self-checkin", async (req, res) => {
+    try {
+      const { locationId, customer, vehicle, serviceDescription } = req.body;
+      
+      if (!locationId || !customer || !vehicle) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      if (typeof locationId !== 'string') {
+        return res.status(400).json({ message: "Invalid location ID" });
+      }
+      
+      if (!customer.firstName || !customer.lastName || !customer.phone) {
+        return res.status(400).json({ message: "Customer name and phone are required" });
+      }
+      
+      if (typeof customer.firstName !== 'string' || typeof customer.lastName !== 'string' || typeof customer.phone !== 'string') {
+        return res.status(400).json({ message: "Invalid customer data" });
+      }
+      
+      if (!vehicle.vin || !vehicle.year || !vehicle.make || !vehicle.model) {
+        return res.status(400).json({ message: "Vehicle VIN, year, make, and model are required" });
+      }
+
+      const location = await storage.getLocation(locationId);
+      if (!location) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+
+      // Validate customer ID belongs to this location AND organization if provided
+      let customerId = customer.id;
+      if (customerId) {
+        const existingCustomer = await storage.getCustomer(customerId);
+        if (!existingCustomer || 
+            existingCustomer.locationId !== locationId || 
+            existingCustomer.organizationId !== location.organizationId) {
+          return res.status(400).json({ message: "Invalid customer" });
+        }
+      } else {
+        const newCustomer = await storage.createCustomer({
+          locationId,
+          organizationId: location.organizationId,
+          firstName: String(customer.firstName).trim().substring(0, 100),
+          lastName: String(customer.lastName).trim().substring(0, 100),
+          phone: String(customer.phone).replace(/[^\d+\-() ]/g, '').substring(0, 20),
+          email: customer.email ? String(customer.email).trim().substring(0, 255) : null,
+        });
+        customerId = newCustomer.id;
+      }
+
+      // Validate vehicle ID belongs to this location AND organization if provided
+      let vehicleId = vehicle.id;
+      if (vehicleId) {
+        const existingVehicle = await storage.getVehicle(vehicleId);
+        if (!existingVehicle || 
+            existingVehicle.locationId !== locationId || 
+            existingVehicle.organizationId !== location.organizationId ||
+            existingVehicle.customerId !== customerId) {
+          return res.status(400).json({ message: "Invalid vehicle" });
+        }
+      } else {
+        const newVehicle = await storage.createVehicle({
+          customerId,
+          locationId,
+          organizationId: location.organizationId,
+          vin: String(vehicle.vin).toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 17),
+          year: String(vehicle.year).substring(0, 4),
+          make: String(vehicle.make).trim().substring(0, 50),
+          model: String(vehicle.model).trim().substring(0, 50),
+          trim: vehicle.trim ? String(vehicle.trim).trim().substring(0, 50) : null,
+        });
+        vehicleId = newVehicle.id;
+      }
+
+      // Generate RO number
+      const existingROs = await storage.getRepairOrdersByLocation(locationId);
+      const roCount = existingROs.length + 1;
+      const roNumber = `RO-${String(roCount).padStart(5, '0')}`;
+
+      // Create repair order with sanitized notes
+      const sanitizedNotes = serviceDescription 
+        ? `Customer Check-In Notes: ${String(serviceDescription).substring(0, 1000)}` 
+        : 'Self Check-In';
+
+      const repairOrder = await storage.createRepairOrder({
+        locationId,
+        organizationId: location.organizationId,
+        customerId,
+        vehicleId,
+        roNumber,
+        status: 'checked-in',
+        notes: sanitizedNotes,
+        jobs: [],
+      });
+
+      res.json({
+        success: true,
+        roId: repairOrder.id,
+        roNumber: repairOrder.roNumber,
+      });
+    } catch (error: any) {
+      console.error('Self check-in error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // License plate lookup proxy (Auto.dev API)
   app.get("/api/plate-lookup", requireAuth, async (req, res) => {
     try {
