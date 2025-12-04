@@ -2010,7 +2010,7 @@ function CannedJobsTab({ locationId, settings }: { locationId: string; settings:
 
   const { data: categories = [] } = useQuery<any[]>({
     queryKey: ['job-categories', locationId],
-    queryFn: () => apiRequest(`/api/locations/${locationId}/job-categories`),
+    queryFn: () => apiRequest(`/api/settings/job-categories/${locationId}`),
     enabled: !!locationId,
   });
 
@@ -2201,7 +2201,7 @@ function CannedJobsTab({ locationId, settings }: { locationId: string; settings:
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map((cat: any) => (
+                      {Array.isArray(categories) && categories.map((cat: any) => (
                         <SelectItem key={cat.id} value={cat.id}>
                           {cat.name}
                         </SelectItem>
