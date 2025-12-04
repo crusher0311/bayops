@@ -1,7 +1,18 @@
 import { useState } from 'react';
 import { useRoute, Link } from 'wouter';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { useRepairOrder, useCustomer, useVehicle, useWorkflows, useUpdateRepairOrder, useLaborGuide, type LaborGuideRepair } from '@/lib/hooks';
+import { 
+  useRepairOrder, 
+  useCustomer, 
+  useVehicle, 
+  useWorkflows, 
+  useUpdateRepairOrder, 
+  useLaborGuide, 
+  useGenerateServiceDescription,
+  useGenerateAuthorizationRequest,
+  useImproveJobDescription,
+  type LaborGuideRepair 
+} from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,8 +32,12 @@ import {
   Pencil,
   BookOpen,
   Search,
-  DollarSign
+  DollarSign,
+  Sparkles,
+  Copy,
+  Check
 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -194,6 +209,18 @@ export default function RepairOrderDetail() {
   const [editForm, setEditForm] = useState<Partial<LineItem>>({});
   const [isLaborGuideOpen, setIsLaborGuideOpen] = useState(false);
   const [laborGuideJobId, setLaborGuideJobId] = useState<string | null>(null);
+  
+  // AI Service Writer state
+  const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
+  const [aiDialogContent, setAIDialogContent] = useState('');
+  const [aiDialogTitle, setAIDialogTitle] = useState('');
+  const [aiCopied, setAICopied] = useState(false);
+  const [aiActiveJobId, setAIActiveJobId] = useState<string | null>(null);
+  
+  // AI hooks
+  const generateDescription = useGenerateServiceDescription();
+  const generateAuth = useGenerateAuthorizationRequest();
+  const improveDescription = useImproveJobDescription();
 
   if (roLoading) {
     return (
@@ -273,6 +300,98 @@ export default function RepairOrderDetail() {
   const openLaborGuide = (jobId: string) => {
     setLaborGuideJobId(jobId);
     setIsLaborGuideOpen(true);
+  };
+
+  // AI Service Writer functions
+  const handleGenerateJobDescription = async (job: ServiceJob) => {
+    if (!vehicle) return;
+    
+    setAIActiveJobId(job.id);
+    setAIDialogTitle(`AI Service Description: ${job.name}`);
+    setAIDialogContent('');
+    setIsAIDialogOpen(true);
+    
+    try {
+      const result = await generateDescription.mutateAsync({
+        job: {
+          name: job.name,
+          description: job.description,
+          lineItems: job.lineItems.map(item => ({
+            type: item.type,
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+          })),
+        },
+        vehicle: {
+          year: vehicle.year,
+          make: vehicle.make,
+          model: vehicle.model,
+          mileage: vehicle.mileage,
+        },
+      });
+      setAIDialogContent(result.description);
+    } catch (error: any) {
+      setAIDialogContent(`Error: ${error.message}`);
+    }
+  };
+
+  const handleGenerateAuthorizationRequest = async () => {
+    if (!vehicle || jobs.length === 0) return;
+    
+    setAIDialogTitle('Authorization Request');
+    setAIDialogContent('');
+    setIsAIDialogOpen(true);
+    
+    try {
+      const result = await generateAuth.mutateAsync({
+        vehicle: {
+          year: vehicle.year,
+          make: vehicle.make,
+          model: vehicle.model,
+          mileage: vehicle.mileage,
+        },
+        jobs: jobs.map(job => ({
+          name: job.name,
+          description: job.description,
+          lineItems: job.lineItems.map(item => ({
+            type: item.type,
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+          })),
+        })),
+        notes: ro.notes || undefined,
+        customerName: customer ? `${customer.firstName} ${customer.lastName}` : undefined,
+      });
+      setAIDialogContent(result.message);
+    } catch (error: any) {
+      setAIDialogContent(`Error: ${error.message}`);
+    }
+  };
+
+  const handleCopyAIContent = async () => {
+    await navigator.clipboard.writeText(aiDialogContent);
+    setAICopied(true);
+    setTimeout(() => setAICopied(false), 2000);
+  };
+
+  const handleApplyJobDescription = () => {
+    if (!aiActiveJobId || !aiDialogContent) return;
+    
+    const updatedJobs = jobs.map(job => 
+      job.id === aiActiveJobId 
+        ? { ...job, description: aiDialogContent }
+        : job
+    );
+    
+    updateRO.mutate({
+      id: ro.id,
+      updates: { jobs: updatedJobs as any },
+    });
+    
+    setIsAIDialogOpen(false);
+    setAIActiveJobId(null);
   };
 
   const advanceStatus = () => {
@@ -432,6 +551,17 @@ export default function RepairOrderDetail() {
               <Send className="w-4 h-4" /> Share
             </Button>
             <Button 
+              variant="secondary" 
+              size="sm" 
+              className="gap-2 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20 hover:from-purple-500/20 hover:to-blue-500/20" 
+              onClick={handleGenerateAuthorizationRequest}
+              disabled={generateAuth.isPending || !vehicle || jobs.length === 0}
+              data-testid="button-ai-authorization"
+            >
+              <Sparkles className="w-4 h-4 text-purple-500" />
+              {generateAuth.isPending ? 'Generating...' : 'AI Authorization'}
+            </Button>
+            <Button 
               className="gap-2" 
               disabled={currentStepIndex >= activeStages.length - 1 || updateRO.isPending}
               onClick={advanceStatus}
@@ -564,6 +694,17 @@ export default function RepairOrderDetail() {
                             {job.description && <p className="text-sm text-muted-foreground mt-1">{job.description}</p>}
                           </div>
                           <div className="flex gap-2">
+                            <Button 
+                              variant="secondary" 
+                              size="sm" 
+                              className="gap-2 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20 hover:from-purple-500/20 hover:to-blue-500/20" 
+                              onClick={() => handleGenerateJobDescription(job)}
+                              disabled={generateDescription.isPending || !vehicle}
+                              data-testid={`button-ai-description-${job.id}`}
+                            >
+                              <Sparkles className="w-3 h-3 text-purple-500" />
+                              {generateDescription.isPending && aiActiveJobId === job.id ? 'Writing...' : 'AI Write'}
+                            </Button>
                             <Button 
                               variant="default" 
                               size="sm" 
@@ -825,6 +966,82 @@ export default function RepairOrderDetail() {
           onSelect={handleAddFromLaborGuide}
         />
       )}
+
+      {/* AI Service Writer Dialog */}
+      <Dialog open={isAIDialogOpen} onOpenChange={setIsAIDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-500" />
+              {aiDialogTitle}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {generateDescription.isPending || generateAuth.isPending ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-purple-500 mb-4" />
+              <p className="text-muted-foreground">AI is writing...</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <Textarea
+                value={aiDialogContent}
+                onChange={(e) => setAIDialogContent(e.target.value)}
+                className="min-h-[200px] text-sm"
+                placeholder="AI generated content will appear here..."
+                data-testid="textarea-ai-content"
+              />
+              
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>You can edit the text above before applying</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleCopyAIContent}
+                  disabled={!aiDialogContent}
+                  data-testid="button-copy-ai"
+                >
+                  {aiCopied ? (
+                    <>
+                      <Check className="w-3 h-3 text-green-500" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3" />
+                      Copy
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsAIDialogOpen(false);
+                setAIActiveJobId(null);
+              }}
+            >
+              Close
+            </Button>
+            {aiActiveJobId && aiDialogContent && !aiDialogContent.startsWith('Error:') && (
+              <Button 
+                onClick={handleApplyJobDescription}
+                disabled={updateRO.isPending}
+                className="gap-2"
+                data-testid="button-apply-ai"
+              >
+                <Check className="w-4 h-4" />
+                Apply to Job
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

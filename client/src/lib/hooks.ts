@@ -214,3 +214,144 @@ export function useLaborGuide(year: number | string, make: string, model: string
     staleTime: 1000 * 60 * 30, // Cache for 30 minutes
   });
 }
+
+// AI Service Writer Hooks
+interface VehicleInfo {
+  year: number;
+  make: string;
+  model: string;
+  mileage?: number | null;
+}
+
+interface JobInfo {
+  name: string;
+  description?: string;
+  lineItems: Array<{
+    type: string;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+  }>;
+}
+
+export function useGenerateServiceDescription() {
+  return useMutation({
+    mutationFn: async ({ job, vehicle }: { job: JobInfo; vehicle: VehicleInfo }) => {
+      const response = await fetch('/api/ai/service-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ job, vehicle }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to generate description');
+      }
+      return response.json();
+    },
+  });
+}
+
+export function useGenerateAuthorizationRequest() {
+  return useMutation({
+    mutationFn: async ({ 
+      vehicle, 
+      jobs, 
+      notes, 
+      customerName 
+    }: { 
+      vehicle: VehicleInfo; 
+      jobs: JobInfo[]; 
+      notes?: string; 
+      customerName?: string;
+    }) => {
+      const response = await fetch('/api/ai/authorization-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ vehicle, jobs, notes, customerName }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to generate authorization request');
+      }
+      return response.json();
+    },
+  });
+}
+
+export function useGenerateDiagnosticSummary() {
+  return useMutation({
+    mutationFn: async ({ 
+      symptoms, 
+      vehicle, 
+      dtcCodes 
+    }: { 
+      symptoms: string; 
+      vehicle: VehicleInfo; 
+      dtcCodes?: string[];
+    }) => {
+      const response = await fetch('/api/ai/diagnostic-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ symptoms, vehicle, dtcCodes }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to generate diagnostic summary');
+      }
+      return response.json();
+    },
+  });
+}
+
+export function useGetServiceRecommendations() {
+  return useMutation({
+    mutationFn: async ({ 
+      vehicle, 
+      serviceHistory 
+    }: { 
+      vehicle: VehicleInfo; 
+      serviceHistory?: string[];
+    }) => {
+      const response = await fetch('/api/ai/service-recommendations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ vehicle, serviceHistory }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to get recommendations');
+      }
+      return response.json();
+    },
+  });
+}
+
+export function useImproveJobDescription() {
+  return useMutation({
+    mutationFn: async ({ 
+      currentDescription, 
+      jobName, 
+      vehicle 
+    }: { 
+      currentDescription: string; 
+      jobName: string; 
+      vehicle: VehicleInfo;
+    }) => {
+      const response = await fetch('/api/ai/improve-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ currentDescription, jobName, vehicle }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to improve description');
+      }
+      return response.json();
+    },
+  });
+}

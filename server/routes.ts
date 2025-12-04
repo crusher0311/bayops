@@ -673,5 +673,99 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================
+  // AI Service Writer Routes
+  // ============================================
+
+  // Generate customer-friendly service description for a job
+  app.post("/api/ai/service-description", requireAuth, async (req, res) => {
+    try {
+      const { generateServiceDescription } = await import("./ai");
+      const { job, vehicle } = req.body;
+      
+      if (!job || !vehicle) {
+        return res.status(400).json({ message: "Job and vehicle information required" });
+      }
+
+      const description = await generateServiceDescription(job, vehicle);
+      res.json({ description });
+    } catch (error: any) {
+      console.error('AI service description error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Generate authorization request message for customer
+  app.post("/api/ai/authorization-request", requireAuth, async (req, res) => {
+    try {
+      const { generateAuthorizationRequest } = await import("./ai");
+      const { vehicle, jobs, notes, customerName } = req.body;
+      
+      if (!vehicle || !jobs || jobs.length === 0) {
+        return res.status(400).json({ message: "Vehicle and jobs information required" });
+      }
+
+      const message = await generateAuthorizationRequest({ vehicle, jobs, notes, customerName });
+      res.json({ message });
+    } catch (error: any) {
+      console.error('AI authorization request error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Generate diagnostic summary from symptoms
+  app.post("/api/ai/diagnostic-summary", requireAuth, async (req, res) => {
+    try {
+      const { generateDiagnosticSummary } = await import("./ai");
+      const { symptoms, vehicle, dtcCodes } = req.body;
+      
+      if (!symptoms || !vehicle) {
+        return res.status(400).json({ message: "Symptoms and vehicle information required" });
+      }
+
+      const summary = await generateDiagnosticSummary(symptoms, vehicle, dtcCodes);
+      res.json(summary);
+    } catch (error: any) {
+      console.error('AI diagnostic summary error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get AI-powered service recommendations
+  app.post("/api/ai/service-recommendations", requireAuth, async (req, res) => {
+    try {
+      const { generateServiceRecommendation } = await import("./ai");
+      const { vehicle, serviceHistory } = req.body;
+      
+      if (!vehicle) {
+        return res.status(400).json({ message: "Vehicle information required" });
+      }
+
+      const result = await generateServiceRecommendation(vehicle, serviceHistory);
+      res.json(result);
+    } catch (error: any) {
+      console.error('AI service recommendations error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Improve job description
+  app.post("/api/ai/improve-description", requireAuth, async (req, res) => {
+    try {
+      const { improveJobDescription } = await import("./ai");
+      const { currentDescription, jobName, vehicle } = req.body;
+      
+      if (!jobName || !vehicle) {
+        return res.status(400).json({ message: "Job name and vehicle information required" });
+      }
+
+      const improved = await improveJobDescription(currentDescription || '', jobName, vehicle);
+      res.json({ description: improved });
+    } catch (error: any) {
+      console.error('AI improve description error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }
