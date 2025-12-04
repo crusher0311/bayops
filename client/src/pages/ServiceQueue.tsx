@@ -82,7 +82,10 @@ export default function ServiceQueue() {
 
   const { data: serviceBays = [] } = useQuery<any[]>({
     queryKey: ['service-bays', selectedLocationId],
-    queryFn: () => apiRequest(`/api/locations/${selectedLocationId}/service-bays`),
+    queryFn: async () => {
+      const result = await apiRequest(`/api/service-bays/${selectedLocationId}`);
+      return Array.isArray(result) ? result : [];
+    },
     enabled: !!selectedLocationId,
   });
 

@@ -155,8 +155,9 @@ export default function Appointments() {
     queryKey: ['service-bays', currentLocationId],
     queryFn: async () => {
       const res = await fetch(`/api/service-bays/${currentLocationId}`, { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch service bays');
-      return res.json();
+      if (!res.ok) return [];
+      const result = await res.json();
+      return Array.isArray(result) ? result : [];
     },
     enabled: !!currentLocationId,
   });
