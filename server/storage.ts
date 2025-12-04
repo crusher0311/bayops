@@ -24,6 +24,15 @@ import {
   customerSettings,
   transparencySettings,
   orgBranding,
+  serviceBays,
+  appointments,
+  appointmentServices,
+  technicianTimeLogs,
+  vendors,
+  partOrders,
+  partOrderItems,
+  invoices,
+  payments,
   type User,
   type InsertUser,
   type Organization,
@@ -74,6 +83,24 @@ import {
   type InsertTransparencySettings,
   type OrgBranding,
   type InsertOrgBranding,
+  type ServiceBay,
+  type InsertServiceBay,
+  type Appointment,
+  type InsertAppointment,
+  type AppointmentService,
+  type InsertAppointmentService,
+  type TechnicianTimeLog,
+  type InsertTechnicianTimeLog,
+  type Vendor,
+  type InsertVendor,
+  type PartOrder,
+  type InsertPartOrder,
+  type PartOrderItem,
+  type InsertPartOrderItem,
+  type Invoice,
+  type InsertInvoice,
+  type Payment,
+  type InsertPayment,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray, desc, sql } from "drizzle-orm";
@@ -224,6 +251,68 @@ export interface IStorage {
   // Org Branding
   getOrgBranding(orgId: string): Promise<OrgBranding | undefined>;
   upsertOrgBranding(branding: InsertOrgBranding): Promise<OrgBranding>;
+
+  // ==========================================
+  // PHASE 2: OPERATIONAL WORKFLOWS
+  // ==========================================
+
+  // Service Bays
+  getServiceBaysByLocation(locationId: string): Promise<ServiceBay[]>;
+  createServiceBay(bay: InsertServiceBay): Promise<ServiceBay>;
+  updateServiceBay(id: string, updates: Partial<InsertServiceBay>): Promise<ServiceBay | undefined>;
+  deleteServiceBay(id: string): Promise<boolean>;
+
+  // Appointments
+  getAppointment(id: string): Promise<Appointment | undefined>;
+  getAppointmentsByLocation(locationId: string, startDate?: Date, endDate?: Date): Promise<Appointment[]>;
+  getAppointmentsByCustomer(customerId: string): Promise<Appointment[]>;
+  createAppointment(appointment: InsertAppointment): Promise<Appointment>;
+  updateAppointment(id: string, updates: Partial<InsertAppointment>): Promise<Appointment | undefined>;
+  deleteAppointment(id: string): Promise<boolean>;
+
+  // Appointment Services
+  getAppointmentServices(appointmentId: string): Promise<AppointmentService[]>;
+  createAppointmentService(service: InsertAppointmentService): Promise<AppointmentService>;
+  deleteAppointmentServices(appointmentId: string): Promise<boolean>;
+
+  // Technician Time Logs
+  getTechnicianTimeLogs(userId: string, startDate?: Date, endDate?: Date): Promise<TechnicianTimeLog[]>;
+  getTimeLogsByLocation(locationId: string, startDate?: Date, endDate?: Date): Promise<TechnicianTimeLog[]>;
+  getTimeLogsByRepairOrder(repairOrderId: string): Promise<TechnicianTimeLog[]>;
+  createTimeLog(log: InsertTechnicianTimeLog): Promise<TechnicianTimeLog>;
+  updateTimeLog(id: string, updates: Partial<InsertTechnicianTimeLog>): Promise<TechnicianTimeLog | undefined>;
+  getActiveTimeLog(userId: string): Promise<TechnicianTimeLog | undefined>;
+
+  // Vendors
+  getVendorsByOrg(orgId: string): Promise<Vendor[]>;
+  createVendor(vendor: InsertVendor): Promise<Vendor>;
+  updateVendor(id: string, updates: Partial<InsertVendor>): Promise<Vendor | undefined>;
+  deleteVendor(id: string): Promise<boolean>;
+
+  // Part Orders
+  getPartOrder(id: string): Promise<PartOrder | undefined>;
+  getPartOrdersByLocation(locationId: string): Promise<PartOrder[]>;
+  getPartOrdersByRepairOrder(repairOrderId: string): Promise<PartOrder[]>;
+  createPartOrder(order: InsertPartOrder): Promise<PartOrder>;
+  updatePartOrder(id: string, updates: Partial<InsertPartOrder>): Promise<PartOrder | undefined>;
+
+  // Part Order Items
+  getPartOrderItems(partOrderId: string): Promise<PartOrderItem[]>;
+  createPartOrderItem(item: InsertPartOrderItem): Promise<PartOrderItem>;
+  updatePartOrderItem(id: string, updates: Partial<InsertPartOrderItem>): Promise<PartOrderItem | undefined>;
+  deletePartOrderItem(id: string): Promise<boolean>;
+
+  // Invoices
+  getInvoice(id: string): Promise<Invoice | undefined>;
+  getInvoicesByLocation(locationId: string): Promise<Invoice[]>;
+  getInvoiceByRepairOrder(repairOrderId: string): Promise<Invoice | undefined>;
+  createInvoice(invoice: InsertInvoice): Promise<Invoice>;
+  updateInvoice(id: string, updates: Partial<InsertInvoice>): Promise<Invoice | undefined>;
+  getNextInvoiceNumber(locationId: string): Promise<string>;
+
+  // Payments
+  getPaymentsByInvoice(invoiceId: string): Promise<Payment[]>;
+  createPayment(payment: InsertPayment): Promise<Payment>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -776,6 +865,280 @@ export class DatabaseStorage implements IStorage {
       return updated;
     }
     const [created] = await db.insert(orgBranding).values(branding).returning();
+    return created;
+  }
+
+  // ==========================================
+  // PHASE 2: OPERATIONAL WORKFLOWS
+  // ==========================================
+
+  // Service Bays
+  async getServiceBaysByLocation(locationId: string): Promise<ServiceBay[]> {
+    return db.select().from(serviceBays).where(eq(serviceBays.locationId, locationId)).orderBy(serviceBays.sortOrder);
+  }
+
+  async createServiceBay(bay: InsertServiceBay): Promise<ServiceBay> {
+    const [created] = await db.insert(serviceBays).values(bay).returning();
+    return created;
+  }
+
+  async updateServiceBay(id: string, updates: Partial<InsertServiceBay>): Promise<ServiceBay | undefined> {
+    const [updated] = await db.update(serviceBays).set(updates).where(eq(serviceBays.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deleteServiceBay(id: string): Promise<boolean> {
+    await db.delete(serviceBays).where(eq(serviceBays.id, id));
+    return true;
+  }
+
+  // Appointments
+  async getAppointment(id: string): Promise<Appointment | undefined> {
+    const [appointment] = await db.select().from(appointments).where(eq(appointments.id, id));
+    return appointment || undefined;
+  }
+
+  async getAppointmentsByLocation(locationId: string, startDate?: Date, endDate?: Date): Promise<Appointment[]> {
+    if (startDate && endDate) {
+      return db.select().from(appointments)
+        .where(and(
+          eq(appointments.locationId, locationId),
+          sql`${appointments.startTime} >= ${startDate}`,
+          sql`${appointments.startTime} <= ${endDate}`
+        ))
+        .orderBy(appointments.startTime);
+    }
+    return db.select().from(appointments)
+      .where(eq(appointments.locationId, locationId))
+      .orderBy(appointments.startTime);
+  }
+
+  async getAppointmentsByCustomer(customerId: string): Promise<Appointment[]> {
+    return db.select().from(appointments)
+      .where(eq(appointments.customerId, customerId))
+      .orderBy(desc(appointments.startTime));
+  }
+
+  async createAppointment(appointment: InsertAppointment): Promise<Appointment> {
+    const [created] = await db.insert(appointments).values(appointment).returning();
+    return created;
+  }
+
+  async updateAppointment(id: string, updates: Partial<InsertAppointment>): Promise<Appointment | undefined> {
+    const [updated] = await db.update(appointments).set(updates).where(eq(appointments.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deleteAppointment(id: string): Promise<boolean> {
+    await db.delete(appointmentServices).where(eq(appointmentServices.appointmentId, id));
+    await db.delete(appointments).where(eq(appointments.id, id));
+    return true;
+  }
+
+  // Appointment Services
+  async getAppointmentServices(appointmentId: string): Promise<AppointmentService[]> {
+    return db.select().from(appointmentServices).where(eq(appointmentServices.appointmentId, appointmentId));
+  }
+
+  async createAppointmentService(service: InsertAppointmentService): Promise<AppointmentService> {
+    const [created] = await db.insert(appointmentServices).values(service).returning();
+    return created;
+  }
+
+  async deleteAppointmentServices(appointmentId: string): Promise<boolean> {
+    await db.delete(appointmentServices).where(eq(appointmentServices.appointmentId, appointmentId));
+    return true;
+  }
+
+  // Technician Time Logs
+  async getTechnicianTimeLogs(userId: string, startDate?: Date, endDate?: Date): Promise<TechnicianTimeLog[]> {
+    if (startDate && endDate) {
+      return db.select().from(technicianTimeLogs)
+        .where(and(
+          eq(technicianTimeLogs.userId, userId),
+          sql`${technicianTimeLogs.clockIn} >= ${startDate}`,
+          sql`${technicianTimeLogs.clockIn} <= ${endDate}`
+        ))
+        .orderBy(desc(technicianTimeLogs.clockIn));
+    }
+    return db.select().from(technicianTimeLogs)
+      .where(eq(technicianTimeLogs.userId, userId))
+      .orderBy(desc(technicianTimeLogs.clockIn));
+  }
+
+  async getTimeLogsByLocation(locationId: string, startDate?: Date, endDate?: Date): Promise<TechnicianTimeLog[]> {
+    if (startDate && endDate) {
+      return db.select().from(technicianTimeLogs)
+        .where(and(
+          eq(technicianTimeLogs.locationId, locationId),
+          sql`${technicianTimeLogs.clockIn} >= ${startDate}`,
+          sql`${technicianTimeLogs.clockIn} <= ${endDate}`
+        ))
+        .orderBy(desc(technicianTimeLogs.clockIn));
+    }
+    return db.select().from(technicianTimeLogs)
+      .where(eq(technicianTimeLogs.locationId, locationId))
+      .orderBy(desc(technicianTimeLogs.clockIn));
+  }
+
+  async getTimeLogsByRepairOrder(repairOrderId: string): Promise<TechnicianTimeLog[]> {
+    return db.select().from(technicianTimeLogs)
+      .where(eq(technicianTimeLogs.repairOrderId, repairOrderId))
+      .orderBy(technicianTimeLogs.clockIn);
+  }
+
+  async createTimeLog(log: InsertTechnicianTimeLog): Promise<TechnicianTimeLog> {
+    const [created] = await db.insert(technicianTimeLogs).values(log).returning();
+    return created;
+  }
+
+  async updateTimeLog(id: string, updates: Partial<InsertTechnicianTimeLog>): Promise<TechnicianTimeLog | undefined> {
+    const [updated] = await db.update(technicianTimeLogs).set(updates).where(eq(technicianTimeLogs.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async getActiveTimeLog(userId: string): Promise<TechnicianTimeLog | undefined> {
+    const [log] = await db.select().from(technicianTimeLogs)
+      .where(and(
+        eq(technicianTimeLogs.userId, userId),
+        sql`${technicianTimeLogs.clockOut} IS NULL`
+      ))
+      .orderBy(desc(technicianTimeLogs.clockIn))
+      .limit(1);
+    return log || undefined;
+  }
+
+  // Vendors
+  async getVendorsByOrg(orgId: string): Promise<Vendor[]> {
+    return db.select().from(vendors).where(eq(vendors.orgId, orgId)).orderBy(vendors.name);
+  }
+
+  async createVendor(vendor: InsertVendor): Promise<Vendor> {
+    const [created] = await db.insert(vendors).values(vendor).returning();
+    return created;
+  }
+
+  async updateVendor(id: string, updates: Partial<InsertVendor>): Promise<Vendor | undefined> {
+    const [updated] = await db.update(vendors).set(updates).where(eq(vendors.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deleteVendor(id: string): Promise<boolean> {
+    await db.delete(vendors).where(eq(vendors.id, id));
+    return true;
+  }
+
+  // Part Orders
+  async getPartOrder(id: string): Promise<PartOrder | undefined> {
+    const [order] = await db.select().from(partOrders).where(eq(partOrders.id, id));
+    return order || undefined;
+  }
+
+  async getPartOrdersByLocation(locationId: string): Promise<PartOrder[]> {
+    return db.select().from(partOrders)
+      .where(eq(partOrders.locationId, locationId))
+      .orderBy(desc(partOrders.createdAt));
+  }
+
+  async getPartOrdersByRepairOrder(repairOrderId: string): Promise<PartOrder[]> {
+    const items = await db.select().from(partOrderItems)
+      .where(eq(partOrderItems.repairOrderId, repairOrderId));
+    if (items.length === 0) return [];
+    const orderIds = [...new Set(items.map(i => i.partOrderId))];
+    return db.select().from(partOrders).where(inArray(partOrders.id, orderIds));
+  }
+
+  async createPartOrder(order: InsertPartOrder): Promise<PartOrder> {
+    const [created] = await db.insert(partOrders).values(order).returning();
+    return created;
+  }
+
+  async updatePartOrder(id: string, updates: Partial<InsertPartOrder>): Promise<PartOrder | undefined> {
+    const [updated] = await db.update(partOrders).set(updates).where(eq(partOrders.id, id)).returning();
+    return updated || undefined;
+  }
+
+  // Part Order Items
+  async getPartOrderItems(partOrderId: string): Promise<PartOrderItem[]> {
+    return db.select().from(partOrderItems).where(eq(partOrderItems.partOrderId, partOrderId));
+  }
+
+  async createPartOrderItem(item: InsertPartOrderItem): Promise<PartOrderItem> {
+    const [created] = await db.insert(partOrderItems).values(item).returning();
+    return created;
+  }
+
+  async updatePartOrderItem(id: string, updates: Partial<InsertPartOrderItem>): Promise<PartOrderItem | undefined> {
+    const [updated] = await db.update(partOrderItems).set(updates).where(eq(partOrderItems.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deletePartOrderItem(id: string): Promise<boolean> {
+    await db.delete(partOrderItems).where(eq(partOrderItems.id, id));
+    return true;
+  }
+
+  // Invoices
+  async getInvoice(id: string): Promise<Invoice | undefined> {
+    const [invoice] = await db.select().from(invoices).where(eq(invoices.id, id));
+    return invoice || undefined;
+  }
+
+  async getInvoicesByLocation(locationId: string): Promise<Invoice[]> {
+    return db.select().from(invoices)
+      .where(eq(invoices.locationId, locationId))
+      .orderBy(desc(invoices.createdAt));
+  }
+
+  async getInvoiceByRepairOrder(repairOrderId: string): Promise<Invoice | undefined> {
+    const [invoice] = await db.select().from(invoices)
+      .where(eq(invoices.repairOrderId, repairOrderId));
+    return invoice || undefined;
+  }
+
+  async createInvoice(invoice: InsertInvoice): Promise<Invoice> {
+    const [created] = await db.insert(invoices).values(invoice).returning();
+    return created;
+  }
+
+  async updateInvoice(id: string, updates: Partial<InsertInvoice>): Promise<Invoice | undefined> {
+    const [updated] = await db.update(invoices).set(updates).where(eq(invoices.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async getNextInvoiceNumber(locationId: string): Promise<string> {
+    const settings = await this.getInvoiceSettingsByLocation(locationId);
+    const nextNumber = settings?.nextInvoiceNumber || 1;
+    const prefix = settings?.invoicePrefix || 'INV';
+    if (settings) {
+      await db.update(invoiceSettings)
+        .set({ nextInvoiceNumber: nextNumber + 1 })
+        .where(eq(invoiceSettings.locationId, locationId));
+    }
+    return `${prefix}-${String(nextNumber).padStart(6, '0')}`;
+  }
+
+  // Payments
+  async getPaymentsByInvoice(invoiceId: string): Promise<Payment[]> {
+    return db.select().from(payments)
+      .where(eq(payments.invoiceId, invoiceId))
+      .orderBy(payments.processedAt);
+  }
+
+  async createPayment(payment: InsertPayment): Promise<Payment> {
+    const [created] = await db.insert(payments).values(payment).returning();
+    const invoice = await this.getInvoice(payment.invoiceId);
+    if (invoice) {
+      const allPayments = await this.getPaymentsByInvoice(payment.invoiceId);
+      const totalPaid = allPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+      const amountDue = parseFloat(invoice.total) - totalPaid;
+      await this.updateInvoice(invoice.id, {
+        amountPaid: String(totalPaid),
+        amountDue: String(Math.max(0, amountDue)),
+        status: amountDue <= 0 ? 'PAID' : totalPaid > 0 ? 'PARTIAL' : invoice.status,
+        paidAt: amountDue <= 0 ? new Date() : undefined,
+      });
+    }
     return created;
   }
 }

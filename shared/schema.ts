@@ -686,6 +686,285 @@ export const orgBrandingRelations = relations(orgBranding, ({ one }) => ({
   }),
 }));
 
+// ============================================
+// PHASE 2: OPERATIONAL WORKFLOWS
+// ============================================
+
+// Appointment Status Enum
+export const appointmentStatusEnum = pgEnum('appointment_status', ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'IN_PROGRESS', 'COMPLETED', 'NO_SHOW', 'CANCELLED']);
+
+// Service Bays - Physical work bays at each location
+export const serviceBays = pgTable("service_bays", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const serviceBaysRelations = relations(serviceBays, ({ one, many }) => ({
+  location: one(locations, {
+    fields: [serviceBays.locationId],
+    references: [locations.id],
+  }),
+  appointments: many(appointments),
+}));
+
+// Appointments - Main scheduling table
+export const appointments = pgTable("appointments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  customerId: varchar("customer_id").notNull().references(() => customers.id, { onDelete: 'cascade' }),
+  vehicleId: varchar("vehicle_id").notNull().references(() => vehicles.id, { onDelete: 'cascade' }),
+  advisorId: varchar("advisor_id").references(() => users.id),
+  technicianId: varchar("technician_id").references(() => users.id),
+  bayId: varchar("bay_id").references(() => serviceBays.id),
+  repairOrderId: varchar("repair_order_id").references(() => repairOrders.id),
+  title: text("title").notNull(),
+  notes: text("notes"),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
+  estimatedDuration: integer("estimated_duration").notNull().default(60),
+  status: appointmentStatusEnum("status").notNull().default('SCHEDULED'),
+  reminderSent: boolean("reminder_sent").notNull().default(false),
+  confirmedAt: timestamp("confirmed_at"),
+  checkedInAt: timestamp("checked_in_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const appointmentsRelations = relations(appointments, ({ one, many }) => ({
+  location: one(locations, {
+    fields: [appointments.locationId],
+    references: [locations.id],
+  }),
+  customer: one(customers, {
+    fields: [appointments.customerId],
+    references: [customers.id],
+  }),
+  vehicle: one(vehicles, {
+    fields: [appointments.vehicleId],
+    references: [vehicles.id],
+  }),
+  advisor: one(users, {
+    fields: [appointments.advisorId],
+    references: [users.id],
+    relationName: 'appointmentAdvisor',
+  }),
+  technician: one(users, {
+    fields: [appointments.technicianId],
+    references: [users.id],
+    relationName: 'appointmentTechnician',
+  }),
+  bay: one(serviceBays, {
+    fields: [appointments.bayId],
+    references: [serviceBays.id],
+  }),
+  repairOrder: one(repairOrders, {
+    fields: [appointments.repairOrderId],
+    references: [repairOrders.id],
+  }),
+  services: many(appointmentServices),
+}));
+
+// Appointment Services - Services requested for an appointment
+export const appointmentServices = pgTable("appointment_services", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  appointmentId: varchar("appointment_id").notNull().references(() => appointments.id, { onDelete: 'cascade' }),
+  serviceName: text("service_name").notNull(),
+  estimatedHours: decimal("estimated_hours", { precision: 5, scale: 2 }),
+  estimatedCost: decimal("estimated_cost", { precision: 10, scale: 2 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const appointmentServicesRelations = relations(appointmentServices, ({ one }) => ({
+  appointment: one(appointments, {
+    fields: [appointmentServices.appointmentId],
+    references: [appointments.id],
+  }),
+}));
+
+// Technician Time Logs - Clock in/out and job time tracking
+export const technicianTimeLogs = pgTable("technician_time_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  repairOrderId: varchar("repair_order_id").references(() => repairOrders.id),
+  jobId: text("job_id"),
+  clockIn: timestamp("clock_in").notNull(),
+  clockOut: timestamp("clock_out"),
+  breakMinutes: integer("break_minutes").notNull().default(0),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const technicianTimeLogsRelations = relations(technicianTimeLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [technicianTimeLogs.userId],
+    references: [users.id],
+  }),
+  location: one(locations, {
+    fields: [technicianTimeLogs.locationId],
+    references: [locations.id],
+  }),
+  repairOrder: one(repairOrders, {
+    fields: [technicianTimeLogs.repairOrderId],
+    references: [repairOrders.id],
+  }),
+}));
+
+// Vendors - Parts suppliers
+export const vendors = pgTable("vendors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  code: text("code"),
+  contactName: text("contact_name"),
+  email: text("email"),
+  phone: text("phone"),
+  address: text("address"),
+  accountNumber: text("account_number"),
+  notes: text("notes"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const vendorsRelations = relations(vendors, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [vendors.orgId],
+    references: [organizations.id],
+  }),
+  partOrders: many(partOrders),
+}));
+
+// Part Order Status Enum
+export const partOrderStatusEnum = pgEnum('part_order_status', ['DRAFT', 'ORDERED', 'PARTIAL', 'RECEIVED', 'CANCELLED']);
+
+// Part Orders - Orders placed with vendors
+export const partOrders = pgTable("part_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  vendorId: varchar("vendor_id").notNull().references(() => vendors.id, { onDelete: 'cascade' }),
+  orderNumber: text("order_number"),
+  poNumber: text("po_number"),
+  status: partOrderStatusEnum("status").notNull().default('DRAFT'),
+  orderedAt: timestamp("ordered_at"),
+  expectedAt: timestamp("expected_at"),
+  receivedAt: timestamp("received_at"),
+  notes: text("notes"),
+  totalCost: decimal("total_cost", { precision: 10, scale: 2 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const partOrdersRelations = relations(partOrders, ({ one, many }) => ({
+  location: one(locations, {
+    fields: [partOrders.locationId],
+    references: [locations.id],
+  }),
+  vendor: one(vendors, {
+    fields: [partOrders.vendorId],
+    references: [vendors.id],
+  }),
+  items: many(partOrderItems),
+}));
+
+// Part Order Items - Individual parts on an order
+export const partOrderItems = pgTable("part_order_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partOrderId: varchar("part_order_id").notNull().references(() => partOrders.id, { onDelete: 'cascade' }),
+  repairOrderId: varchar("repair_order_id").references(() => repairOrders.id),
+  jobId: text("job_id"),
+  partNumber: text("part_number").notNull(),
+  description: text("description").notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }),
+  quantityReceived: integer("quantity_received").notNull().default(0),
+  receivedAt: timestamp("received_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const partOrderItemsRelations = relations(partOrderItems, ({ one }) => ({
+  partOrder: one(partOrders, {
+    fields: [partOrderItems.partOrderId],
+    references: [partOrders.id],
+  }),
+  repairOrder: one(repairOrders, {
+    fields: [partOrderItems.repairOrderId],
+    references: [repairOrders.id],
+  }),
+}));
+
+// Invoice Status Enum
+export const invoiceStatusEnum = pgEnum('invoice_status', ['DRAFT', 'SENT', 'VIEWED', 'PARTIAL', 'PAID', 'OVERDUE', 'VOID']);
+
+// Invoices - Generated from repair orders
+export const invoices = pgTable("invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  repairOrderId: varchar("repair_order_id").notNull().references(() => repairOrders.id, { onDelete: 'cascade' }),
+  customerId: varchar("customer_id").notNull().references(() => customers.id, { onDelete: 'cascade' }),
+  invoiceNumber: text("invoice_number").notNull(),
+  status: invoiceStatusEnum("status").notNull().default('DRAFT'),
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).notNull().default('0'),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).notNull().default('0'),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  amountPaid: decimal("amount_paid", { precision: 10, scale: 2 }).notNull().default('0'),
+  amountDue: decimal("amount_due", { precision: 10, scale: 2 }).notNull(),
+  dueDate: timestamp("due_date"),
+  sentAt: timestamp("sent_at"),
+  viewedAt: timestamp("viewed_at"),
+  paidAt: timestamp("paid_at"),
+  notes: text("notes"),
+  termsAndConditions: text("terms_and_conditions"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const invoicesRelations = relations(invoices, ({ one, many }) => ({
+  location: one(locations, {
+    fields: [invoices.locationId],
+    references: [locations.id],
+  }),
+  repairOrder: one(repairOrders, {
+    fields: [invoices.repairOrderId],
+    references: [repairOrders.id],
+  }),
+  customer: one(customers, {
+    fields: [invoices.customerId],
+    references: [customers.id],
+  }),
+  payments: many(payments),
+}));
+
+// Payment Method Enum
+export const paymentMethodEnum = pgEnum('payment_method', ['CASH', 'CHECK', 'CREDIT_CARD', 'DEBIT_CARD', 'ACH', 'FINANCING', 'OTHER']);
+
+// Payments - Payment records for invoices
+export const payments = pgTable("payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceId: varchar("invoice_id").notNull().references(() => invoices.id, { onDelete: 'cascade' }),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  method: paymentMethodEnum("method").notNull(),
+  referenceNumber: text("reference_number"),
+  notes: text("notes"),
+  processedBy: varchar("processed_by").references(() => users.id),
+  processedAt: timestamp("processed_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [payments.invoiceId],
+    references: [invoices.id],
+  }),
+  processedByUser: one(users, {
+    fields: [payments.processedBy],
+    references: [users.id],
+  }),
+}));
+
 // Insert Schemas
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({
   id: true,
@@ -814,6 +1093,52 @@ export const insertOrgBrandingSchema = createInsertSchema(orgBranding).omit({
   createdAt: true,
 });
 
+// Phase 2: Operational Workflows Insert Schemas
+export const insertServiceBaySchema = createInsertSchema(serviceBays).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAppointmentSchema = createInsertSchema(appointments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAppointmentServiceSchema = createInsertSchema(appointmentServices).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTechnicianTimeLogSchema = createInsertSchema(technicianTimeLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertVendorSchema = createInsertSchema(vendors).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPartOrderSchema = createInsertSchema(partOrders).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPartOrderItemSchema = createInsertSchema(partOrderItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPaymentSchema = createInsertSchema(payments).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type Organization = typeof organizations.$inferSelect;
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
@@ -890,3 +1215,31 @@ export type InsertTransparencySettings = z.infer<typeof insertTransparencySettin
 
 export type OrgBranding = typeof orgBranding.$inferSelect;
 export type InsertOrgBranding = z.infer<typeof insertOrgBrandingSchema>;
+
+// Phase 2: Operational Workflows Types
+export type ServiceBay = typeof serviceBays.$inferSelect;
+export type InsertServiceBay = z.infer<typeof insertServiceBaySchema>;
+
+export type Appointment = typeof appointments.$inferSelect;
+export type InsertAppointment = z.infer<typeof insertAppointmentSchema>;
+
+export type AppointmentService = typeof appointmentServices.$inferSelect;
+export type InsertAppointmentService = z.infer<typeof insertAppointmentServiceSchema>;
+
+export type TechnicianTimeLog = typeof technicianTimeLogs.$inferSelect;
+export type InsertTechnicianTimeLog = z.infer<typeof insertTechnicianTimeLogSchema>;
+
+export type Vendor = typeof vendors.$inferSelect;
+export type InsertVendor = z.infer<typeof insertVendorSchema>;
+
+export type PartOrder = typeof partOrders.$inferSelect;
+export type InsertPartOrder = z.infer<typeof insertPartOrderSchema>;
+
+export type PartOrderItem = typeof partOrderItems.$inferSelect;
+export type InsertPartOrderItem = z.infer<typeof insertPartOrderItemSchema>;
+
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+
+export type Payment = typeof payments.$inferSelect;
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
