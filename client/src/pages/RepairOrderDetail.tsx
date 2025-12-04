@@ -230,6 +230,10 @@ interface PartstechDialogProps {
 function PartstechDialog({ isOpen, onClose, vehicle, onSelect }: PartstechDialogProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<PartstechPart[]>([]);
+  const [manualPartNumber, setManualPartNumber] = useState('');
+  const [manualDescription, setManualDescription] = useState('');
+  const [manualBrand, setManualBrand] = useState('');
+  const [manualPrice, setManualPrice] = useState('');
   const partstechSearch = usePartstechSearch();
   const { data: ptStatus } = usePartstechStatus();
   
@@ -254,22 +258,145 @@ function PartstechDialog({ isOpen, onClose, vehicle, onSelect }: PartstechDialog
     }
   };
 
+  const openPartstechPopup = () => {
+    const baseUrl = 'https://app.partstech.com';
+    let url = baseUrl;
+    
+    if (vehicle?.vin) {
+      url = `${baseUrl}/search?vin=${encodeURIComponent(vehicle.vin)}`;
+    }
+    
+    const popup = window.open(
+      url,
+      'partstech',
+      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no'
+    );
+    
+    if (popup) {
+      popup.focus();
+    }
+  };
+
+  const handleManualPartAdd = () => {
+    if (!manualPartNumber.trim() || !manualDescription.trim()) return;
+    
+    const part: PartstechPart = {
+      partNumber: manualPartNumber.trim(),
+      description: manualDescription.trim(),
+      brand: manualBrand.trim() || 'Unknown',
+      price: manualPrice ? parseFloat(manualPrice) : undefined,
+    };
+    
+    onSelect(part);
+    setManualPartNumber('');
+    setManualDescription('');
+    setManualBrand('');
+    setManualPrice('');
+    onClose();
+  };
+
   if (!ptStatus?.configured) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              PartsTech Not Configured
+              <Package className="w-5 h-5 text-orange-500" />
+              PartsTech Parts Ordering
+              {vehicle && (
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  {vehicle.year} {vehicle.make} {vehicle.model}
+                </Badge>
+              )}
             </DialogTitle>
           </DialogHeader>
-          <div className="py-6 text-center">
-            <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">
-              PartsTech credentials are not configured. Please add your PARTSTECH_USERNAME and PARTSTECH_API_KEY to enable parts search.
-            </p>
+          
+          <div className="space-y-6">
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <ExternalLink className="w-5 h-5 text-orange-600 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-orange-900">Open PartsTech Website</h4>
+                  <p className="text-sm text-orange-700 mt-1">
+                    Click below to open PartsTech in a new window. Search and order parts, then enter the part details below to add to this repair order.
+                  </p>
+                  <Button 
+                    onClick={openPartstechPopup}
+                    className="mt-3 bg-orange-500 hover:bg-orange-600 text-white"
+                    data-testid="button-open-partstech"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Open PartsTech {vehicle?.vin ? `(VIN: ${vehicle.vin.slice(-6)})` : ''}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <h4 className="font-medium mb-3 flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Add Part to Repair Order
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="partNumber" className="text-xs">Part Number *</Label>
+                  <Input
+                    id="partNumber"
+                    placeholder="e.g. BP-12345"
+                    value={manualPartNumber}
+                    onChange={(e) => setManualPartNumber(e.target.value)}
+                    data-testid="input-manual-part-number"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="partBrand" className="text-xs">Brand</Label>
+                  <Input
+                    id="partBrand"
+                    placeholder="e.g. ACDelco"
+                    value={manualBrand}
+                    onChange={(e) => setManualBrand(e.target.value)}
+                    data-testid="input-manual-brand"
+                  />
+                </div>
+                <div className="col-span-2 space-y-1.5">
+                  <Label htmlFor="partDescription" className="text-xs">Description *</Label>
+                  <Input
+                    id="partDescription"
+                    placeholder="e.g. Front Brake Pads"
+                    value={manualDescription}
+                    onChange={(e) => setManualDescription(e.target.value)}
+                    data-testid="input-manual-description"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="partPrice" className="text-xs">Cost Price ($)</Label>
+                  <Input
+                    id="partPrice"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={manualPrice}
+                    onChange={(e) => setManualPrice(e.target.value)}
+                    data-testid="input-manual-price"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button 
+                    onClick={handleManualPartAdd}
+                    disabled={!manualPartNumber.trim() || !manualDescription.trim()}
+                    className="w-full"
+                    data-testid="button-add-manual-part"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Part
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
+          
           <DialogFooter>
             <Button variant="outline" onClick={onClose}>Close</Button>
           </DialogFooter>

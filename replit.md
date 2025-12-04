@@ -184,14 +184,21 @@ Settings page with 6 tabs for comprehensive shop configuration:
 - Performance-based pay calculations
 
 ### PartsTech Integration (IMPLEMENTED)
-Native parts search and ordering integration using PartsTech's REST API:
-- **VIN-based search**: Searches with vehicle context for accurate part fitment
-- **Real-time pricing**: Live pricing from connected suppliers
-- **Direct to RO**: Selected parts automatically added to job line items with markup matrix applied
-- **UI**: Orange-styled PartsTech button in job headers, modal search dialog with part details
-- **Backend**: `server/partstech.ts` handles OAuth authentication (60-min token caching), API calls
-- **Routes**: `/api/partstech/*` endpoints for status, VIN decode, parts search, categories, suppliers
-- **Credentials**: PARTSTECH_USERNAME and PARTSTECH_API_KEY stored in Replit Secrets
+Two-mode integration for parts ordering:
+
+**Popup Mode (Works Now - No Partner Credentials Needed):**
+- Opens PartsTech website in popup window with VIN pre-loaded
+- Quick-add form to enter part details (part#, description, brand, cost) into RO
+- Uses your existing PartsTech shop account
+
+**Full API Mode (Requires Partner Credentials):**
+- Native search within app using PartsTech REST API
+- VIN-based search with real-time pricing from suppliers
+- Direct part selection adds to job line items with markup matrix
+- Requires: PARTSTECH_PARTNER_ID and PARTSTECH_PARTNER_KEY (developer credentials from PartsTech)
+
+**Backend**: `server/partstech.ts` handles authentication, `server/routes.ts` provides `/api/partstech/*` endpoints
+**Credentials Needed**: PARTSTECH_USERNAME, PARTSTECH_API_KEY (shop), and optionally PARTSTECH_PARTNER_ID, PARTSTECH_PARTNER_KEY (developer)
 
 ### Planned Integrations
 - Payment processing (Stripe, Square)
