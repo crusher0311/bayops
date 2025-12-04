@@ -34,6 +34,11 @@ declare global {
 }
 
 export function setupAuth(app: Express) {
+  // Trust the reverse proxy (Replit) for secure cookies to work
+  if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
+
   const sessionSettings: session.SessionOptions = {
     secret: process.env.REPL_ID || "apex-auto-secret-key-dev",
     resave: false,
@@ -42,7 +47,7 @@ export function setupAuth(app: Express) {
       maxAge: 86400000, // 24 hours
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     },
     store: new MemoryStore({
       checkPeriod: 86400000,
