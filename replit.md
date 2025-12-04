@@ -111,7 +111,8 @@ Settings page with 6 tabs for comprehensive shop configuration:
 ## MVP Roadmap
 - **Phase 1 (COMPLETE)**: Configuration backbone - all shop settings, markup matrices, branding
 - **Phase 2 (COMPLETE)**: Operational workflows - appointments, invoicing, parts ordering, time tracking, reporting
-- **Phase 3 (IN PROGRESS)**: DVI with AI tech notes, customer report sharing, template management
+- **Phase 3 (COMPLETE)**: DVI with AI tech notes, customer report sharing, template management, photo/video capture
+- **Phase 4 (IN PROGRESS)**: Inventory Management - comprehensive inventory system with stock adjustments, low stock alerts, transaction history
 
 ## Phase 2 Features
 
@@ -173,7 +174,33 @@ Settings page with 6 tabs for comprehensive shop configuration:
 - Media display in customer report with click-to-expand images and video controls
 - Remove media functionality with confirmation
 
-## Future Phase 3 Features
+## Phase 4 Features (Inventory Management - IN PROGRESS)
+
+### Inventory Management
+- **Full CRUD**: Add, edit, delete inventory items (tires, parts, supplies)
+- **Stock Adjustments**: Receive, adjust, count, return, transfer stock with audit trail
+- **Low Stock Alerts**: Automatic detection of items below minimum quantity threshold
+- **Reorder Points**: Configurable min/max quantities per item
+- **Inventory Valuation**: Real-time cost-based valuation summary
+- **Stock Transactions**: Full audit trail of all inventory movements
+- **Vendor Part Numbers**: Track supplier part numbers and UPC codes
+- **Bin Locations**: Track physical location of parts in the shop
+
+### Inventory Database Schema
+- `inventoryItems`: Enhanced with minQuantity, maxQuantity, vendorPartNumber, upc, isActive, updatedAt
+- `stockTransactions`: New table tracking all inventory movements (RECEIVE, ADJUST, SALE, RETURN, TRANSFER_IN, TRANSFER_OUT, COUNT)
+
+### Inventory API Endpoints
+- `GET /api/inventory` - List inventory items with search
+- `GET /api/inventory/:id` - Get single item
+- `POST /api/inventory` - Create new item
+- `PATCH /api/inventory/:id` - Update item
+- `DELETE /api/inventory/:id` - Delete item
+- `GET /api/inventory/low-stock/:locationId` - Get low stock items
+- `GET /api/inventory/:id/transactions` - Get stock transaction history
+- `POST /api/inventory/:id/adjust` - Adjust stock quantity
+
+## Future Features
 
 ### SMS/Email Communications
 - Automated appointment reminders

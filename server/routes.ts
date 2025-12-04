@@ -517,6 +517,60 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/inventory/:id", requireAuth, async (req, res) => {
+    try {
+      const deleted = await storage.deleteInventoryItem(req.params.id, req.user!.orgId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Inventory item not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/inventory/low-stock/:locationId", requireAuth, async (req, res) => {
+    try {
+      const items = await storage.getLowStockItems(req.params.locationId, req.user!.orgId);
+      res.json(items);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/inventory/:id/transactions", requireAuth, async (req, res) => {
+    try {
+      const item = await storage.getInventoryItem(req.params.id, req.user!.orgId);
+      if (!item) {
+        return res.status(404).json({ message: "Inventory item not found" });
+      }
+      const transactions = await storage.getStockTransactions(req.params.id);
+      res.json(transactions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/inventory/:id/adjust", requireAuth, async (req, res) => {
+    try {
+      const { type, quantity, notes } = req.body;
+      if (!type || quantity === undefined) {
+        return res.status(400).json({ message: "type and quantity are required" });
+      }
+      const item = await storage.adjustInventoryQuantity(
+        req.params.id, 
+        req.user!.orgId, 
+        { type, quantity, notes, userId: req.user!.id }
+      );
+      if (!item) {
+        return res.status(404).json({ message: "Inventory item not found" });
+      }
+      res.json(item);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Inspection Templates
   app.get("/api/inspection-templates", requireAuth, async (req, res) => {
     try {

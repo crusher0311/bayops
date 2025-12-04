@@ -7,6 +7,7 @@ import {
   workflows,
   repairOrders,
   inventoryItems,
+  stockTransactions,
   inspectionTemplates,
   inspections,
   auditLogs,
@@ -49,6 +50,8 @@ import {
   type InsertRepairOrder,
   type InventoryItem,
   type InsertInventoryItem,
+  type StockTransaction,
+  type InsertStockTransaction,
   type InspectionTemplate,
   type InsertInspectionTemplate,
   type Inspection,
@@ -159,8 +162,15 @@ export interface IStorage {
   getInventoryItem(id: string, orgId: string): Promise<InventoryItem | undefined>;
   getInventoryByLocation(locationId: string, orgId: string): Promise<InventoryItem[]>;
   searchInventory(locationId: string, orgId: string, query: string): Promise<InventoryItem[]>;
+  getLowStockItems(locationId: string, orgId: string): Promise<InventoryItem[]>;
   createInventoryItem(item: InsertInventoryItem): Promise<InventoryItem>;
   updateInventoryItem(id: string, orgId: string, updates: Partial<InsertInventoryItem>): Promise<InventoryItem | undefined>;
+  deleteInventoryItem(id: string, orgId: string): Promise<boolean>;
+
+  // Stock Transactions
+  getStockTransactions(inventoryItemId: string): Promise<StockTransaction[]>;
+  createStockTransaction(transaction: InsertStockTransaction): Promise<StockTransaction>;
+  adjustInventoryQuantity(itemId: string, orgId: string, adjustment: { type: string; quantity: number; notes?: string; userId?: string }): Promise<InventoryItem | undefined>;
 
   // Inspection Templates
   getInspectionTemplate(id: string, orgId: string): Promise<InspectionTemplate | undefined>;
@@ -568,10 +578,81 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateInventoryItem(id: string, orgId: string, updates: Partial<InsertInventoryItem>): Promise<InventoryItem | undefined> {
-    const [item] = await db.update(inventoryItems).set(updates).where(
+    const [item] = await db.update(inventoryItems).set({
+      ...updates,
+      updatedAt: new Date(),
+    }).where(
       and(eq(inventoryItems.id, id), eq(inventoryItems.orgId, orgId))
     ).returning();
     return item || undefined;
+  }
+
+  async deleteInventoryItem(id: string, orgId: string): Promise<boolean> {
+    const result = await db.delete(inventoryItems).where(
+      and(eq(inventoryItems.id, id), eq(inventoryItems.orgId, orgId))
+    ).returning();
+    return result.length > 0;
+  }
+
+  async getLowStockItems(locationId: string, orgId: string): Promise<InventoryItem[]> {
+    return db.select().from(inventoryItems).where(
+      and(
+        eq(inventoryItems.locationId, locationId),
+        eq(inventoryItems.orgId, orgId),
+        eq(inventoryItems.isActive, true),
+        sql`${inventoryItems.quantityOnHand} <= ${inventoryItems.minQuantity}`
+      )
+    ).orderBy(inventoryItems.name);
+  }
+
+  // Stock Transactions
+  async getStockTransactions(inventoryItemId: string): Promise<StockTransaction[]> {
+    return db.select().from(stockTransactions)
+      .where(eq(stockTransactions.inventoryItemId, inventoryItemId))
+      .orderBy(desc(stockTransactions.createdAt));
+  }
+
+  async createStockTransaction(transaction: InsertStockTransaction): Promise<StockTransaction> {
+    const [result] = await db.insert(stockTransactions).values(transaction).returning();
+    return result;
+  }
+
+  async adjustInventoryQuantity(itemId: string, orgId: string, adjustment: { type: string; quantity: number; notes?: string; userId?: string }): Promise<InventoryItem | undefined> {
+    const item = await this.getInventoryItem(itemId, orgId);
+    if (!item) return undefined;
+
+    const previousQuantity = item.quantityOnHand;
+    let newQuantity: number;
+
+    if (adjustment.type === 'RECEIVE' || adjustment.type === 'RETURN' || adjustment.type === 'TRANSFER_IN') {
+      newQuantity = previousQuantity + adjustment.quantity;
+    } else if (adjustment.type === 'SALE' || adjustment.type === 'TRANSFER_OUT') {
+      newQuantity = previousQuantity - adjustment.quantity;
+    } else if (adjustment.type === 'COUNT' || adjustment.type === 'ADJUST') {
+      newQuantity = adjustment.quantity;
+    } else {
+      newQuantity = previousQuantity + adjustment.quantity;
+    }
+
+    await this.createStockTransaction({
+      inventoryItemId: itemId,
+      locationId: item.locationId,
+      type: adjustment.type as any,
+      quantity: adjustment.quantity,
+      previousQuantity,
+      newQuantity,
+      notes: adjustment.notes,
+      userId: adjustment.userId,
+    });
+
+    const [updated] = await db.update(inventoryItems).set({
+      quantityOnHand: newQuantity,
+      updatedAt: new Date(),
+    }).where(
+      and(eq(inventoryItems.id, itemId), eq(inventoryItems.orgId, orgId))
+    ).returning();
+
+    return updated || undefined;
   }
 
   // Inspection Templates

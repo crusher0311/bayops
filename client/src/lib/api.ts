@@ -7,6 +7,7 @@ import type {
   Workflow,
   RepairOrder,
   InventoryItem,
+  StockTransaction,
   InspectionTemplate,
   Inspection,
   InsertCustomer,
@@ -165,10 +166,42 @@ class ApiClient {
     return this.request(url);
   }
 
+  async getInventoryItem(id: string): Promise<InventoryItem> {
+    return this.request(`/api/inventory/${id}`);
+  }
+
   async createInventoryItem(item: InsertInventoryItem): Promise<InventoryItem> {
     return this.request("/api/inventory", {
       method: "POST",
       body: JSON.stringify(item),
+    });
+  }
+
+  async updateInventoryItem(id: string, updates: Partial<InsertInventoryItem>): Promise<InventoryItem> {
+    return this.request(`/api/inventory/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async deleteInventoryItem(id: string): Promise<void> {
+    return this.request(`/api/inventory/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async getLowStockItems(locationId: string): Promise<InventoryItem[]> {
+    return this.request(`/api/inventory/low-stock/${locationId}`);
+  }
+
+  async getStockTransactions(itemId: string): Promise<StockTransaction[]> {
+    return this.request(`/api/inventory/${itemId}/transactions`);
+  }
+
+  async adjustInventory(itemId: string, adjustment: { type: string; quantity: number; notes?: string }): Promise<InventoryItem> {
+    return this.request(`/api/inventory/${itemId}/adjust`, {
+      method: "POST",
+      body: JSON.stringify(adjustment),
     });
   }
 

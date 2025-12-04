@@ -268,11 +268,17 @@ export const inventoryItems = pgTable("inventory_items", {
   cost: decimal("cost", { precision: 10, scale: 2 }).notNull(),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   quantityOnHand: integer("quantity_on_hand").notNull().default(0),
+  minQuantity: integer("min_quantity").notNull().default(0),
+  maxQuantity: integer("max_quantity"),
   binLocation: text("bin_location"),
+  vendorPartNumber: text("vendor_part_number"),
+  upc: text("upc"),
+  isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const inventoryItemsRelations = relations(inventoryItems, ({ one }) => ({
+export const inventoryItemsRelations = relations(inventoryItems, ({ one, many }) => ({
   organization: one(organizations, {
     fields: [inventoryItems.orgId],
     references: [organizations.id],
@@ -280,6 +286,50 @@ export const inventoryItemsRelations = relations(inventoryItems, ({ one }) => ({
   location: one(locations, {
     fields: [inventoryItems.locationId],
     references: [locations.id],
+  }),
+  transactions: many(stockTransactions),
+}));
+
+// Stock Transaction Types
+export const stockTransactionTypeEnum = pgEnum('stock_transaction_type', [
+  'RECEIVE',
+  'ADJUST',
+  'SALE',
+  'RETURN',
+  'TRANSFER_IN',
+  'TRANSFER_OUT',
+  'COUNT'
+]);
+
+// Stock Transactions - Audit trail for inventory movements
+export const stockTransactions = pgTable("stock_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  inventoryItemId: varchar("inventory_item_id").notNull().references(() => inventoryItems.id, { onDelete: 'cascade' }),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  type: stockTransactionTypeEnum("type").notNull(),
+  quantity: integer("quantity").notNull(),
+  previousQuantity: integer("previous_quantity").notNull(),
+  newQuantity: integer("new_quantity").notNull(),
+  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }),
+  referenceType: text("reference_type"),
+  referenceId: text("reference_id"),
+  notes: text("notes"),
+  userId: varchar("user_id").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const stockTransactionsRelations = relations(stockTransactions, ({ one }) => ({
+  inventoryItem: one(inventoryItems, {
+    fields: [stockTransactions.inventoryItemId],
+    references: [inventoryItems.id],
+  }),
+  location: one(locations, {
+    fields: [stockTransactions.locationId],
+    references: [locations.id],
+  }),
+  user: one(users, {
+    fields: [stockTransactions.userId],
+    references: [users.id],
   }),
 }));
 
@@ -1022,6 +1072,12 @@ export const insertRepairOrderSchema = createInsertSchema(repairOrders).omit({
 export const insertInventoryItemSchema = createInsertSchema(inventoryItems).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
+});
+
+export const insertStockTransactionSchema = createInsertSchema(stockTransactions).omit({
+  id: true,
+  createdAt: true,
 });
 
 export const insertInspectionTemplateSchema = createInsertSchema(inspectionTemplates).omit({
@@ -1180,6 +1236,9 @@ export type InsertRepairOrder = z.infer<typeof insertRepairOrderSchema>;
 
 export type InventoryItem = typeof inventoryItems.$inferSelect;
 export type InsertInventoryItem = z.infer<typeof insertInventoryItemSchema>;
+
+export type StockTransaction = typeof stockTransactions.$inferSelect;
+export type InsertStockTransaction = z.infer<typeof insertStockTransactionSchema>;
 
 export type InspectionTemplate = typeof inspectionTemplates.$inferSelect;
 export type InsertInspectionTemplate = z.infer<typeof insertInspectionTemplateSchema>;

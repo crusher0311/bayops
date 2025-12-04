@@ -123,11 +123,11 @@ export type InventoryType = 'TIRE' | 'PART' | 'OTHER';
 export interface InventoryItem {
   id: string;
   orgId: string;
-  locationId: string; // Simplified: each location tracks its own stock for MVP
+  locationId: string;
   type: InventoryType;
   sku: string;
   brand: string;
-  name: string; // Model name for tires
+  name: string;
   description?: string;
   
   // Tire specifics
@@ -136,10 +136,35 @@ export interface InventoryItem {
   loadIndex?: string;
   category?: 'ALL_SEASON' | 'WINTER' | 'PERFORMANCE' | 'LT' | 'AT';
   
-  cost: number;
-  price: number;
+  cost: string;
+  price: string;
   quantityOnHand: number;
+  minQuantity: number;
+  maxQuantity?: number;
   binLocation?: string;
+  vendorPartNumber?: string;
+  upc?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type StockTransactionType = 'RECEIVE' | 'ADJUST' | 'SALE' | 'RETURN' | 'TRANSFER_IN' | 'TRANSFER_OUT' | 'COUNT';
+
+export interface StockTransaction {
+  id: string;
+  inventoryItemId: string;
+  locationId: string;
+  type: StockTransactionType;
+  quantity: number;
+  previousQuantity: number;
+  newQuantity: number;
+  unitCost?: string;
+  referenceType?: string;
+  referenceId?: string;
+  notes?: string;
+  userId?: string;
+  createdAt: string;
 }
 
 export interface AuditLog {
