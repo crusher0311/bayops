@@ -1963,5 +1963,124 @@ export async function registerRoutes(
     }
   });
 
+  // Reporting
+  app.get("/api/reports/summary/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const dateRange = req.query.range as string || 'all';
+      const now = new Date();
+      let startDate: Date | null = null;
+      
+      if (dateRange === 'today') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      } else if (dateRange === 'week') {
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      } else if (dateRange === 'month') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      } else if (dateRange === 'year') {
+        startDate = new Date(now.getFullYear(), 0, 1);
+      }
+      
+      const ros = await storage.getRepairOrdersByLocation(req.params.locationId);
+      const invoices = await storage.getInvoicesByLocation(req.params.locationId);
+      const timeLogs = await storage.getTimeLogsByLocation(req.params.locationId);
+      const partsOrders = await storage.getPartsOrdersByLocation(req.params.locationId);
+      
+      const filteredInvoices = startDate 
+        ? invoices.filter(i => new Date(i.createdAt) >= startDate!) 
+        : invoices;
+      const filteredTimeLogs = startDate
+        ? timeLogs.filter(t => new Date(t.clockIn) >= startDate!)
+        : timeLogs;
+      const filteredPartsOrders = startDate
+        ? partsOrders.filter(p => new Date(p.createdAt) >= startDate!)
+        : partsOrders;
+      
+      const paidInvoices = filteredInvoices.filter(i => i.status === 'PAID');
+      const outstandingInvoices = filteredInvoices.filter(i => i.status !== 'PAID' && i.status !== 'VOID');
+      
+      const totalPaid = paidInvoices.reduce((sum, i) => sum + parseFloat(i.total), 0);
+      const totalOutstanding = outstandingInvoices.reduce((sum, i) => sum + parseFloat(i.amountDue), 0);
+      
+      let laborRevenue = 0;
+      let partsRevenue = 0;
+      let otherRevenue = 0;
+      
+      for (const invoice of paidInvoices) {
+        const ro = ros.find(r => r.id === invoice.repairOrderId);
+        if (ro) {
+          const jobs = (ro.jobs as any[]) || [];
+          for (const job of jobs) {
+            for (const item of job.lineItems || []) {
+              const amount = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
+              if (item.type === 'LABOR') laborRevenue += amount;
+              else if (item.type === 'PART') partsRevenue += amount;
+              else otherRevenue += amount;
+            }
+          }
+        }
+      }
+      
+      const completedRos = ros.filter(ro => 
+        ro.completedAt && (!startDate || new Date(ro.completedAt) >= startDate)
+      );
+      const activeRos = ros.filter(ro => !ro.completedAt);
+      
+      let totalHoursWorked = 0;
+      for (const log of filteredTimeLogs) {
+        if (log.clockOut) {
+          const clockIn = new Date(log.clockIn);
+          const clockOut = new Date(log.clockOut);
+          const breakMins = Number(log.breakMinutes) || 0;
+          const hours = (clockOut.getTime() - clockIn.getTime()) / (1000 * 60 * 60) - (breakMins / 60);
+          totalHoursWorked += Math.max(0, hours);
+        }
+      }
+      
+      const pendingPartsOrders = filteredPartsOrders.filter(o => o.status === 'DRAFT' || o.status === 'ORDERED');
+      const partsCost = filteredPartsOrders
+        .filter(o => o.status === 'RECEIVED')
+        .reduce((sum, o) => sum + parseFloat(o.totalCost || '0'), 0);
+      
+      const avgRoValue = paidInvoices.length > 0 ? totalPaid / paidInvoices.length : 0;
+      
+      res.json({
+        revenue: {
+          total: totalPaid,
+          labor: laborRevenue,
+          parts: partsRevenue,
+          other: otherRevenue,
+          avgRoValue,
+        },
+        repairOrders: {
+          total: ros.length,
+          active: activeRos.length,
+          completed: completedRos.length,
+        },
+        invoices: {
+          total: filteredInvoices.length,
+          paid: paidInvoices.length,
+          outstanding: outstandingInvoices.length,
+          totalPaid,
+          totalOutstanding,
+        },
+        productivity: {
+          totalHoursWorked: Math.round(totalHoursWorked * 100) / 100,
+          activeTechnicians: new Set(filteredTimeLogs.map(l => l.technicianId)).size,
+        },
+        parts: {
+          pendingOrders: pendingPartsOrders.length,
+          totalCost: partsCost,
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }

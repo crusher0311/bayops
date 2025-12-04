@@ -19,6 +19,7 @@ import Appointments from "@/pages/Appointments";
 import Parts from "@/pages/Parts";
 import TimeTracking from "@/pages/TimeTracking";
 import Invoices from "@/pages/Invoices";
+import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import OrganizationSettings from "@/pages/OrganizationSettings";
 import MasterDashboard from "@/pages/MasterDashboard";
@@ -70,7 +71,7 @@ function ProtectedRouter() {
       <Route path="/parts" component={Parts} />
       <Route path="/time-tracking" component={TimeTracking} />
       <Route path="/invoices" component={Invoices} />
-      <Route path="/reports" component={Dashboard} />
+      <Route path="/reports" component={Reports} />
       <Route path="/settings" component={Settings} />
       <Route path="/org-settings" component={OrganizationSettings} />
       <Route component={NotFound} />
