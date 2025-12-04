@@ -682,7 +682,7 @@ export async function registerRoutes(
 
       // Get customer and vehicle info
       const repairOrder = await storage.getRepairOrderById(inspection.roId);
-      const customer = repairOrder?.customerId ? await storage.getCustomer(repairOrder.customerId) : null;
+      const customer = repairOrder?.customerId ? await storage.getCustomer(repairOrder.customerId, req.user!.orgId) : null;
       const vehicle = repairOrder?.vehicleId ? await storage.getVehicle(repairOrder.vehicleId) : null;
       const location = repairOrder?.locationId ? await storage.getLocation(repairOrder.locationId) : null;
 
@@ -736,7 +736,7 @@ export async function registerRoutes(
 
       // Get customer and vehicle info
       const repairOrder = await storage.getRepairOrderById(inspection.roId);
-      const customer = repairOrder?.customerId ? await storage.getCustomer(repairOrder.customerId) : null;
+      const customer = repairOrder?.customerId ? await storage.getCustomer(repairOrder.customerId, req.user!.orgId) : null;
       const vehicle = repairOrder?.vehicleId ? await storage.getVehicle(repairOrder.vehicleId) : null;
       const location = repairOrder?.locationId ? await storage.getLocation(repairOrder.locationId) : null;
 
