@@ -136,6 +136,41 @@ Settings page with 6 tabs for comprehensive shop configuration:
 - Parts metrics (cost, revenue, margin)
 - Date range filtering (today, week, month, year, all)
 
+## Phase 3 Planned Features
+
+### Digital Vehicle Inspections (DVI)
+- Photo/video capture during inspections
+- Condition ratings (red/yellow/green) for each inspection item
+- Customer-facing inspection reports with media
+
+### SMS/Email Communications
+- Automated appointment reminders
+- RO status updates to customers
+- Authorization requests via text/email
+- Marketing campaigns
+
+### Commissions
+- Technician commission tracking
+- Advisor sales commissions
+- Performance-based pay calculations
+
+### Planned Integrations
+
+#### PartsTech (Parts Ordering)
+- **What it provides**: Access to 20,000+ suppliers (AutoZone, NAPA, Advance Auto, O'Reilly), real-time inventory & pricing, VIN-based parts lookup, price comparison, direct ordering
+- **Integration approach**: 
+  - Option A: Punchout (popup/iframe, ~1-2 weeks) - opens PartsTech UI, parts auto-import to RO
+  - Option B: Full API (~3-4 weeks) - native search, inline pricing, seamless cart
+- **Requirements**: Free PartsTech account, Partner API credentials, supplier account credentials
+- **Cost**: Free for shops and developers
+- **API Docs**: https://api-docs.partstech.com/
+- **Auth**: JWT tokens (60 min expiry), supports user + partner credentials
+
+#### Other Planned Integrations
+- Payment processing (Stripe, Square)
+- Accounting sync (QuickBooks)
+- Customer review platforms
+
 ## User Preferences
 - Prefer purple gradient styling for AI features
 - Keep UI clean and professional for automotive industry
