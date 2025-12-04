@@ -748,6 +748,46 @@ export default function RepairOrderDetail() {
   const [isPartstechOpen, setIsPartstechOpen] = useState(false);
   const [partstechJobId, setPartstechJobId] = useState<string | null>(null);
   
+  // Canned Jobs / Service Packages state
+  const [isPackageDialogOpen, setIsPackageDialogOpen] = useState(false);
+  
+  // Fetch canned job templates
+  const { data: cannedJobTemplates = [] } = useQuery<any[]>({
+    queryKey: ['canned-jobs', ro?.locationId],
+    queryFn: async () => {
+      const res = await fetch(`/api/locations/${ro?.locationId}/canned-jobs`, {
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error('Failed to fetch packages');
+      return res.json();
+    },
+    enabled: !!ro?.locationId,
+  });
+
+  // Mutation to add canned job to RO
+  const addPackageMutation = useMutation({
+    mutationFn: async (templateId: string) => {
+      const res = await fetch(`/api/repair-orders/${roId}/add-canned-job/${templateId}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to add package');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['repair-order', roId] });
+      toast({ title: 'Service package added successfully' });
+      setIsPackageDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+  
   // AI hooks
   const generateDescription = useGenerateServiceDescription();
   const generateAuth = useGenerateAuthorizationRequest();
@@ -1345,7 +1385,67 @@ export default function RepairOrderDetail() {
               </TabsList>
 
               <TabsContent value="estimate" className="mt-6 space-y-6">
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-2">
+                  <Dialog open={isPackageDialogOpen} onOpenChange={setIsPackageDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="gap-2" data-testid="button-add-package">
+                        <Package className="w-4 h-4" /> Add Package
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[500px]">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <Package className="w-5 h-5" />
+                          Add Service Package
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="py-4">
+                        {cannedJobTemplates.length === 0 ? (
+                          <div className="text-center py-8">
+                            <Package className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                            <p className="text-muted-foreground mb-4">No service packages configured yet.</p>
+                            <Link href="/settings">
+                              <Button variant="outline" size="sm">
+                                Configure in Settings
+                              </Button>
+                            </Link>
+                          </div>
+                        ) : (
+                          <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                            {cannedJobTemplates.filter((t: any) => t.isActive).map((template: any) => (
+                              <div
+                                key={template.id}
+                                className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                                data-testid={`package-option-${template.id}`}
+                              >
+                                <div className="flex-1">
+                                  <p className="font-medium">{template.name}</p>
+                                  <div className="flex gap-3 text-sm text-muted-foreground mt-1">
+                                    <span>{template.laborHours}h labor</span>
+                                    {template.parts?.length > 0 && (
+                                      <span>{template.parts.length} parts</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  onClick={() => addPackageMutation.mutate(template.id)}
+                                  disabled={addPackageMutation.isPending}
+                                  data-testid={`button-select-package-${template.id}`}
+                                >
+                                  {addPackageMutation.isPending ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Plus className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                   <Dialog open={isAddJobDialogOpen} onOpenChange={setIsAddJobDialogOpen}>
                     <DialogTrigger asChild>
                       <Button className="gap-2" data-testid="button-add-job">
