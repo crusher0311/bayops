@@ -60,22 +60,22 @@ const STATUS_CONFIG = {
     icon: CheckCircle2,
     label: 'Good',
     buttonClass: 'bg-green-600 hover:bg-green-700 text-white border-green-700',
-    inactiveClass: 'bg-green-600/20 hover:bg-green-600/40 text-green-400 border-green-600/30',
-    cardClass: 'border-l-4 border-l-green-500 bg-green-500/5',
+    inactiveClass: 'bg-slate-700/50 hover:bg-green-600/30 text-green-400 border-green-600/50',
+    borderClass: 'border-l-green-500',
   },
   YELLOW: {
     icon: AlertTriangle,
     label: 'Attention',
     buttonClass: 'bg-yellow-500 hover:bg-yellow-600 text-black border-yellow-600',
-    inactiveClass: 'bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-400 border-yellow-500/30',
-    cardClass: 'border-l-4 border-l-yellow-500 bg-yellow-500/5',
+    inactiveClass: 'bg-slate-700/50 hover:bg-yellow-500/30 text-yellow-400 border-yellow-500/50',
+    borderClass: 'border-l-yellow-500',
   },
   RED: {
     icon: XCircle,
     label: 'Urgent',
     buttonClass: 'bg-red-600 hover:bg-red-700 text-white border-red-700',
-    inactiveClass: 'bg-red-600/20 hover:bg-red-600/40 text-red-400 border-red-600/30',
-    cardClass: 'border-l-4 border-l-red-500 bg-red-500/5',
+    inactiveClass: 'bg-slate-700/50 hover:bg-red-600/30 text-red-400 border-red-600/50',
+    borderClass: 'border-l-red-500',
   },
 };
 
@@ -361,15 +361,15 @@ export function InspectionForm({
       </div>
 
       <ScrollArea className="h-[calc(100vh-360px)]">
-        <div className="space-y-8 pr-4">
+        <div className="space-y-10 pr-4">
           {categories.map((category) => (
             <div key={category}>
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <span className="w-1.5 h-6 bg-blue-500 rounded-full"></span>
+              <h3 className="text-2xl font-bold text-white mb-5 flex items-center gap-3 pb-2 border-b border-slate-700">
+                <span className="w-2 h-8 bg-blue-500 rounded-full"></span>
                 {category}
               </h3>
               
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {templateItems
                   .filter(t => t.category === category)
                   .sort((a, b) => a.sortOrder - b.sortOrder)
@@ -384,18 +384,21 @@ export function InspectionForm({
                       <Card 
                         key={templateItem.id} 
                         className={cn(
-                          "transition-all duration-200",
-                          statusConfig ? statusConfig.cardClass : "border-slate-700 bg-slate-800/40"
+                          "transition-all duration-200 border-l-4 bg-slate-900",
+                          statusConfig ? statusConfig.borderClass : "border-l-slate-600"
                         )}
                         data-testid={`inspection-item-${templateItem.id}`}
                       >
-                        <CardContent className="p-5">
-                          <div className="flex items-start justify-between gap-4">
-                            <h4 className="text-lg font-medium text-white flex-1 pt-1">
+                        <CardContent className="p-6">
+                          <div className="flex items-start justify-between gap-6">
+                            <h4 className="text-xl font-semibold text-white flex-1 leading-tight">
                               {templateItem.label}
                             </h4>
                             
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-3">
+                              {!result.status && (
+                                <span className="text-sm text-slate-400 mr-2">Not checked</span>
+                              )}
                               {(['GREEN', 'YELLOW', 'RED'] as const).map((status) => {
                                 const config = STATUS_CONFIG[status];
                                 const Icon = config.icon;
@@ -407,14 +410,14 @@ export function InspectionForm({
                                     onClick={() => handleStatusChange(templateItem.id, status)}
                                     disabled={isCompleted}
                                     className={cn(
-                                      "flex items-center gap-2 px-4 py-2.5 rounded-lg border font-medium transition-all",
+                                      "flex items-center gap-2 px-5 py-3 rounded-lg border-2 font-semibold transition-all text-base",
                                       isActive ? config.buttonClass : config.inactiveClass,
                                       isCompleted && "opacity-50 cursor-not-allowed"
                                     )}
                                     data-testid={`button-status-${status.toLowerCase()}-${templateItem.id}`}
                                   >
                                     <Icon className="w-5 h-5" />
-                                    <span className="hidden sm:inline">{config.label}</span>
+                                    <span>{config.label}</span>
                                   </button>
                                 );
                               })}
@@ -422,10 +425,10 @@ export function InspectionForm({
                           </div>
                           
                           {result.status && (
-                            <div className="mt-5 space-y-4">
+                            <div className="mt-6 space-y-5">
                               <div>
-                                <div className="flex items-center justify-between mb-2">
-                                  <label className="text-sm font-medium text-slate-300">
+                                <div className="flex items-center justify-between mb-3">
+                                  <label className="text-base font-semibold text-slate-200">
                                     Technician Notes
                                   </label>
                                   <Button
@@ -456,8 +459,8 @@ export function InspectionForm({
                               
                               {requiresRecommendation && (
                                 <div>
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <label className="text-sm font-medium text-slate-300">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <label className="text-base font-semibold text-slate-200">
                                       Recommendation for Customer
                                     </label>
                                     <Badge variant="destructive" className="text-xs">Required</Badge>
@@ -488,9 +491,9 @@ export function InspectionForm({
                               )}
                               
                               <div>
-                                <div className="flex items-center gap-2 mb-2">
-                                  <label className="text-sm font-medium text-slate-300">
-                                    Photos / Videos
+                                <div className="flex items-center gap-2 mb-3">
+                                  <label className="text-base font-semibold text-slate-200">
+                                    Photos
                                   </label>
                                   {!isCompleted && (
                                     <Button
