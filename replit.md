@@ -87,6 +87,11 @@ Settings page with 6 tabs for comprehensive shop configuration:
 - **Style**: Enterprise automotive aesthetic with clean, professional UI
 
 ## Recent Changes
+- 2024-12-04: Phase 2 Complete - Added Reports dashboard with revenue, productivity, and parts analytics
+- 2024-12-04: Added Invoicing system with invoice generation from ROs, auto-calculated totals, payment tracking
+- 2024-12-04: Added Technician Time Tracking with clock in/out, break tracking, weekly summaries
+- 2024-12-04: Added Parts Ordering with vendor management, order status tracking, line item details
+- 2024-12-04: Added Appointments scheduling with service bay management
 - 2024-12-04: Phase 1 Configuration Settings - Added comprehensive Settings page with 14 configuration tables
 - 2024-12-04: Added AI Service Writer with job description and authorization request generation
 - 2024-12-03: Made vehicle mileage optional, fixed RO advisor auto-assignment
@@ -95,8 +100,41 @@ Settings page with 6 tabs for comprehensive shop configuration:
 
 ## MVP Roadmap
 - **Phase 1 (COMPLETE)**: Configuration backbone - all shop settings, markup matrices, branding
-- **Phase 2 (NEXT)**: Operational workflows - appointments, invoicing, parts ordering, time tracking, reporting
+- **Phase 2 (COMPLETE)**: Operational workflows - appointments, invoicing, parts ordering, time tracking, reporting
 - **Phase 3 (FUTURE)**: Engagement features - DVI photos, SMS/email, commissions, integrations
+
+## Phase 2 Features
+
+### Appointments & Scheduling
+- Service bay management (add, edit, toggle active)
+- Appointment calendar with status tracking
+- Customer and vehicle linking
+
+### Parts Ordering
+- Vendor management (name, contact, account info)
+- Parts orders with line items (part numbers, quantities, costs)
+- Order status workflow: DRAFT → ORDERED → PARTIAL → RECEIVED
+- Delete confirmations and toast feedback
+
+### Technician Time Tracking
+- Clock in/out functionality
+- Break time tracking
+- Job assignment per time log
+- Weekly summary with total hours, overtime detection
+- History view with date range filtering
+
+### Invoicing
+- Invoice generation from completed repair orders
+- Auto-calculated totals from RO line items (subtotal, tax, total)
+- Payment recording with automatic status updates
+- Status workflow: DRAFT → SENT → PARTIAL → PAID
+
+### Reporting Dashboard
+- Revenue metrics (total, by category, avg RO value)
+- Invoice status (paid vs outstanding)
+- Productivity metrics (hours worked, technicians, revenue/hour)
+- Parts metrics (cost, revenue, margin)
+- Date range filtering (today, week, month, year, all)
 
 ## User Preferences
 - Prefer purple gradient styling for AI features
