@@ -142,6 +142,7 @@ export interface IStorage {
 
   // Customers
   getCustomer(id: string, orgId: string): Promise<Customer | undefined>;
+  getCustomerById(id: string): Promise<Customer | undefined>;
   getCustomersByOrg(orgId: string): Promise<Customer[]>;
   searchCustomers(orgId: string, query: string): Promise<Customer[]>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
@@ -149,6 +150,7 @@ export interface IStorage {
 
   // Vehicles
   getVehicle(id: string): Promise<Vehicle | undefined>;
+  getVehicleById(id: string): Promise<Vehicle | undefined>;
   getVehiclesByOrg(orgId: string): Promise<Vehicle[]>;
   getVehiclesByCustomer(customerId: string): Promise<Vehicle[]>;
   searchVehiclesByVin(vin: string, orgId: string): Promise<Vehicle[]>;
@@ -165,6 +167,7 @@ export interface IStorage {
   // Repair Orders
   getRepairOrder(id: string, orgId: string): Promise<RepairOrder | undefined>;
   getRepairOrderById(id: string): Promise<RepairOrder | undefined>;
+  getRepairOrderByAuthToken(token: string): Promise<RepairOrder | undefined>;
   getRepairOrdersByLocation(locationId: string, orgId: string): Promise<RepairOrder[]>;
   getRepairOrdersByOrg(orgId: string): Promise<RepairOrder[]>;
   createRepairOrder(ro: InsertRepairOrder): Promise<RepairOrder>;
@@ -451,6 +454,11 @@ export class DatabaseStorage implements IStorage {
     return customer || undefined;
   }
 
+  async getCustomerById(id: string): Promise<Customer | undefined> {
+    const [customer] = await db.select().from(customers).where(eq(customers.id, id));
+    return customer || undefined;
+  }
+
   async getCustomersByOrg(orgId: string): Promise<Customer[]> {
     return db.select().from(customers).where(eq(customers.orgId, orgId)).orderBy(desc(customers.createdAt));
   }
@@ -481,6 +489,10 @@ export class DatabaseStorage implements IStorage {
   async getVehicle(id: string): Promise<Vehicle | undefined> {
     const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, id));
     return vehicle || undefined;
+  }
+
+  async getVehicleById(id: string): Promise<Vehicle | undefined> {
+    return this.getVehicle(id);
   }
 
   async getVehiclesByOrg(orgId: string): Promise<Vehicle[]> {
@@ -565,6 +577,11 @@ export class DatabaseStorage implements IStorage {
 
   async getRepairOrderById(id: string): Promise<RepairOrder | undefined> {
     const [ro] = await db.select().from(repairOrders).where(eq(repairOrders.id, id));
+    return ro || undefined;
+  }
+
+  async getRepairOrderByAuthToken(token: string): Promise<RepairOrder | undefined> {
+    const [ro] = await db.select().from(repairOrders).where(eq(repairOrders.authorizationToken, token));
     return ro || undefined;
   }
 

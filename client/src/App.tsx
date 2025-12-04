@@ -26,6 +26,8 @@ import Settings from "@/pages/Settings";
 import OrganizationSettings from "@/pages/OrganizationSettings";
 import MasterDashboard from "@/pages/MasterDashboard";
 import Login from "@/pages/Login";
+import QuickCheckIn from "@/pages/QuickCheckIn";
+import CustomerAuthorization from "@/pages/CustomerAuthorization";
 
 function ProtectedRouter() {
   const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
@@ -66,6 +68,7 @@ function ProtectedRouter() {
       <Route path="/job-board" component={JobBoard} />
       <Route path="/ros" component={RepairOrders} />
       <Route path="/ros/new" component={NewRepairOrder} />
+      <Route path="/quick-checkin" component={QuickCheckIn} />
       <Route path="/ros/:id" component={RepairOrderDetail} />
       <Route path="/inventory" component={Inventory} />
       <Route path="/customers" component={Customers} />
@@ -89,6 +92,7 @@ function App() {
         <Toaster />
         <Switch>
           <Route path="/inspection/:token" component={InspectionReport} />
+          <Route path="/authorize/:token" component={CustomerAuthorization} />
           <Route component={ProtectedRouter} />
         </Switch>
       </TooltipProvider>

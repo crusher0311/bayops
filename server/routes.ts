@@ -2448,6 +2448,49 @@ export async function registerRoutes(
   });
 
   // ============================================
+  // VIN Decode (NHTSA - Free, no API key required)
+  // ============================================
+  
+  app.get("/api/vin/decode", requireAuth, async (req, res) => {
+    try {
+      const vin = req.query.vin as string;
+      if (!vin || vin.length !== 17) {
+        return res.status(400).json({ message: "Valid 17-character VIN is required" });
+      }
+
+      const response = await fetch(
+        `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/${vin}?format=json`
+      );
+      
+      if (!response.ok) {
+        throw new Error("Failed to decode VIN");
+      }
+
+      const data = await response.json();
+      const result = data.Results?.[0];
+      
+      if (!result || result.ErrorCode !== "0") {
+        return res.status(404).json({ message: "Vehicle not found for this VIN" });
+      }
+
+      res.json({
+        year: parseInt(result.ModelYear) || null,
+        make: result.Make || null,
+        model: result.Model || null,
+        submodel: result.Trim || null,
+        engine: result.DisplacementL ? `${result.DisplacementL}L ${result.EngineCylinders || ''}cyl` : null,
+        bodyClass: result.BodyClass || null,
+        driveType: result.DriveType || null,
+        fuelType: result.FuelTypePrimary || null,
+        transmission: result.TransmissionStyle || null,
+        doors: result.Doors || null,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============================================
   // PartsTech Integration Routes
   // ============================================
   
@@ -2791,6 +2834,200 @@ export async function registerRoutes(
         orgId: req.user!.orgId,
       });
       res.status(201).json(statement);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============================================
+  // Customer Authorization Routes (Public)
+  // ============================================
+
+  // Get authorization data by token (public)
+  app.get("/api/authorize/:token", async (req, res) => {
+    try {
+      const ro = await storage.getRepairOrderByAuthToken(req.params.token);
+      if (!ro) {
+        return res.status(404).json({ message: "Authorization not found" });
+      }
+      
+      const customer = await storage.getCustomerById(ro.customerId);
+      const vehicle = await storage.getVehicleById(ro.vehicleId);
+      const location = await storage.getLocation(ro.locationId);
+      
+      res.json({
+        id: ro.id,
+        roNumber: ro.roNumber,
+        status: ro.status,
+        authorizationStatus: ro.authorizationStatus,
+        odometerIn: ro.odometerIn,
+        notes: ro.notes,
+        jobs: ro.jobs,
+        createdAt: ro.createdAt,
+        customer: customer ? {
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          phone: customer.phone,
+          email: customer.email,
+        } : null,
+        vehicle: vehicle ? {
+          year: vehicle.year,
+          make: vehicle.make,
+          model: vehicle.model,
+          vin: vehicle.vin,
+          licensePlate: vehicle.licensePlate,
+        } : null,
+        location: location ? {
+          name: location.name,
+          address: location.address,
+          phone: location.phone,
+        } : null,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Submit customer authorization (public)
+  app.post("/api/authorize/:token", async (req, res) => {
+    try {
+      const { approvedItems, signature } = req.body;
+      
+      if (!approvedItems || !Array.isArray(approvedItems) || approvedItems.length === 0) {
+        return res.status(400).json({ message: "At least one item must be approved" });
+      }
+      
+      if (!signature) {
+        return res.status(400).json({ message: "Signature is required" });
+      }
+
+      const ro = await storage.getRepairOrderByAuthToken(req.params.token);
+      if (!ro) {
+        return res.status(404).json({ message: "Authorization not found" });
+      }
+
+      // Update the approved items in the jobs
+      const updatedJobs = ro.jobs.map(job => ({
+        ...job,
+        lineItems: job.lineItems.map(item => ({
+          ...item,
+          approved: approvedItems.includes(item.id),
+        })),
+      }));
+
+      await storage.updateRepairOrder(ro.id, ro.orgId, {
+        jobs: updatedJobs,
+        authorizationStatus: 'AUTHORIZED',
+        authorizedAt: new Date(),
+        customerSignature: signature,
+      });
+
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Send authorization request to customer
+  app.post("/api/repair-orders/:id/send-authorization", requireAuth, async (req, res) => {
+    try {
+      const ro = await storage.getRepairOrder(req.params.id, req.user!.orgId);
+      if (!ro) {
+        return res.status(404).json({ message: "Repair order not found" });
+      }
+
+      const customer = await storage.getCustomerById(ro.customerId);
+      const vehicle = await storage.getVehicleById(ro.vehicleId);
+      const location = await storage.getLocation(ro.locationId);
+
+      if (!customer) {
+        return res.status(400).json({ message: "Customer not found" });
+      }
+
+      // Generate auth token if not exists
+      let authToken = ro.authorizationToken;
+      if (!authToken) {
+        authToken = crypto.randomUUID();
+        await storage.updateRepairOrder(ro.id, ro.orgId, {
+          authorizationToken: authToken,
+        });
+      }
+
+      const { method } = req.body;
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const authUrl = `${baseUrl}/authorize/${authToken}`;
+      const vehicleInfo = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'your vehicle';
+      const shopName = location?.name || 'Your Shop';
+
+      let sendResult;
+      
+      if (method === 'sms' && customer.phone) {
+        const message = `Hi ${customer.firstName}! Please review and authorize the recommended services for your ${vehicleInfo}. View here: ${authUrl} - ${shopName}`;
+        sendResult = await sendSMS({ to: customer.phone, message });
+      } else if (method === 'email' && customer.email) {
+        const subject = `Service Authorization Required - ${vehicleInfo}`;
+        const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f4f4f5;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <tr>
+      <td style="padding: 40px 30px; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);">
+        <h1 style="margin: 0; color: #ffffff; font-size: 24px;">${shopName}</h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 40px 30px;">
+        <h2 style="margin: 0 0 20px; color: #18181b;">Hi ${customer.firstName},</h2>
+        <p style="margin: 0 0 20px; color: #3f3f46; font-size: 16px; line-height: 1.6;">
+          We've completed the inspection of your <strong>${vehicleInfo}</strong> and have some recommended services for your review.
+        </p>
+        <p style="margin: 0 0 30px; color: #3f3f46; font-size: 16px; line-height: 1.6;">
+          Click the button below to review the recommendations and authorize the work.
+        </p>
+        <table role="presentation" cellspacing="0" cellpadding="0">
+          <tr>
+            <td style="background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); border-radius: 8px;">
+              <a href="${authUrl}" target="_blank" style="display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600;">
+                Review & Authorize Services
+              </a>
+            </td>
+          </tr>
+        </table>
+        <p style="margin: 30px 0 0; color: #71717a; font-size: 14px;">
+          If the button doesn't work, copy and paste this link:<br>
+          <a href="${authUrl}" style="color: #2563eb;">${authUrl}</a>
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 30px; background-color: #f4f4f5; border-top: 1px solid #e4e4e7;">
+        <p style="margin: 0; color: #71717a; font-size: 14px; text-align: center;">
+          Questions? Contact us directly.
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`.trim();
+        sendResult = await sendEmail({ to: customer.email, subject, html });
+      } else {
+        return res.status(400).json({ message: "Invalid method or missing contact info" });
+      }
+
+      if (sendResult.success) {
+        await storage.updateRepairOrder(ro.id, ro.orgId, {
+          authorizationSentAt: new Date(),
+          authorizationSentVia: method,
+        });
+        res.json({ success: true, messageId: sendResult.messageId });
+      } else {
+        res.status(500).json({ message: sendResult.error || "Failed to send" });
+      }
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

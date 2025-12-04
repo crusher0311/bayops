@@ -11,7 +11,8 @@ import {
   Plus,
   ArrowRight,
   Clock,
-  Loader2
+  Loader2,
+  Zap
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'wouter';
@@ -73,13 +74,19 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex gap-3">
+          <Link href="/quick-checkin">
+            <Button variant="outline" className="gap-2 border-blue-500 text-blue-500 hover:bg-blue-50" data-testid="button-quick-checkin">
+              <Zap className="w-4 h-4" />
+              Quick Check-In
+            </Button>
+          </Link>
           <Link href="/customers">
             <Button variant="outline" className="gap-2" data-testid="button-new-customer">
               <Plus className="w-4 h-4" />
               New Customer
             </Button>
           </Link>
-          <Link href="/ros">
+          <Link href="/ros/new">
             <Button className="gap-2" data-testid="button-new-ro">
               <Plus className="w-4 h-4" />
               New Repair Order

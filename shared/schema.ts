@@ -232,6 +232,12 @@ export const repairOrders = pgTable("repair_orders", {
   promisedAt: timestamp("promised_at"),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  authorizationToken: varchar("authorization_token"),
+  authorizationStatus: text("authorization_status").notNull().default('PENDING'),
+  authorizedAt: timestamp("authorized_at"),
+  customerSignature: text("customer_signature"),
+  authorizationSentAt: timestamp("authorization_sent_at"),
+  authorizationSentVia: text("authorization_sent_via"),
 });
 
 export const repairOrdersRelations = relations(repairOrders, ({ one, many }) => ({

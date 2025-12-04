@@ -662,6 +662,39 @@ export default function RepairOrderDetail() {
     },
   });
 
+  const sendAuthorizationMutation = useMutation({
+    mutationFn: async (method: 'sms' | 'email') => {
+      const res = await fetch(`/api/repair-orders/${roId}/send-authorization`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ method }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to send');
+      }
+      return res.json();
+    },
+    onSuccess: (_, method) => {
+      queryClient.invalidateQueries({ queryKey: ['repair-order', roId] });
+      toast({ 
+        title: 'Authorization Request Sent!', 
+        description: `Sent via ${method === 'sms' ? 'text message' : 'email'}` 
+      });
+      setSendDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: 'Failed to Send', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    },
+  });
+
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+
   const deleteInspectionMutation = useMutation({
     mutationFn: async (inspectionId: string) => {
       const res = await fetch(`/api/inspections/${inspectionId}`, {
@@ -1130,9 +1163,65 @@ export default function RepairOrderDetail() {
             <Button variant="outline" size="sm" className="gap-2" data-testid="button-print">
               <Printer className="w-4 h-4" /> Print
             </Button>
-            <Button variant="outline" size="sm" className="gap-2" data-testid="button-share">
-              <Send className="w-4 h-4" /> Share
-            </Button>
+            <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2" data-testid="button-send-customer">
+                  <Send className="w-4 h-4" /> Send to Customer
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[400px]">
+                <DialogHeader>
+                  <DialogTitle>Send Authorization Request</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Send the service authorization request to the customer so they can review and approve the recommended work.
+                  </p>
+                  <div className="space-y-2">
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start gap-3 h-14"
+                      onClick={() => sendAuthorizationMutation.mutate('sms')}
+                      disabled={!customer?.phone || sendAuthorizationMutation.isPending}
+                      data-testid="button-send-sms"
+                    >
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-100">
+                        <Send className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div className="text-left">
+                        <div className="font-medium">Text Message (SMS)</div>
+                        <div className="text-xs text-muted-foreground">
+                          {customer?.phone || 'No phone number'}
+                        </div>
+                      </div>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start gap-3 h-14"
+                      onClick={() => sendAuthorizationMutation.mutate('email')}
+                      disabled={!customer?.email || sendAuthorizationMutation.isPending}
+                      data-testid="button-send-email"
+                    >
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100">
+                        <FileText className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div className="text-left">
+                        <div className="font-medium">Email</div>
+                        <div className="text-xs text-muted-foreground">
+                          {customer?.email || 'No email address'}
+                        </div>
+                      </div>
+                    </Button>
+                  </div>
+                  {sendAuthorizationMutation.isPending && (
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Sending...
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
             <Button 
               variant="secondary" 
               size="sm" 
