@@ -61,6 +61,7 @@ export const locations = pgTable("locations", {
   licenseNumber: text("license_number"),
   taxId: text("tax_id"),
   logoUrl: text("logo_url"),
+  hoursOfOperation: text("hours_of_operation"),
   taxRate: decimal("tax_rate", { precision: 5, scale: 4 }).notNull().default('0.0'),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
