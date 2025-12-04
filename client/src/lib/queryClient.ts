@@ -8,19 +8,54 @@ async function throwIfResNotOk(res: Response) {
 }
 
 export async function apiRequest(
-  method: string,
-  url: string,
+  urlOrMethod: string,
+  optionsOrUrl?: string | RequestInit,
   data?: unknown | undefined,
-): Promise<Response> {
+): Promise<any> {
+  let url: string;
+  let options: RequestInit = {};
+
+  // Support two calling patterns:
+  // 1. apiRequest(url) or apiRequest(url, { method, body, ... }) - fetch-like
+  // 2. apiRequest(method, url, data) - legacy pattern
+  if (typeof optionsOrUrl === 'string') {
+    // Legacy pattern: apiRequest(method, url, data)
+    url = optionsOrUrl;
+    options = {
+      method: urlOrMethod,
+      headers: data ? { "Content-Type": "application/json" } : {},
+      body: data ? JSON.stringify(data) : undefined,
+    };
+  } else if (optionsOrUrl && typeof optionsOrUrl === 'object') {
+    // Fetch-like pattern: apiRequest(url, options)
+    url = urlOrMethod;
+    options = {
+      ...optionsOrUrl,
+      headers: {
+        "Content-Type": "application/json",
+        ...(optionsOrUrl.headers || {}),
+      },
+    };
+  } else {
+    // Simple GET: apiRequest(url)
+    url = urlOrMethod;
+    options = { method: 'GET' };
+  }
+
   const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
+    ...options,
     credentials: "include",
   });
 
   await throwIfResNotOk(res);
-  return res;
+  
+  // Return JSON for convenience
+  const text = await res.text();
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch {
+    return text;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
