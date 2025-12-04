@@ -29,6 +29,7 @@ import Login from "@/pages/Login";
 import QuickCheckIn from "@/pages/QuickCheckIn";
 import CustomerAuthorization from "@/pages/CustomerAuthorization";
 import SelfCheckIn from "@/pages/SelfCheckIn";
+import ServiceQueue from "@/pages/ServiceQueue";
 
 function ProtectedRouter() {
   const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
@@ -79,6 +80,7 @@ function ProtectedRouter() {
       <Route path="/invoices" component={Invoices} />
       <Route path="/reports" component={Reports} />
       <Route path="/inspections" component={Inspections} />
+      <Route path="/service-queue" component={ServiceQueue} />
       <Route path="/settings" component={Settings} />
       <Route path="/org-settings" component={OrganizationSettings} />
       <Route component={NotFound} />

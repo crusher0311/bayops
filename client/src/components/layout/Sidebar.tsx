@@ -16,7 +16,8 @@ import {
   Calendar,
   Truck,
   Clock,
-  Receipt
+  Receipt,
+  UsersRound
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -29,6 +30,7 @@ export function Sidebar() {
     { icon: FileText, label: 'Repair Orders', href: '/ros' },
     { icon: ClipboardCheck, label: 'Inspections', href: '/inspections' },
     { icon: Calendar, label: 'Appointments', href: '/appointments' },
+    { icon: UsersRound, label: 'Service Queue', href: '/service-queue' },
     { icon: Users, label: 'Customers', href: '/customers' },
     { icon: Truck, label: 'Parts', href: '/parts' },
     { icon: Clock, label: 'Time Tracking', href: '/time-tracking' },
