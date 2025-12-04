@@ -13,7 +13,10 @@ import {
   useGenerateServiceDescription,
   useGenerateAuthorizationRequest,
   useImproveJobDescription,
-  type LaborGuideRepair 
+  usePartstechStatus,
+  usePartstechSearch,
+  type LaborGuideRepair,
+  type PartstechPart
 } from '@/lib/hooks';
 import { InspectionForm } from '@/components/InspectionForm';
 import { Button } from '@/components/ui/button';
@@ -45,7 +48,9 @@ import {
   Check,
   ClipboardCheck,
   ExternalLink,
-  Wrench
+  Wrench,
+  ShoppingCart,
+  Package
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
@@ -201,6 +206,201 @@ function LaborGuideDialog({ isOpen, onClose, vehicle, onSelect }: LaborGuideDial
                   </Card>
                 );
               })}
+            </div>
+          </ScrollArea>
+        )}
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface PartstechDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  vehicle: { vin?: string; year?: number; make?: string; model?: string } | null;
+  onSelect: (part: PartstechPart) => void;
+}
+
+function PartstechDialog({ isOpen, onClose, vehicle, onSelect }: PartstechDialogProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<PartstechPart[]>([]);
+  const partstechSearch = usePartstechSearch();
+  const { data: ptStatus } = usePartstechStatus();
+  
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) return;
+    
+    try {
+      const result = await partstechSearch.mutateAsync({
+        query: searchTerm,
+        vin: vehicle?.vin,
+        pageSize: 50,
+      });
+      setSearchResults(result.parts);
+    } catch (error) {
+      console.error('Search error:', error);
+    }
+  };
+  
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  if (!ptStatus?.configured) {
+    return (
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              PartsTech Not Configured
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-6 text-center">
+            <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              PartsTech credentials are not configured. Please add your PARTSTECH_USERNAME and PARTSTECH_API_KEY to enable parts search.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={onClose}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[800px] max-h-[85vh]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Package className="w-5 h-5 text-orange-500" />
+            PartsTech Parts Search
+            {vehicle && (
+              <Badge variant="secondary" className="ml-2 text-xs">
+                {vehicle.year} {vehicle.make} {vehicle.model}
+              </Badge>
+            )}
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search parts (e.g. brake pads, oil filter...)"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="pl-9"
+              data-testid="input-partstech-search"
+            />
+          </div>
+          <Button 
+            onClick={handleSearch} 
+            disabled={!searchTerm.trim() || partstechSearch.isPending}
+            data-testid="button-partstech-search"
+          >
+            {partstechSearch.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              'Search'
+            )}
+          </Button>
+        </div>
+
+        {partstechSearch.isPending ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            <span className="ml-3 text-muted-foreground">Searching PartsTech...</span>
+          </div>
+        ) : partstechSearch.isError ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <AlertCircle className="w-12 h-12 text-destructive mb-4" />
+            <h3 className="text-lg font-semibold">Search Failed</h3>
+            <p className="text-muted-foreground text-sm max-w-sm">
+              {partstechSearch.error?.message || 'An error occurred while searching'}
+            </p>
+          </div>
+        ) : searchResults.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Package className="w-12 h-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold">
+              {searchTerm ? 'No parts found' : 'Search for parts'}
+            </h3>
+            <p className="text-muted-foreground text-sm max-w-sm">
+              {searchTerm 
+                ? 'Try a different search term or part number' 
+                : 'Enter a part name, description, or part number to search'}
+            </p>
+          </div>
+        ) : (
+          <ScrollArea className="h-[400px] pr-4">
+            <div className="space-y-2">
+              {searchResults.map((part, index) => (
+                <Card 
+                  key={`${part.partNumber}-${index}`} 
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => {
+                    onSelect(part);
+                    onClose();
+                  }}
+                  data-testid={`partstech-part-${index}`}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium text-sm">{part.description}</h4>
+                          {part.available !== false && (
+                            <Badge variant="outline" className="text-[10px] text-green-600 border-green-600">
+                              In Stock
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                          <span className="font-mono">{part.partNumber}</span>
+                          <span>•</span>
+                          <span>{part.brand}</span>
+                          {part.supplier && (
+                            <>
+                              <span>•</span>
+                              <span>{part.supplier}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        {part.price != null && part.price > 0 && (
+                          <div className="flex items-center gap-1 text-sm font-medium text-primary">
+                            <DollarSign className="w-3 h-3" />
+                            {part.price.toFixed(2)}
+                          </div>
+                        )}
+                        {part.listPrice != null && part.listPrice !== part.price && (
+                          <div className="text-xs text-muted-foreground line-through">
+                            ${part.listPrice.toFixed(2)}
+                          </div>
+                        )}
+                        {part.corePrice != null && part.corePrice > 0 && (
+                          <div className="text-xs text-muted-foreground">
+                            Core: ${part.corePrice.toFixed(2)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </ScrollArea>
         )}
@@ -384,6 +584,10 @@ export default function RepairOrderDetail() {
   const [aiCopied, setAICopied] = useState(false);
   const [aiActiveJobId, setAIActiveJobId] = useState<string | null>(null);
   
+  // PartsTech state
+  const [isPartstechOpen, setIsPartstechOpen] = useState(false);
+  const [partstechJobId, setPartstechJobId] = useState<string | null>(null);
+  
   // AI hooks
   const generateDescription = useGenerateServiceDescription();
   const generateAuth = useGenerateAuthorizationRequest();
@@ -480,6 +684,47 @@ export default function RepairOrderDetail() {
   const openLaborGuide = (jobId: string) => {
     setLaborGuideJobId(jobId);
     setIsLaborGuideOpen(true);
+  };
+
+  // PartsTech handlers
+  const openPartstechSearch = (jobId: string) => {
+    setPartstechJobId(jobId);
+    setIsPartstechOpen(true);
+  };
+
+  const handleAddFromPartstech = (part: PartstechPart) => {
+    if (!partstechJobId) return;
+    
+    const partCost = part.price || 0;
+    const partPrice = applyPartsMatrix(partCost);
+    
+    const newItem: LineItem = {
+      id: `li-${Date.now()}`,
+      type: 'PART',
+      description: part.description,
+      quantity: 1,
+      unitCost: partCost,
+      unitPrice: partPrice,
+      approved: true,
+      partNumber: part.partNumber,
+      manufacturer: part.brand,
+      supplier: part.supplier,
+    };
+    
+    const updatedJobs = jobs.map(job => 
+      job.id === partstechJobId 
+        ? { ...job, lineItems: [...job.lineItems, newItem] }
+        : job
+    );
+    
+    updateRO.mutate({
+      id: ro.id,
+      updates: { jobs: updatedJobs as any },
+    });
+    
+    setIsPartstechOpen(false);
+    setPartstechJobId(null);
+    toast({ title: 'Part added', description: `${part.description} added to job` });
   };
 
   // AI Service Writer functions
@@ -963,6 +1208,16 @@ export default function RepairOrderDetail() {
                               <BookOpen className="w-3 h-3" /> Labor Guide
                             </Button>
                             <Button 
+                              variant="secondary" 
+                              size="sm" 
+                              className="gap-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-700 border-orange-500/20" 
+                              onClick={() => openPartstechSearch(job.id)}
+                              disabled={updateRO.isPending}
+                              data-testid={`button-partstech-${job.id}`}
+                            >
+                              <Package className="w-3 h-3" /> PartsTech
+                            </Button>
+                            <Button 
                               variant="outline" 
                               size="sm" 
                               className="gap-2" 
@@ -1324,6 +1579,17 @@ export default function RepairOrderDetail() {
           onSelect={handleAddFromLaborGuide}
         />
       )}
+
+      {/* PartsTech Parts Search Dialog */}
+      <PartstechDialog
+        isOpen={isPartstechOpen}
+        onClose={() => {
+          setIsPartstechOpen(false);
+          setPartstechJobId(null);
+        }}
+        vehicle={vehicle}
+        onSelect={handleAddFromPartstech}
+      />
 
       {/* AI Service Writer Dialog */}
       <Dialog open={isAIDialogOpen} onOpenChange={setIsAIDialogOpen}>

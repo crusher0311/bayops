@@ -57,6 +57,7 @@ Settings page with 6 tabs for comprehensive shop configuration:
 - VIN Decoder: Auto-populate vehicle info from VIN
 - Labor Guide: VehicleDatabases.com API for repair pricing estimates
 - Address Autocomplete: Geoapify for customer addresses
+- PartsTech: Native parts search and ordering integration (see PartsTech Integration section)
 
 ## Configuration Tables
 | Table | Purpose |
@@ -80,6 +81,8 @@ Settings page with 6 tabs for comprehensive shop configuration:
 - `GEOAPIFY_API_KEY`: Address autocomplete
 - `VEHICLE_DATABASES_API_KEY`: Labor guide API
 - `AI_INTEGRATIONS_OPENAI_*`: Replit AI (auto-configured)
+- `PARTSTECH_USERNAME`: PartsTech account username
+- `PARTSTECH_API_KEY`: PartsTech API key
 
 ## Design System
 - **Colors**: Slate grays (#0f172a), Blue (#2563EB) for primary actions, Purple gradient for AI features
@@ -87,6 +90,7 @@ Settings page with 6 tabs for comprehensive shop configuration:
 - **Style**: Enterprise automotive aesthetic with clean, professional UI
 
 ## Recent Changes
+- 2024-12-04: PartsTech Integration - Native parts search/ordering with VIN-based vehicle context
 - 2024-12-04: Phase 3 DVI Started - Added Digital Vehicle Inspection with AI-powered tech notes
 - 2024-12-04: DVI Features: Template management, status toggles (GREEN/YELLOW/RED), mandatory recommendations for non-green items
 - 2024-12-04: DVI AI Assist: AI generates findings and recommendations based on inspection status
@@ -177,19 +181,17 @@ Settings page with 6 tabs for comprehensive shop configuration:
 - Advisor sales commissions
 - Performance-based pay calculations
 
+### PartsTech Integration (IMPLEMENTED)
+Native parts search and ordering integration using PartsTech's REST API:
+- **VIN-based search**: Searches with vehicle context for accurate part fitment
+- **Real-time pricing**: Live pricing from connected suppliers
+- **Direct to RO**: Selected parts automatically added to job line items with markup matrix applied
+- **UI**: Orange-styled PartsTech button in job headers, modal search dialog with part details
+- **Backend**: `server/partstech.ts` handles OAuth authentication (60-min token caching), API calls
+- **Routes**: `/api/partstech/*` endpoints for status, VIN decode, parts search, categories, suppliers
+- **Credentials**: PARTSTECH_USERNAME and PARTSTECH_API_KEY stored in Replit Secrets
+
 ### Planned Integrations
-
-#### PartsTech (Parts Ordering)
-- **What it provides**: Access to 20,000+ suppliers (AutoZone, NAPA, Advance Auto, O'Reilly), real-time inventory & pricing, VIN-based parts lookup, price comparison, direct ordering
-- **Integration approach**: 
-  - Option A: Punchout (popup/iframe, ~1-2 weeks) - opens PartsTech UI, parts auto-import to RO
-  - Option B: Full API (~3-4 weeks) - native search, inline pricing, seamless cart
-- **Requirements**: Free PartsTech account, Partner API credentials, supplier account credentials
-- **Cost**: Free for shops and developers
-- **API Docs**: https://api-docs.partstech.com/
-- **Auth**: JWT tokens (60 min expiry), supports user + partner credentials
-
-#### Other Planned Integrations
 - Payment processing (Stripe, Square)
 - Accounting sync (QuickBooks)
 - Customer review platforms

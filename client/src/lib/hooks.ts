@@ -355,3 +355,81 @@ export function useImproveJobDescription() {
     },
   });
 }
+
+// PartsTech Integration
+export interface PartstechPart {
+  partNumber: string;
+  description: string;
+  brand: string;
+  brandId?: string;
+  price?: number;
+  listPrice?: number;
+  corePrice?: number;
+  quantity?: number;
+  available?: boolean;
+  supplier?: string;
+  supplierId?: string;
+  store?: string;
+  storeId?: string;
+  lineCode?: string;
+  image?: string;
+  notes?: string[];
+  attributes?: Record<string, string>;
+}
+
+export interface PartstechSearchResult {
+  parts: PartstechPart[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export function usePartstechStatus() {
+  return useQuery<{ configured: boolean }>({
+    queryKey: ['partstech-status'],
+    queryFn: async () => {
+      const response = await fetch('/api/partstech/status', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to check PartsTech status');
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+}
+
+export function usePartstechSearch() {
+  return useMutation<PartstechSearchResult, Error, { 
+    query: string; 
+    vin?: string; 
+    vehicleId?: string;
+    categoryId?: string;
+    page?: number;
+    pageSize?: number;
+  }>({
+    mutationFn: async (params) => {
+      const response = await fetch('/api/partstech/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(params),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to search parts');
+      }
+      return response.json();
+    },
+  });
+}
+
+export function usePartstechVINDecode() {
+  return useMutation<any, Error, string>({
+    mutationFn: async (vin) => {
+      const response = await fetch(`/api/partstech/vin/${vin}`, { credentials: 'include' });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to decode VIN');
+      }
+      return response.json();
+    },
+  });
+}

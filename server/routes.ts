@@ -2393,5 +2393,134 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================
+  // PartsTech Integration Routes
+  // ============================================
+  
+  // Check if PartsTech is configured
+  app.get("/api/partstech/status", requireAuth, async (req, res) => {
+    const { isPartstechConfigured } = await import("./partstech");
+    res.json({ configured: isPartstechConfigured() });
+  });
+
+  // Decode VIN using PartsTech
+  app.get("/api/partstech/vin/:vin", requireAuth, async (req, res) => {
+    try {
+      const { decodeVIN } = await import("./partstech");
+      const vehicle = await decodeVIN(req.params.vin);
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+      res.json(vehicle);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Search parts
+  app.post("/api/partstech/search", requireAuth, async (req, res) => {
+    try {
+      const { searchParts } = await import("./partstech");
+      const { query, vin, vehicleId, categoryId, page, pageSize } = req.body;
+      
+      if (!query) {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+
+      const results = await searchParts(query, {
+        vin,
+        vehicleId,
+        categoryId,
+        page,
+        pageSize,
+      });
+      
+      res.json(results);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get part details
+  app.get("/api/partstech/parts/:partNumber", requireAuth, async (req, res) => {
+    try {
+      const { getPartDetails } = await import("./partstech");
+      const brandId = req.query.brandId as string | undefined;
+      const part = await getPartDetails(req.params.partNumber, brandId);
+      
+      if (!part) {
+        return res.status(404).json({ message: "Part not found" });
+      }
+      
+      res.json(part);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get suppliers
+  app.get("/api/partstech/suppliers", requireAuth, async (req, res) => {
+    try {
+      const { getSuppliers } = await import("./partstech");
+      const suppliers = await getSuppliers();
+      res.json(suppliers);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get categories
+  app.get("/api/partstech/categories", requireAuth, async (req, res) => {
+    try {
+      const { getCategories } = await import("./partstech");
+      const categories = await getCategories();
+      res.json(categories);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get vehicle years
+  app.get("/api/partstech/vehicles/years", requireAuth, async (req, res) => {
+    try {
+      const { getVehicleYears } = await import("./partstech");
+      const years = await getVehicleYears();
+      res.json(years);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get vehicle makes for a year
+  app.get("/api/partstech/vehicles/makes", requireAuth, async (req, res) => {
+    try {
+      const { getVehicleMakes } = await import("./partstech");
+      const year = parseInt(req.query.year as string);
+      if (isNaN(year)) {
+        return res.status(400).json({ message: "Year is required" });
+      }
+      const makes = await getVehicleMakes(year);
+      res.json(makes);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get vehicle models for a year and make
+  app.get("/api/partstech/vehicles/models", requireAuth, async (req, res) => {
+    try {
+      const { getVehicleModels } = await import("./partstech");
+      const year = parseInt(req.query.year as string);
+      const makeId = req.query.makeId as string;
+      if (isNaN(year) || !makeId) {
+        return res.status(400).json({ message: "Year and makeId are required" });
+      }
+      const models = await getVehicleModels(year, makeId);
+      res.json(models);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }
