@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRoute, Link } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { useAuthStore } from '@/lib/authStore';
 import { 
   useRepairOrder, 
   useCustomer, 
@@ -215,6 +216,7 @@ function LaborGuideDialog({ isOpen, onClose, vehicle, onSelect }: LaborGuideDial
 export default function RepairOrderDetail() {
   const [, params] = useRoute('/ros/:id');
   const roId = params?.id || '';
+  const { user } = useAuthStore();
   
   const { data: ro, isLoading: roLoading } = useRepairOrder(roId);
   const { data: customer } = useCustomer(ro?.customerId || '');
@@ -258,24 +260,39 @@ export default function RepairOrderDetail() {
 
   const createInspectionMutation = useMutation({
     mutationFn: async (templateId: string) => {
+      const template = inspectionTemplates.find((t: any) => t.id === templateId);
+      const initialItems = (template?.items || []).map((item: any) => ({
+        itemId: item.id,
+        status: 'GREEN' as const,
+        finding: null,
+        recommendation: null,
+        photos: [],
+      }));
+      
       const res = await fetch('/api/inspections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          repairOrderId: roId,
+          roId: roId,
           templateId,
-          locationId: ro?.locationId,
-          items: [],
-          status: 'PENDING',
+          technicianId: ro?.technicianId || user?.id,
+          vehicleId: ro?.vehicleId,
+          items: initialItems,
         }),
       });
-      if (!res.ok) throw new Error('Failed to create inspection');
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to create inspection');
+      }
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inspections', roId] });
       toast({ title: 'Inspection started' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 
