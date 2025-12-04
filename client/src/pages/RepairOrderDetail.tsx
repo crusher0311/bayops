@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useRoute, Link } from 'wouter';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { 
   useRepairOrder, 
@@ -14,6 +14,7 @@ import {
   useImproveJobDescription,
   type LaborGuideRepair 
 } from '@/lib/hooks';
+import { InspectionForm } from '@/components/InspectionForm';
 import { Button } from '@/components/ui/button';
 
 import { Badge } from '@/components/ui/badge';
@@ -40,8 +41,10 @@ import {
   DollarSign,
   Sparkles,
   Copy,
-  Check
+  Check,
+  ClipboardCheck
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -228,6 +231,72 @@ export default function RepairOrderDetail() {
     },
     enabled: !!ro?.locationId,
   });
+
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: inspectionTemplates = [] } = useQuery({
+    queryKey: ['inspection-templates', ro?.locationId],
+    queryFn: async () => {
+      const res = await fetch(`/api/inspection-templates?locationId=${ro?.locationId}`, { credentials: 'include' });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!ro?.locationId,
+  });
+
+  const { data: roInspection, isLoading: inspectionLoading } = useQuery({
+    queryKey: ['inspections', roId],
+    queryFn: async () => {
+      const res = await fetch(`/api/inspections/ro/${roId}`, { credentials: 'include' });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.length > 0 ? data[0] : null;
+    },
+    enabled: !!roId,
+  });
+
+  const createInspectionMutation = useMutation({
+    mutationFn: async (templateId: string) => {
+      const res = await fetch('/api/inspections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          repairOrderId: roId,
+          templateId,
+          locationId: ro?.locationId,
+          items: [],
+          status: 'PENDING',
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to create inspection');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inspections', roId] });
+      toast({ title: 'Inspection started' });
+    },
+  });
+
+  const updateInspectionMutation = useMutation({
+    mutationFn: async ({ id, items, status }: { id: string; items: any[]; status?: string }) => {
+      const res = await fetch(`/api/inspections/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ items, status }),
+      });
+      if (!res.ok) throw new Error('Failed to update inspection');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inspections', roId] });
+      toast({ title: 'Inspection updated' });
+    },
+  });
+
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
 
   const [newJobName, setNewJobName] = useState('');
   const [isAddJobDialogOpen, setIsAddJobDialogOpen] = useState(false);
@@ -879,15 +948,62 @@ export default function RepairOrderDetail() {
               </TabsContent>
 
               <TabsContent value="inspection" className="mt-6">
-                <Card className="border-dashed">
-                  <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                    <LayoutList className="w-12 h-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold">Inspection Module</h3>
-                    <p className="text-muted-foreground mb-6 max-w-sm">
-                      Digital vehicle inspection will be available in a future update.
-                    </p>
-                  </CardContent>
-                </Card>
+                {inspectionLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : roInspection ? (
+                  <InspectionForm
+                    inspectionId={roInspection.id}
+                    templateItems={(inspectionTemplates.find((t: any) => t.id === roInspection.templateId)?.items || []) as any}
+                    initialItems={roInspection.items || []}
+                    vehicle={vehicle ? { year: vehicle.year, make: vehicle.make, model: vehicle.model, mileage: vehicle.mileage } : { year: 0, make: '', model: '' }}
+                    onSave={(items) => updateInspectionMutation.mutate({ id: roInspection.id, items })}
+                    onComplete={() => updateInspectionMutation.mutate({ id: roInspection.id, items: roInspection.items || [], status: 'COMPLETED' })}
+                    isCompleted={roInspection.status === 'COMPLETED'}
+                  />
+                ) : (
+                  <Card className="border-dashed">
+                    <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                      <ClipboardCheck className="w-12 h-12 text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-semibold">Start Vehicle Inspection</h3>
+                      <p className="text-muted-foreground mb-6 max-w-sm">
+                        Select an inspection template to begin the digital vehicle inspection process.
+                      </p>
+                      
+                      {inspectionTemplates.length > 0 ? (
+                        <div className="flex flex-col items-center gap-4 w-full max-w-xs">
+                          <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+                            <SelectTrigger data-testid="select-inspection-template">
+                              <SelectValue placeholder="Select a template" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {inspectionTemplates.map((template: any) => (
+                                <SelectItem key={template.id} value={template.id}>
+                                  {template.name} ({template.items?.length || 0} items)
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button 
+                            onClick={() => selectedTemplateId && createInspectionMutation.mutate(selectedTemplateId)}
+                            disabled={!selectedTemplateId || createInspectionMutation.isPending}
+                            data-testid="button-start-inspection"
+                          >
+                            {createInspectionMutation.isPending ? 'Starting...' : 'Start Inspection'}
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-muted-foreground">
+                          No inspection templates available.{' '}
+                          <Link href="/inspections" className="text-primary hover:underline">
+                            Create templates
+                          </Link>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
             </Tabs>
           </div>
