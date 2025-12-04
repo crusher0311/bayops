@@ -21,6 +21,7 @@ import TimeTracking from "@/pages/TimeTracking";
 import Invoices from "@/pages/Invoices";
 import Reports from "@/pages/Reports";
 import Inspections from "@/pages/Inspections";
+import InspectionReport from "@/pages/InspectionReport";
 import Settings from "@/pages/Settings";
 import OrganizationSettings from "@/pages/OrganizationSettings";
 import MasterDashboard from "@/pages/MasterDashboard";
@@ -86,7 +87,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <ProtectedRouter />
+        <Switch>
+          <Route path="/inspection/:token" component={InspectionReport} />
+          <Route component={ProtectedRouter} />
+        </Switch>
       </TooltipProvider>
     </QueryClientProvider>
   );

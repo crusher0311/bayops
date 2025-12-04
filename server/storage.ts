@@ -149,6 +149,7 @@ export interface IStorage {
 
   // Repair Orders
   getRepairOrder(id: string, orgId: string): Promise<RepairOrder | undefined>;
+  getRepairOrderById(id: string): Promise<RepairOrder | undefined>;
   getRepairOrdersByLocation(locationId: string, orgId: string): Promise<RepairOrder[]>;
   getRepairOrdersByOrg(orgId: string): Promise<RepairOrder[]>;
   createRepairOrder(ro: InsertRepairOrder): Promise<RepairOrder>;
@@ -163,15 +164,19 @@ export interface IStorage {
 
   // Inspection Templates
   getInspectionTemplate(id: string, orgId: string): Promise<InspectionTemplate | undefined>;
+  getInspectionTemplateById(id: string): Promise<InspectionTemplate | undefined>;
   getInspectionTemplatesByOrg(orgId: string): Promise<InspectionTemplate[]>;
   createInspectionTemplate(template: InsertInspectionTemplate): Promise<InspectionTemplate>;
 
   // Inspections
   getInspection(id: string): Promise<Inspection | undefined>;
+  getInspectionForOrg(id: string, orgId: string): Promise<Inspection | undefined>;
   getInspectionsByRO(roId: string): Promise<Inspection[]>;
   createInspection(inspection: InsertInspection): Promise<Inspection>;
   updateInspection(id: string, updates: Partial<InsertInspection>): Promise<Inspection | undefined>;
+  updateInspectionForOrg(id: string, orgId: string, updates: Partial<InsertInspection>): Promise<Inspection | undefined>;
   deleteInspection(id: string): Promise<boolean>;
+  deleteInspectionForOrg(id: string, orgId: string): Promise<boolean>;
   getInspectionByShareToken(token: string): Promise<Inspection | undefined>;
 
   // Audit Logs
@@ -504,6 +509,11 @@ export class DatabaseStorage implements IStorage {
     return ro || undefined;
   }
 
+  async getRepairOrderById(id: string): Promise<RepairOrder | undefined> {
+    const [ro] = await db.select().from(repairOrders).where(eq(repairOrders.id, id));
+    return ro || undefined;
+  }
+
   async getRepairOrdersByLocation(locationId: string, orgId: string): Promise<RepairOrder[]> {
     return db.select().from(repairOrders).where(
       and(eq(repairOrders.locationId, locationId), eq(repairOrders.orgId, orgId))
@@ -571,6 +581,11 @@ export class DatabaseStorage implements IStorage {
     return template || undefined;
   }
 
+  async getInspectionTemplateById(id: string): Promise<InspectionTemplate | undefined> {
+    const [template] = await db.select().from(inspectionTemplates).where(eq(inspectionTemplates.id, id));
+    return template || undefined;
+  }
+
   async getInspectionTemplatesByOrg(orgId: string): Promise<InspectionTemplate[]> {
     return db.select().from(inspectionTemplates).where(eq(inspectionTemplates.orgId, orgId));
   }
@@ -584,6 +599,14 @@ export class DatabaseStorage implements IStorage {
   async getInspection(id: string): Promise<Inspection | undefined> {
     const [inspection] = await db.select().from(inspections).where(eq(inspections.id, id));
     return inspection || undefined;
+  }
+
+  async getInspectionForOrg(id: string, orgId: string): Promise<Inspection | undefined> {
+    const [result] = await db.select({ inspection: inspections })
+      .from(inspections)
+      .innerJoin(repairOrders, eq(inspections.roId, repairOrders.id))
+      .where(and(eq(inspections.id, id), eq(repairOrders.orgId, orgId)));
+    return result?.inspection || undefined;
   }
 
   async getInspectionsByRO(roId: string): Promise<Inspection[]> {
@@ -600,7 +623,21 @@ export class DatabaseStorage implements IStorage {
     return inspection || undefined;
   }
 
+  async updateInspectionForOrg(id: string, orgId: string, updates: Partial<InsertInspection>): Promise<Inspection | undefined> {
+    const inspection = await this.getInspectionForOrg(id, orgId);
+    if (!inspection) return undefined;
+    const [updated] = await db.update(inspections).set(updates).where(eq(inspections.id, id)).returning();
+    return updated || undefined;
+  }
+
   async deleteInspection(id: string): Promise<boolean> {
+    await db.delete(inspections).where(eq(inspections.id, id));
+    return true;
+  }
+
+  async deleteInspectionForOrg(id: string, orgId: string): Promise<boolean> {
+    const inspection = await this.getInspectionForOrg(id, orgId);
+    if (!inspection) return false;
     await db.delete(inspections).where(eq(inspections.id, id));
     return true;
   }

@@ -541,6 +541,11 @@ export async function registerRoutes(
   // Inspections
   app.get("/api/inspections/ro/:roId", requireAuth, async (req, res) => {
     try {
+      const repairOrder = await storage.getRepairOrder(req.params.roId, req.user!.orgId);
+      if (!repairOrder) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
       const inspections = await storage.getInspectionsByRO(req.params.roId);
       res.json(inspections);
     } catch (error: any) {
@@ -556,6 +561,22 @@ export async function registerRoutes(
           message: fromZodError(result.error).toString() 
         });
       }
+      
+      const repairOrder = await storage.getRepairOrder(result.data.roId, req.user!.orgId);
+      if (!repairOrder) {
+        return res.status(403).json({ message: "Access denied - repair order not found in your organization" });
+      }
+      
+      const template = await storage.getInspectionTemplate(result.data.templateId, req.user!.orgId);
+      if (!template) {
+        return res.status(403).json({ message: "Access denied - inspection template not found in your organization" });
+      }
+      
+      const technician = await storage.getUser(result.data.technicianId);
+      if (!technician || technician.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied - technician not found in your organization" });
+      }
+      
       const inspection = await storage.createInspection(result.data);
       res.status(201).json(inspection);
     } catch (error: any) {
@@ -565,11 +586,50 @@ export async function registerRoutes(
 
   app.patch("/api/inspections/:id", requireAuth, async (req, res) => {
     try {
-      const inspection = await storage.updateInspection(req.params.id, req.body);
-      if (!inspection) {
-        return res.status(404).json({ message: "Inspection not found" });
+      const { items, status } = req.body;
+      const updates: Record<string, unknown> = {};
+      
+      if (items !== undefined) updates.items = items;
+      if (status !== undefined) updates.status = status;
+      
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ message: "No valid update fields provided" });
       }
-      res.json(inspection);
+      
+      const updatedInspection = await storage.updateInspectionForOrg(req.params.id, req.user!.orgId, updates);
+      if (!updatedInspection) {
+        return res.status(404).json({ message: "Inspection not found or access denied" });
+      }
+      res.json(updatedInspection);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/inspections/:id/share", requireAuth, async (req, res) => {
+    try {
+      const inspection = await storage.getInspectionForOrg(req.params.id, req.user!.orgId);
+      if (!inspection) {
+        return res.status(404).json({ message: "Inspection not found or access denied" });
+      }
+      
+      if (inspection.shareToken && inspection.customerViewable) {
+        return res.json({ 
+          shareToken: inspection.shareToken,
+          shareUrl: `/inspection/${inspection.shareToken}`
+        });
+      }
+      
+      const shareToken = crypto.randomUUID();
+      const updated = await storage.updateInspectionForOrg(req.params.id, req.user!.orgId, {
+        shareToken,
+        customerViewable: true,
+      });
+      
+      res.json({ 
+        shareToken: updated?.shareToken,
+        shareUrl: `/inspection/${updated?.shareToken}`
+      });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -578,9 +638,9 @@ export async function registerRoutes(
   // Get single inspection
   app.get("/api/inspections/:id", requireAuth, async (req, res) => {
     try {
-      const inspection = await storage.getInspection(req.params.id);
+      const inspection = await storage.getInspectionForOrg(req.params.id, req.user!.orgId);
       if (!inspection) {
-        return res.status(404).json({ message: "Inspection not found" });
+        return res.status(404).json({ message: "Inspection not found or access denied" });
       }
       res.json(inspection);
     } catch (error: any) {
@@ -591,7 +651,10 @@ export async function registerRoutes(
   // Delete inspection
   app.delete("/api/inspections/:id", requireAuth, async (req, res) => {
     try {
-      await storage.deleteInspection(req.params.id);
+      const deleted = await storage.deleteInspectionForOrg(req.params.id, req.user!.orgId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Inspection not found or access denied" });
+      }
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -644,7 +707,38 @@ export async function registerRoutes(
       if (!inspection || !inspection.customerViewable) {
         return res.status(404).json({ message: "Inspection not found" });
       }
-      res.json(inspection);
+      
+      const repairOrder = await storage.getRepairOrderById(inspection.roId);
+      const vehicle = repairOrder?.vehicleId ? await storage.getVehicle(repairOrder.vehicleId) : null;
+      const template = await storage.getInspectionTemplateById(inspection.templateId);
+      
+      const sanitizedResponse = {
+        id: inspection.id,
+        status: inspection.status,
+        items: (inspection.items as any[])?.map(item => ({
+          itemId: item.itemId,
+          status: item.status,
+          finding: item.finding,
+          recommendation: item.recommendation,
+        })) || [],
+        createdAt: inspection.createdAt,
+        completedAt: inspection.completedAt,
+        repairOrder: repairOrder ? {
+          roNumber: repairOrder.roNumber,
+          odometerIn: repairOrder.odometerIn,
+          vehicle: vehicle ? {
+            year: vehicle.year,
+            make: vehicle.make,
+            model: vehicle.model,
+          } : undefined,
+        } : undefined,
+        template: template ? {
+          name: template.name,
+          items: template.items,
+        } : undefined,
+      };
+      
+      res.json(sanitizedResponse);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

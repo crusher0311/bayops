@@ -52,6 +52,8 @@ interface InspectionFormProps {
   onSave: (items: InspectionResultItem[]) => void;
   onComplete: () => void;
   isCompleted?: boolean;
+  shareToken?: string | null;
+  onShare?: () => void;
 }
 
 const STATUS_CONFIG = {
@@ -86,6 +88,8 @@ export function InspectionForm({
   onSave,
   onComplete,
   isCompleted = false,
+  shareToken,
+  onShare,
 }: InspectionFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -261,6 +265,17 @@ export function InspectionForm({
             <Button variant="outline" onClick={handleSave} data-testid="button-save-inspection">
               <Save className="w-4 h-4 mr-2" />
               Save Draft
+            </Button>
+          )}
+          {isCompleted && onShare && (
+            <Button 
+              variant="outline" 
+              onClick={onShare}
+              className="gap-2"
+              data-testid="button-share-inspection"
+            >
+              <Share2 className="w-4 h-4" />
+              {shareToken ? 'View Share Link' : 'Share with Customer'}
             </Button>
           )}
           {!isCompleted && (

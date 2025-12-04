@@ -296,6 +296,27 @@ export default function RepairOrderDetail() {
     },
   });
 
+  const shareInspectionMutation = useMutation({
+    mutationFn: async (inspectionId: string) => {
+      const res = await fetch(`/api/inspections/${inspectionId}/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to generate share link');
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['inspections', roId] });
+      if (data.shareToken) {
+        const shareUrl = `${window.location.origin}${data.shareUrl}`;
+        navigator.clipboard.writeText(shareUrl);
+        toast({ title: 'Share link copied!', description: 'Link copied to clipboard' });
+      }
+    },
+  });
+
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
 
   const [newJobName, setNewJobName] = useState('');
@@ -961,6 +982,16 @@ export default function RepairOrderDetail() {
                     onSave={(items) => updateInspectionMutation.mutate({ id: roInspection.id, items })}
                     onComplete={() => updateInspectionMutation.mutate({ id: roInspection.id, items: roInspection.items || [], status: 'COMPLETED' })}
                     isCompleted={roInspection.status === 'COMPLETED'}
+                    shareToken={roInspection.shareToken}
+                    onShare={() => {
+                      if (roInspection.shareToken) {
+                        const shareUrl = `${window.location.origin}/inspection/${roInspection.shareToken}`;
+                        navigator.clipboard.writeText(shareUrl);
+                        toast({ title: 'Share link copied!', description: 'Link copied to clipboard' });
+                      } else {
+                        shareInspectionMutation.mutate(roInspection.id);
+                      }
+                    }}
                   />
                 ) : (
                   <Card className="border-dashed">

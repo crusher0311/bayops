@@ -87,6 +87,10 @@ Settings page with 6 tabs for comprehensive shop configuration:
 - **Style**: Enterprise automotive aesthetic with clean, professional UI
 
 ## Recent Changes
+- 2024-12-04: Phase 3 DVI Started - Added Digital Vehicle Inspection with AI-powered tech notes
+- 2024-12-04: DVI Features: Template management, status toggles (GREEN/YELLOW/RED), mandatory recommendations for non-green items
+- 2024-12-04: DVI AI Assist: AI generates findings and recommendations based on inspection status
+- 2024-12-04: DVI Customer Report: Public shareable inspection report page (/inspection/:token)
 - 2024-12-04: Phase 2 Complete - Added Reports dashboard with revenue, productivity, and parts analytics
 - 2024-12-04: Added Invoicing system with invoice generation from ROs, auto-calculated totals, payment tracking
 - 2024-12-04: Added Technician Time Tracking with clock in/out, break tracking, weekly summaries
@@ -101,7 +105,7 @@ Settings page with 6 tabs for comprehensive shop configuration:
 ## MVP Roadmap
 - **Phase 1 (COMPLETE)**: Configuration backbone - all shop settings, markup matrices, branding
 - **Phase 2 (COMPLETE)**: Operational workflows - appointments, invoicing, parts ordering, time tracking, reporting
-- **Phase 3 (FUTURE)**: Engagement features - DVI photos, SMS/email, commissions, integrations
+- **Phase 3 (IN PROGRESS)**: DVI with AI tech notes, customer report sharing, template management
 
 ## Phase 2 Features
 
@@ -136,12 +140,31 @@ Settings page with 6 tabs for comprehensive shop configuration:
 - Parts metrics (cost, revenue, margin)
 - Date range filtering (today, week, month, year, all)
 
-## Phase 3 Planned Features
+## Phase 3 Features (DVI - IN PROGRESS)
 
 ### Digital Vehicle Inspections (DVI)
+- **Inspection Templates**: Create reusable templates with categorized items
+- **Status Toggles**: GREEN (good), YELLOW (needs attention), RED (urgent) for each item
+- **AI Tech Notes**: AI-powered generation of findings and recommendations
+- **Mandatory Recommendations**: Required for yellow/red items, optional for green
+- **Customer Reports**: Public shareable inspection report via unique token URL
+- **RO Integration**: Start inspections from Repair Order detail page (Inspection tab)
+
+### DVI Database Schema
+- `inspectionTemplates`: Template definitions with items array (label, category, sortOrder)
+- `inspections`: Inspection instances linked to RO, containing items with status/finding/recommendation/photos
+
+### DVI Security Architecture
+- **Org-scoped storage helpers**: `getInspectionForOrg`, `updateInspectionForOrg`, `deleteInspectionForOrg` join inspections with repair_orders and filter by orgId
+- **Foreign key validation**: POST /api/inspections validates roId, templateId, and technicianId all belong to user's org before creating inspection
+- **Share token design**: UUIDs serve as authorization (like Google Docs sharing) - possession of token grants read-only access to sanitized inspection data
+- **Public endpoint sanitization**: `/api/inspections/shared/:token` returns only customer-facing data (no internal notes, technician info)
+
+### Remaining DVI Work
 - Photo/video capture during inspections
-- Condition ratings (red/yellow/green) for each inspection item
-- Customer-facing inspection reports with media
+- Media storage and display
+
+## Future Phase 3 Features
 
 ### SMS/Email Communications
 - Automated appointment reminders
