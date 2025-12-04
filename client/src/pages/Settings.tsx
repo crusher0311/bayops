@@ -31,7 +31,9 @@ import {
   Megaphone,
   Palette,
   Wrench,
-  Save
+  Save,
+  Package,
+  Clock
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
@@ -46,7 +48,7 @@ interface WorkflowStage {
   order: number;
 }
 
-type SettingsTab = 'shop' | 'ro' | 'markups' | 'marketing' | 'branding' | 'workflows';
+type SettingsTab = 'shop' | 'ro' | 'markups' | 'marketing' | 'branding' | 'workflows' | 'cannedjobs';
 
 export default function Settings() {
   const { data: locations = [], isLoading: locationsLoading } = useLocations();
@@ -109,7 +111,7 @@ export default function Settings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as SettingsTab)} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6 bg-slate-100 p-1 rounded-lg">
+        <TabsList className="grid w-full grid-cols-7 bg-slate-100 p-1 rounded-lg">
           <TabsTrigger value="shop" className="flex gap-2 data-[state=active]:bg-white" data-testid="tab-shop-profile">
             <Building2 className="w-4 h-4" />
             <span className="hidden sm:inline">Shop Profile</span>
@@ -129,6 +131,10 @@ export default function Settings() {
           <TabsTrigger value="branding" className="flex gap-2 data-[state=active]:bg-white" data-testid="tab-branding">
             <Palette className="w-4 h-4" />
             <span className="hidden sm:inline">Branding</span>
+          </TabsTrigger>
+          <TabsTrigger value="cannedjobs" className="flex gap-2 data-[state=active]:bg-white" data-testid="tab-canned-jobs">
+            <Package className="w-4 h-4" />
+            <span className="hidden sm:inline">Canned Jobs</span>
           </TabsTrigger>
           <TabsTrigger value="workflows" className="flex gap-2 data-[state=active]:bg-white" data-testid="tab-workflows">
             <SettingsIcon className="w-4 h-4" />
@@ -171,6 +177,13 @@ export default function Settings() {
           <BrandingTab 
             settings={allSettings}
             onRefresh={() => refetchSettings()}
+          />
+        </TabsContent>
+
+        <TabsContent value="cannedjobs" className="space-y-6">
+          <CannedJobsTab 
+            locationId={selectedLocationId}
+            settings={allSettings}
           />
         </TabsContent>
 
@@ -1942,6 +1955,502 @@ function WorkflowsTab({ workflows }: { workflows: any[] }) {
               </div>
             )}
           </Tabs>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+interface CannedJobTemplate {
+  id: string;
+  locationId: string;
+  name: string;
+  description?: string;
+  categoryId?: string;
+  laborHours: string;
+  laborRate?: string;
+  defaultNotes?: string;
+  isActive: boolean;
+  sortOrder: number;
+  parts: CannedJobPart[];
+}
+
+interface CannedJobPart {
+  id: string;
+  templateId: string;
+  description: string;
+  partNumber?: string;
+  quantity: string;
+  unitCost?: string;
+  unitPrice?: string;
+  inventoryItemId?: string;
+}
+
+function CannedJobsTab({ locationId, settings }: { locationId: string; settings: any }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<CannedJobTemplate | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    categoryId: '',
+    laborHours: '1.0',
+    laborRate: '',
+    defaultNotes: '',
+    isActive: true,
+    parts: [] as { description: string; partNumber: string; quantity: string; unitPrice: string }[],
+  });
+
+  const { data: templates = [], isLoading } = useQuery<CannedJobTemplate[]>({
+    queryKey: ['canned-jobs', locationId],
+    queryFn: () => apiRequest(`/api/locations/${locationId}/canned-jobs`),
+    enabled: !!locationId,
+  });
+
+  const { data: categories = [] } = useQuery<any[]>({
+    queryKey: ['job-categories', locationId],
+    queryFn: () => apiRequest(`/api/locations/${locationId}/job-categories`),
+    enabled: !!locationId,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: any) => apiRequest(`/api/locations/${locationId}/canned-jobs`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    onSuccess: () => {
+      toast({ title: 'Service package created successfully' });
+      queryClient.invalidateQueries({ queryKey: ['canned-jobs', locationId] });
+      closeDialog();
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error creating service package', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest(`/api/canned-jobs/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+    onSuccess: () => {
+      toast({ title: 'Service package updated successfully' });
+      queryClient.invalidateQueries({ queryKey: ['canned-jobs', locationId] });
+      closeDialog();
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error updating service package', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/canned-jobs/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      toast({ title: 'Service package deleted' });
+      queryClient.invalidateQueries({ queryKey: ['canned-jobs', locationId] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error deleting service package', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const openDialog = (template?: CannedJobTemplate) => {
+    if (template) {
+      setEditingTemplate(template);
+      setFormData({
+        name: template.name,
+        description: template.description || '',
+        categoryId: template.categoryId || '',
+        laborHours: template.laborHours,
+        laborRate: template.laborRate || '',
+        defaultNotes: template.defaultNotes || '',
+        isActive: template.isActive,
+        parts: template.parts.map(p => ({
+          description: p.description,
+          partNumber: p.partNumber || '',
+          quantity: p.quantity,
+          unitPrice: p.unitPrice || '',
+        })),
+      });
+    } else {
+      setEditingTemplate(null);
+      setFormData({
+        name: '',
+        description: '',
+        categoryId: '',
+        laborHours: '1.0',
+        laborRate: '',
+        defaultNotes: '',
+        isActive: true,
+        parts: [],
+      });
+    }
+    setIsDialogOpen(true);
+  };
+
+  const closeDialog = () => {
+    setIsDialogOpen(false);
+    setEditingTemplate(null);
+  };
+
+  const handleSubmit = () => {
+    const payload = {
+      ...formData,
+      categoryId: formData.categoryId || null,
+    };
+    if (editingTemplate) {
+      updateMutation.mutate({ id: editingTemplate.id, data: payload });
+    } else {
+      createMutation.mutate(payload);
+    }
+  };
+
+  const addPart = () => {
+    setFormData({
+      ...formData,
+      parts: [...formData.parts, { description: '', partNumber: '', quantity: '1', unitPrice: '' }],
+    });
+  };
+
+  const updatePart = (index: number, field: string, value: string) => {
+    const updated = [...formData.parts];
+    updated[index] = { ...updated[index], [field]: value };
+    setFormData({ ...formData, parts: updated });
+  };
+
+  const removePart = (index: number) => {
+    setFormData({
+      ...formData,
+      parts: formData.parts.filter((_, i) => i !== index),
+    });
+  };
+
+  const calculateTotal = () => {
+    const laborTotal = parseFloat(formData.laborHours || '0') * parseFloat(formData.laborRate || '0');
+    const partsTotal = formData.parts.reduce((sum, p) => {
+      return sum + (parseFloat(p.quantity || '0') * parseFloat(p.unitPrice || '0'));
+    }, 0);
+    return (laborTotal + partsTotal).toFixed(2);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="w-5 h-5" />
+            Service Packages / Canned Jobs
+          </CardTitle>
+          <CardDescription>
+            Pre-built service templates with labor and parts for quick RO creation.
+          </CardDescription>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => openDialog()} data-testid="button-add-canned-job">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Package
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {editingTemplate ? 'Edit Service Package' : 'Create Service Package'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Package Name *</Label>
+                <Input
+                  id="name"
+                  placeholder="e.g. Oil Change - Conventional"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  data-testid="input-canned-job-name"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Brief description of the service..."
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  data-testid="input-canned-job-description"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Category</Label>
+                  <Select
+                    value={formData.categoryId}
+                    onValueChange={(v) => setFormData({ ...formData, categoryId: v })}
+                  >
+                    <SelectTrigger data-testid="select-canned-job-category">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat: any) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="laborHours">Labor Hours *</Label>
+                  <Input
+                    id="laborHours"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={formData.laborHours}
+                    onChange={(e) => setFormData({ ...formData, laborHours: e.target.value })}
+                    data-testid="input-canned-job-hours"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="laborRate">Custom Labor Rate (optional)</Label>
+                  <Input
+                    id="laborRate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Uses shop default if blank"
+                    value={formData.laborRate}
+                    onChange={(e) => setFormData({ ...formData, laborRate: e.target.value })}
+                    data-testid="input-canned-job-rate"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={formData.isActive}
+                      onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                      data-testid="switch-canned-job-active"
+                    />
+                    <Label>Active</Label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="defaultNotes">Default Technician Notes</Label>
+                <Textarea
+                  id="defaultNotes"
+                  placeholder="Notes that will appear on the RO..."
+                  value={formData.defaultNotes}
+                  onChange={(e) => setFormData({ ...formData, defaultNotes: e.target.value })}
+                  data-testid="input-canned-job-notes"
+                />
+              </div>
+
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between mb-4">
+                  <Label className="text-base font-semibold">Parts Included</Label>
+                  <Button variant="outline" size="sm" onClick={addPart} data-testid="button-add-part">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Part
+                  </Button>
+                </div>
+
+                {formData.parts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No parts added. Click "Add Part" to include parts in this package.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {formData.parts.map((part, index) => (
+                      <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 bg-muted/50 rounded-lg">
+                        <div className="col-span-4">
+                          <Label className="text-xs">Description</Label>
+                          <Input
+                            placeholder="Part description"
+                            value={part.description}
+                            onChange={(e) => updatePart(index, 'description', e.target.value)}
+                            data-testid={`input-part-description-${index}`}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <Label className="text-xs">Part #</Label>
+                          <Input
+                            placeholder="Part #"
+                            value={part.partNumber}
+                            onChange={(e) => updatePart(index, 'partNumber', e.target.value)}
+                            data-testid={`input-part-number-${index}`}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <Label className="text-xs">Qty</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={part.quantity}
+                            onChange={(e) => updatePart(index, 'quantity', e.target.value)}
+                            data-testid={`input-part-quantity-${index}`}
+                          />
+                        </div>
+                        <div className="col-span-3">
+                          <Label className="text-xs">Unit Price</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="$0.00"
+                            value={part.unitPrice}
+                            onChange={(e) => updatePart(index, 'unitPrice', e.target.value)}
+                            data-testid={`input-part-price-${index}`}
+                          />
+                        </div>
+                        <div className="col-span-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removePart(index)}
+                            data-testid={`button-remove-part-${index}`}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {(formData.laborRate || formData.parts.length > 0) && (
+                <div className="border-t pt-4 flex justify-end">
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground">Estimated Package Total</p>
+                    <p className="text-2xl font-bold">${calculateTotal()}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={closeDialog}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={!formData.name || !formData.laborHours || createMutation.isPending || updateMutation.isPending}
+                data-testid="button-save-canned-job"
+              >
+                {(createMutation.isPending || updateMutation.isPending) && (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                )}
+                {editingTemplate ? 'Update Package' : 'Create Package'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent>
+        {templates.length === 0 ? (
+          <div className="text-center py-12">
+            <Package className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">No service packages yet</h3>
+            <p className="text-muted-foreground mb-4">
+              Create pre-built service packages to speed up repair order creation.
+            </p>
+            <Button onClick={() => openDialog()} data-testid="button-create-first-package">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Your First Package
+            </Button>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Package Name</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead className="text-right">Labor Hours</TableHead>
+                <TableHead className="text-right">Parts</TableHead>
+                <TableHead className="text-center">Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {templates.map((template) => {
+                const category = categories.find((c: any) => c.id === template.categoryId);
+                return (
+                  <TableRow key={template.id} data-testid={`row-canned-job-${template.id}`}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{template.name}</p>
+                        {template.description && (
+                          <p className="text-sm text-muted-foreground">{template.description}</p>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {category ? (
+                        <Badge variant="outline">{category.name}</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Clock className="w-4 h-4 text-muted-foreground" />
+                        {template.laborHours}h
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {template.parts.length > 0 ? (
+                        <Badge variant="secondary">{template.parts.length} parts</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={template.isActive ? 'default' : 'secondary'}>
+                        {template.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openDialog(template)}
+                          data-testid={`button-edit-canned-job-${template.id}`}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => deleteMutation.mutate(template.id)}
+                          data-testid={`button-delete-canned-job-${template.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         )}
       </CardContent>
     </Card>
