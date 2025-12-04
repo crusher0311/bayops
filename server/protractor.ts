@@ -179,7 +179,8 @@ export class ProtractorClient {
     });
 
     const responseText = await response.text();
-    console.log(`[Protractor API] Response ${response.status}: ${responseText.substring(0, 500)}`);
+    // Log more of the response for debugging invoice structure
+    console.log(`[Protractor API] Response ${response.status}: ${responseText.substring(0, 2000)}`);
 
     if (!response.ok) {
       throw new Error(`Protractor API error ${response.status}: ${responseText}`);

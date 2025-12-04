@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useCustomers, useCreateCustomer, useUpdateCustomer, useVehiclesByCustomer } from '@/lib/hooks';
 import { 
@@ -74,9 +74,9 @@ function CustomerVehicles({ customerId }: { customerId: string }) {
                 </div>
               </div>
             </div>
-            {vehicle.engine && (
+            {(vehicle.engineCylinders || vehicle.engineDisplacement) && (
               <div className="text-sm text-muted-foreground">
-                {vehicle.engine}
+                {[vehicle.engineCylinders, vehicle.engineDisplacement].filter(Boolean).join(' ')}
               </div>
             )}
           </div>
@@ -291,9 +291,8 @@ export default function Customers() {
               </TableRow>
             ) : (
               customers.map((customer) => (
-                <>
+                <React.Fragment key={customer.id}>
                   <TableRow 
-                    key={customer.id} 
                     data-testid={`row-customer-${customer.id}`}
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => toggleCustomerExpand(customer.id)}
@@ -356,7 +355,7 @@ export default function Customers() {
                       </TableCell>
                     </TableRow>
                   )}
-                </>
+                </React.Fragment>
               ))
             )}
           </TableBody>

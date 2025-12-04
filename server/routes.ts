@@ -4026,6 +4026,76 @@ export async function registerRoutes(
     }
   });
 
+  // Debug: Fetch raw invoices to see actual API field names
+  app.get("/api/integrations/protractor/:locationId/debug/invoices", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+
+      const connection = await storage.getProtractorConnection(req.params.locationId);
+      if (!connection) {
+        return res.status(400).json({ message: "Protractor not connected" });
+      }
+
+      const client = createProtractorClient(connection.connectionId, connection.apiKey, connection.authentication);
+      
+      // Get invoices from last 30 days
+      const endDate = new Date();
+      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      
+      const invoices = await client.getInvoices(startDate, endDate);
+      
+      // Return first 5 invoices with ALL their fields (raw data)
+      const rawInvoices = invoices.slice(0, 5);
+      
+      // Also fetch a single invoice by ID to get full details if we have any
+      let singleInvoiceDetail = null;
+      if (invoices.length > 0 && invoices[0].ID) {
+        try {
+          singleInvoiceDetail = await client.getInvoice(invoices[0].ID);
+        } catch (e) {
+          console.log("Could not fetch single invoice detail:", e);
+        }
+      }
+      
+      res.json({ 
+        count: invoices.length, 
+        rawInvoicesFromList: rawInvoices,
+        singleInvoiceDetail,
+        fieldNames: rawInvoices.length > 0 ? Object.keys(rawInvoices[0]) : [],
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Debug: Fetch a specific invoice with all details
+  app.get("/api/integrations/protractor/:locationId/debug/invoice/:invoiceId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+
+      const connection = await storage.getProtractorConnection(req.params.locationId);
+      if (!connection) {
+        return res.status(400).json({ message: "Protractor not connected" });
+      }
+
+      const client = createProtractorClient(connection.connectionId, connection.apiKey, connection.authentication);
+      const invoice = await client.getInvoice(req.params.invoiceId);
+      
+      res.json({ 
+        invoice,
+        fieldNames: Object.keys(invoice),
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }
 
@@ -4239,10 +4309,42 @@ async function runProtractorImport(
         
         const invoices = Array.from(allInvoices.values());
         console.log(`[Protractor Import ${jobId}] Total unique invoices to import: ${invoices.length}`);
+        
+        // Log the first invoice's raw structure to see all field names
+        if (invoices.length > 0) {
+          console.log(`[Protractor Import ${jobId}] FIRST INVOICE RAW STRUCTURE:`);
+          console.log(`[Protractor Import ${jobId}] Field names: ${Object.keys(invoices[0]).join(', ')}`);
+          console.log(`[Protractor Import ${jobId}] Raw data: ${JSON.stringify(invoices[0], null, 2)}`);
+          
+          // Try fetching a single invoice with full details to see if that has more fields
+          try {
+            const singleInvoice = await client.getInvoice(invoices[0].ID);
+            console.log(`[Protractor Import ${jobId}] SINGLE INVOICE DETAIL STRUCTURE:`);
+            console.log(`[Protractor Import ${jobId}] Detail field names: ${Object.keys(singleInvoice).join(', ')}`);
+            console.log(`[Protractor Import ${jobId}] Detail raw data: ${JSON.stringify(singleInvoice, null, 2)}`);
+          } catch (e: any) {
+            console.log(`[Protractor Import ${jobId}] Could not fetch single invoice detail: ${e.message}`);
+          }
+        }
+        
         totalRecords += invoices.length;
 
-        for (const invoice of invoices) {
+        for (const listInvoice of invoices) {
           try {
+            // Fetch full invoice details - the list endpoint may not include ContactID/ServiceItemID
+            let invoice = listInvoice;
+            try {
+              const fullInvoice = await client.getInvoice(listInvoice.ID);
+              invoice = fullInvoice;
+              
+              // Log first detailed invoice for debugging
+              if (processedRecords === 0 && failedRecords === 0) {
+                console.log(`[Protractor Import ${jobId}] FIRST FULL INVOICE: ContactID=${invoice.ContactID}, ServiceItemID=${invoice.ServiceItemID}`);
+              }
+            } catch (e: any) {
+              console.log(`[Protractor Import ${jobId}] Could not fetch invoice detail for ${listInvoice.ID}: ${e.message}`);
+            }
+            
             // Find customer by protractor contact ID
             const customer = invoice.ContactID ? 
               await storage.getCustomerByProtractorId(orgId, invoice.ContactID) : null;
