@@ -17,6 +17,7 @@ import Inventory from "@/pages/Inventory";
 import Customers from "@/pages/Customers";
 import Appointments from "@/pages/Appointments";
 import Parts from "@/pages/Parts";
+import TimeTracking from "@/pages/TimeTracking";
 import Settings from "@/pages/Settings";
 import OrganizationSettings from "@/pages/OrganizationSettings";
 import MasterDashboard from "@/pages/MasterDashboard";
@@ -66,6 +67,7 @@ function ProtectedRouter() {
       <Route path="/customers" component={Customers} />
       <Route path="/appointments" component={Appointments} />
       <Route path="/parts" component={Parts} />
+      <Route path="/time-tracking" component={TimeTracking} />
       <Route path="/reports" component={Dashboard} />
       <Route path="/settings" component={Settings} />
       <Route path="/org-settings" component={OrganizationSettings} />
