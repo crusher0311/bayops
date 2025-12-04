@@ -1038,7 +1038,7 @@ export default function RepairOrderDetail() {
                         deleteInspectionMutation.mutate(roInspection.id);
                       }
                     }}
-                    isCompleted={roInspection.status === 'COMPLETED'}
+                    isCompleted={!!roInspection.completedAt}
                     shareToken={roInspection.shareToken}
                     onShare={() => {
                       if (roInspection.shareToken) {

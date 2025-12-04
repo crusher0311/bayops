@@ -602,7 +602,10 @@ export async function registerRoutes(
       const updates: Record<string, unknown> = {};
       
       if (items !== undefined) updates.items = items;
-      if (status !== undefined) updates.status = status;
+      // Convert status: 'COMPLETED' to completedAt timestamp
+      if (status === 'COMPLETED') {
+        updates.completedAt = new Date();
+      }
       
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({ message: "No valid update fields provided" });
