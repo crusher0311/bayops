@@ -43,7 +43,9 @@ import {
   Sparkles,
   Copy,
   Check,
-  ClipboardCheck
+  ClipboardCheck,
+  ExternalLink,
+  Wrench
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
@@ -828,8 +830,41 @@ export default function RepairOrderDetail() {
                   <div>
                     <h3 className="font-semibold text-sm text-muted-foreground mb-2 uppercase tracking-wider">Vehicle</h3>
                     <div className="font-medium text-lg">{vehicle?.year} {vehicle?.make} {vehicle?.model}</div>
-                    <div className="text-sm text-muted-foreground">VIN: {vehicle?.vin}</div>
+                    <div className="text-sm text-muted-foreground flex items-center gap-2">
+                      VIN: {vehicle?.vin}
+                      {vehicle?.vin && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => {
+                            navigator.clipboard.writeText(vehicle.vin);
+                            toast({ title: 'VIN copied to clipboard' });
+                          }}
+                          data-testid="button-copy-vin"
+                        >
+                          <Copy className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
                     <div className="text-sm text-muted-foreground">Mileage: {ro.odometerIn?.toLocaleString()} mi</div>
+                    {vehicle?.vin && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-3 gap-2 text-xs"
+                        onClick={() => {
+                          navigator.clipboard.writeText(vehicle.vin);
+                          toast({ title: 'VIN copied! Opening ProDemand...', description: 'Paste VIN in vehicle lookup' });
+                          window.open('https://www.prodemand.com', '_blank');
+                        }}
+                        data-testid="button-launch-prodemand"
+                      >
+                        <Wrench className="w-3.5 h-3.5" />
+                        ProDemand
+                        <ExternalLink className="w-3 h-3" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
