@@ -854,18 +854,12 @@ export default function RepairOrderDetail() {
                         size="sm"
                         className="mt-3 gap-2 text-xs"
                         onClick={() => {
-                          const vin = vehicle.vin;
-                          const year = vehicle.year || '';
-                          const make = vehicle.make || '';
-                          const model = vehicle.model || '';
-                          
-                          const vehicleParams = `year=${year}&make=${make}&model=${model}&productLine=Consumer&country=US`;
-                          const base64Params = btoa(vehicleParams);
-                          
-                          const prodemandUrl = `https://www2.prodemand.com/Main/Index#${year}|${make}|${model}||${model}|||||||||mi|${base64Params}|||${vin}/OneView`;
-                          
-                          window.open(prodemandUrl, '_blank');
-                          toast({ title: 'Opening ProDemand...', description: 'Vehicle info pre-filled' });
+                          navigator.clipboard.writeText(vehicle.vin);
+                          window.open('https://www2.prodemand.com', '_blank');
+                          toast({ 
+                            title: 'VIN copied to clipboard!', 
+                            description: 'Paste in ProDemand vehicle lookup (Ctrl+V)' 
+                          });
                         }}
                         data-testid="button-launch-prodemand"
                       >
