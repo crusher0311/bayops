@@ -10,6 +10,13 @@ import {
   generateAuthorizationRequest,
   improveJobDescription,
 } from "./ai";
+import {
+  sendSMS,
+  sendEmail,
+  generateInspectionSMS,
+  generateInspectionEmail,
+  isMessagingConfigured,
+} from "./messaging";
 import { 
   insertUserSchema,
   insertOrganizationSchema,
@@ -648,6 +655,119 @@ export async function registerRoutes(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
+  });
+
+  // Send inspection report via SMS
+  app.post("/api/inspections/:id/send-sms", requireAuth, async (req, res) => {
+    try {
+      const { phoneNumber } = req.body;
+      if (!phoneNumber) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+
+      const inspection = await storage.getInspectionForOrg(req.params.id, req.user!.orgId);
+      if (!inspection) {
+        return res.status(404).json({ message: "Inspection not found or access denied" });
+      }
+
+      // Ensure inspection has a share token
+      let shareToken = inspection.shareToken;
+      if (!shareToken) {
+        shareToken = crypto.randomUUID();
+        await storage.updateInspectionForOrg(req.params.id, req.user!.orgId, {
+          shareToken,
+          customerViewable: true,
+        });
+      }
+
+      // Get customer and vehicle info
+      const repairOrder = await storage.getRepairOrderById(inspection.roId);
+      const customer = repairOrder?.customerId ? await storage.getCustomer(repairOrder.customerId) : null;
+      const vehicle = repairOrder?.vehicleId ? await storage.getVehicle(repairOrder.vehicleId) : null;
+      const location = repairOrder?.locationId ? await storage.getLocation(repairOrder.locationId) : null;
+
+      const shareUrl = `${req.protocol}://${req.get('host')}/inspection/${shareToken}`;
+      const vehicleInfo = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'vehicle';
+      const customerName = customer ? customer.firstName : 'Customer';
+      const shopName = location?.name || 'Our Shop';
+
+      const message = generateInspectionSMS({
+        customerName,
+        vehicleInfo,
+        shareUrl,
+        shopName,
+      });
+
+      const result = await sendSMS({ to: phoneNumber, message });
+      
+      if (result.success) {
+        res.json({ success: true, messageId: result.messageId });
+      } else {
+        res.status(500).json({ success: false, error: result.error });
+      }
+    } catch (error: any) {
+      console.error('Send SMS error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Send inspection report via Email
+  app.post("/api/inspections/:id/send-email", requireAuth, async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email address is required" });
+      }
+
+      const inspection = await storage.getInspectionForOrg(req.params.id, req.user!.orgId);
+      if (!inspection) {
+        return res.status(404).json({ message: "Inspection not found or access denied" });
+      }
+
+      // Ensure inspection has a share token
+      let shareToken = inspection.shareToken;
+      if (!shareToken) {
+        shareToken = crypto.randomUUID();
+        await storage.updateInspectionForOrg(req.params.id, req.user!.orgId, {
+          shareToken,
+          customerViewable: true,
+        });
+      }
+
+      // Get customer and vehicle info
+      const repairOrder = await storage.getRepairOrderById(inspection.roId);
+      const customer = repairOrder?.customerId ? await storage.getCustomer(repairOrder.customerId) : null;
+      const vehicle = repairOrder?.vehicleId ? await storage.getVehicle(repairOrder.vehicleId) : null;
+      const location = repairOrder?.locationId ? await storage.getLocation(repairOrder.locationId) : null;
+
+      const shareUrl = `${req.protocol}://${req.get('host')}/inspection/${shareToken}`;
+      const vehicleInfo = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'vehicle';
+      const customerName = customer ? customer.firstName : 'Customer';
+      const shopName = location?.name || 'Our Shop';
+
+      const { subject, html } = generateInspectionEmail({
+        customerName,
+        vehicleInfo,
+        shareUrl,
+        shopName,
+      });
+
+      const result = await sendEmail({ to: email, subject, html });
+      
+      if (result.success) {
+        res.json({ success: true, messageId: result.messageId });
+      } else {
+        res.status(500).json({ success: false, error: result.error });
+      }
+    } catch (error: any) {
+      console.error('Send email error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Check messaging configuration status
+  app.get("/api/messaging/status", requireAuth, async (req, res) => {
+    res.json(isMessagingConfigured());
   });
 
   // Get single inspection

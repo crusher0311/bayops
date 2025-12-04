@@ -1,11 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { 
   CheckCircle2, 
@@ -18,7 +27,11 @@ import {
   Share2,
   X,
   Trash2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Mail,
+  MessageSquare,
+  Copy,
+  Link as LinkIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -44,11 +57,18 @@ interface Vehicle {
   mileage?: number | null;
 }
 
+interface CustomerInfo {
+  firstName?: string;
+  email?: string;
+  phone?: string;
+}
+
 interface InspectionFormProps {
   inspectionId: string;
   templateItems: InspectionTemplateItem[];
   initialItems: InspectionResultItem[];
   vehicle: Vehicle;
+  customer?: CustomerInfo;
   onSave: (items: InspectionResultItem[]) => void;
   onComplete: () => void;
   onDelete?: () => void;
@@ -111,6 +131,7 @@ export function InspectionForm({
   templateItems,
   initialItems,
   vehicle,
+  customer,
   onSave,
   onComplete,
   onDelete,
@@ -125,6 +146,65 @@ export function InspectionForm({
   const [items, setItems] = useState<InspectionResultItem[]>(initialItems);
   const [loadingAI, setLoadingAI] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [shareEmail, setShareEmail] = useState(customer?.email || '');
+  const [sharePhone, setSharePhone] = useState(customer?.phone || '');
+  
+  const { data: messagingStatus } = useQuery({
+    queryKey: ['messaging-status'],
+    queryFn: async () => {
+      const res = await fetch('/api/messaging/status', { credentials: 'include' });
+      if (!res.ok) return { sms: false, email: false };
+      return res.json() as Promise<{ sms: boolean; email: boolean }>;
+    },
+  });
+  
+  const sendSmsMutation = useMutation({
+    mutationFn: async (phoneNumber: string) => {
+      const res = await fetch(`/api/inspections/${inspectionId}/send-sms`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ phoneNumber }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || data.message || 'Failed to send SMS');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'SMS sent successfully!' });
+      setIsShareDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Failed to send SMS', description: error.message, variant: 'destructive' });
+    },
+  });
+  
+  const sendEmailMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const res = await fetch(`/api/inspections/${inspectionId}/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || data.message || 'Failed to send email');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Email sent successfully!' });
+      setIsShareDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Failed to send email', description: error.message, variant: 'destructive' });
+    },
+  });
 
   const getItemResult = (itemId: string): InspectionResultItem => {
     return items.find(i => i.itemId === itemId) || { itemId, status: null };
@@ -350,15 +430,15 @@ export function InspectionForm({
               Save
             </Button>
           )}
-          {isCompleted && onShare && (
+          {isCompleted && (
             <Button 
               variant="outline" 
-              onClick={onShare}
+              onClick={() => setIsShareDialogOpen(true)}
               size="lg"
               data-testid="button-share-inspection"
             >
               <Share2 className="w-4 h-4 mr-2" />
-              {shareToken ? 'View Link' : 'Share'}
+              Send to Customer
             </Button>
           )}
           {!isCompleted && (
@@ -563,6 +643,114 @@ export function InspectionForm({
           ))}
         </div>
       </ScrollArea>
+      
+      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send Inspection Report</DialogTitle>
+            <DialogDescription>
+              Send the inspection report to your customer via text or email.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            {shareToken && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Share Link</Label>
+                <div className="flex items-center gap-2">
+                  <Input 
+                    readOnly 
+                    value={`${window.location.origin}/inspection/${shareToken}`}
+                    className="flex-1 text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/inspection/${shareToken}`);
+                      toast({ title: 'Link copied to clipboard!' });
+                    }}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+            
+            <Separator />
+            
+            <div className="space-y-3">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                Send via Text Message
+                {!messagingStatus?.sms && (
+                  <Badge variant="secondary" className="text-xs">Not configured</Badge>
+                )}
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input 
+                  type="tel"
+                  placeholder="(555) 123-4567"
+                  value={sharePhone}
+                  onChange={(e) => setSharePhone(e.target.value)}
+                  disabled={!messagingStatus?.sms}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={() => sendSmsMutation.mutate(sharePhone)}
+                  disabled={!sharePhone || !messagingStatus?.sms || sendSmsMutation.isPending}
+                >
+                  {sendSmsMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    'Send SMS'
+                  )}
+                </Button>
+              </div>
+              {!messagingStatus?.sms && (
+                <p className="text-xs text-muted-foreground">
+                  Configure Twilio in settings to enable SMS.
+                </p>
+              )}
+            </div>
+            
+            <div className="space-y-3">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                Send via Email
+                {!messagingStatus?.email && (
+                  <Badge variant="secondary" className="text-xs">Not configured</Badge>
+                )}
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input 
+                  type="email"
+                  placeholder="customer@email.com"
+                  value={shareEmail}
+                  onChange={(e) => setShareEmail(e.target.value)}
+                  disabled={!messagingStatus?.email}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={() => sendEmailMutation.mutate(shareEmail)}
+                  disabled={!shareEmail || !messagingStatus?.email || sendEmailMutation.isPending}
+                >
+                  {sendEmailMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    'Send Email'
+                  )}
+                </Button>
+              </div>
+              {!messagingStatus?.email && (
+                <p className="text-xs text-muted-foreground">
+                  Configure Resend in settings to enable email.
+                </p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

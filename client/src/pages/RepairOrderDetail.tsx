@@ -1031,6 +1031,7 @@ export default function RepairOrderDetail() {
                     templateItems={(inspectionTemplates.find((t: any) => t.id === roInspection.templateId)?.items || []) as any}
                     initialItems={roInspection.items || []}
                     vehicle={vehicle ? { year: vehicle.year, make: vehicle.make, model: vehicle.model, mileage: vehicle.mileage } : { year: 0, make: '', model: '' }}
+                    customer={customer ? { firstName: customer.firstName, email: customer.email || '', phone: customer.phone || '' } : undefined}
                     onSave={(items) => updateInspectionMutation.mutate({ id: roInspection.id, items })}
                     onComplete={() => updateInspectionMutation.mutate({ id: roInspection.id, items: roInspection.items || [], status: 'COMPLETED' })}
                     onDelete={() => {
@@ -1040,15 +1041,6 @@ export default function RepairOrderDetail() {
                     }}
                     isCompleted={!!roInspection.completedAt}
                     shareToken={roInspection.shareToken}
-                    onShare={() => {
-                      if (roInspection.shareToken) {
-                        const shareUrl = `${window.location.origin}/inspection/${roInspection.shareToken}`;
-                        navigator.clipboard.writeText(shareUrl);
-                        toast({ title: 'Share link copied!', description: 'Link copied to clipboard' });
-                      } else {
-                        shareInspectionMutation.mutate(roInspection.id);
-                      }
-                    }}
                   />
                 ) : (
                   <Card className="border-dashed">
