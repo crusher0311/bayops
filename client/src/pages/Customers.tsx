@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { useCustomers, useCreateCustomer } from '@/lib/hooks';
+import { useCustomers, useCreateCustomer, useUpdateCustomer } from '@/lib/hooks';
 import { 
   Table, 
   TableBody, 
@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, Phone, Mail, MapPin, Loader2 } from 'lucide-react';
+import { Plus, Search, Phone, Mail, MapPin, Loader2, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   Dialog,
@@ -24,12 +24,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Checkbox } from '@/components/ui/checkbox';
+import type { Customer } from '@shared/schema';
 
 export default function Customers() {
   const [search, setSearch] = useState('');
   const { data: customers = [], isLoading } = useCustomers(search || undefined);
   const createCustomer = useCreateCustomer();
+  const updateCustomer = useUpdateCustomer();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [newCustomer, setNewCustomer] = useState({
     firstName: '',
     lastName: '',
@@ -38,6 +42,32 @@ export default function Customers() {
     address: '',
     marketingConsent: false,
   });
+
+  const handleEditCustomer = (customer: Customer) => {
+    setEditingCustomer(customer);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateCustomer = async () => {
+    if (!editingCustomer) return;
+    try {
+      await updateCustomer.mutateAsync({
+        id: editingCustomer.id,
+        updates: {
+          firstName: editingCustomer.firstName,
+          lastName: editingCustomer.lastName,
+          email: editingCustomer.email || undefined,
+          phone: editingCustomer.phone || undefined,
+          address: editingCustomer.address || undefined,
+          marketingConsent: editingCustomer.marketingConsent,
+        },
+      });
+      setIsEditDialogOpen(false);
+      setEditingCustomer(null);
+    } catch (error) {
+      console.error('Failed to update customer:', error);
+    }
+  };
 
   const handleCreateCustomer = async () => {
     try {
@@ -226,7 +256,15 @@ export default function Customers() {
                     {format(new Date(customer.createdAt), 'MMM d, yyyy')}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" data-testid={`button-view-${customer.id}`}>View</Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleEditCustomer(customer)}
+                      data-testid={`button-edit-${customer.id}`}
+                    >
+                      <Pencil className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))
@@ -234,6 +272,88 @@ export default function Customers() {
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Customer</DialogTitle>
+            <DialogDescription>
+              Update customer information.
+            </DialogDescription>
+          </DialogHeader>
+          {editingCustomer && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-firstName">First Name</Label>
+                  <Input
+                    id="edit-firstName"
+                    data-testid="input-edit-first-name"
+                    value={editingCustomer.firstName}
+                    onChange={(e) => setEditingCustomer({ ...editingCustomer, firstName: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-lastName">Last Name</Label>
+                  <Input
+                    id="edit-lastName"
+                    data-testid="input-edit-last-name"
+                    value={editingCustomer.lastName}
+                    onChange={(e) => setEditingCustomer({ ...editingCustomer, lastName: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  data-testid="input-edit-email"
+                  value={editingCustomer.email || ''}
+                  onChange={(e) => setEditingCustomer({ ...editingCustomer, email: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">Phone</Label>
+                <Input
+                  id="edit-phone"
+                  data-testid="input-edit-phone"
+                  value={editingCustomer.phone || ''}
+                  onChange={(e) => setEditingCustomer({ ...editingCustomer, phone: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-address">Address</Label>
+                <Input
+                  id="edit-address"
+                  data-testid="input-edit-address"
+                  value={editingCustomer.address || ''}
+                  onChange={(e) => setEditingCustomer({ ...editingCustomer, address: e.target.value })}
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="edit-marketingConsent"
+                  data-testid="checkbox-edit-marketing"
+                  checked={editingCustomer.marketingConsent}
+                  onCheckedChange={(checked) => setEditingCustomer({ ...editingCustomer, marketingConsent: !!checked })}
+                />
+                <Label htmlFor="edit-marketingConsent">Consent to marketing communications</Label>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={handleUpdateCustomer} 
+              disabled={updateCustomer.isPending}
+              data-testid="button-save-edit-customer"
+            >
+              {updateCustomer.isPending ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
