@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { 
   LayoutDashboard, 
   ClipboardList, 
+  ClipboardCheck,
   FileText, 
   Users, 
   Package, 
@@ -26,6 +27,7 @@ export function Sidebar() {
     { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
     { icon: ClipboardList, label: 'Job Board', href: '/job-board' },
     { icon: FileText, label: 'Repair Orders', href: '/ros' },
+    { icon: ClipboardCheck, label: 'Inspections', href: '/inspections' },
     { icon: Calendar, label: 'Appointments', href: '/appointments' },
     { icon: Users, label: 'Customers', href: '/customers' },
     { icon: Truck, label: 'Parts', href: '/parts' },
