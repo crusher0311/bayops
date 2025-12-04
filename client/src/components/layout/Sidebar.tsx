@@ -1,6 +1,8 @@
 import { useAuthStore } from '@/lib/authStore';
 import { Link, useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import { 
   LayoutDashboard, 
   ClipboardList, 
@@ -23,6 +25,15 @@ import {
 export function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuthStore();
+  
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => apiRequest('/api/settings'),
+    enabled: !!user,
+  });
+  
+  const logoUrl = settings?.orgBranding?.logoUrl;
+  const shopName = settings?.shopProfile?.shopName || 'BayOPS';
   
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
@@ -50,10 +61,23 @@ export function Sidebar() {
   return (
     <div className="w-64 h-screen bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border">
       <div className="p-6 flex items-center gap-3">
-        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-          <Wrench className="w-5 h-5 text-primary-foreground" />
+        {logoUrl ? (
+          <img 
+            src={logoUrl} 
+            alt={shopName} 
+            className="h-8 max-w-[180px] object-contain"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+            }}
+          />
+        ) : null}
+        <div className={cn("flex items-center gap-3", logoUrl && "hidden")}>
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <Wrench className="w-5 h-5 text-primary-foreground" />
+          </div>
+          <span className="font-display font-bold text-xl tracking-tight">{shopName}</span>
         </div>
-        <span className="font-display font-bold text-xl tracking-tight">BayOPS</span>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
