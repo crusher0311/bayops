@@ -14,6 +14,20 @@ import {
   insertInventoryItemSchema,
   insertInspectionTemplateSchema,
   insertInspectionSchema,
+  insertLaborRateSchema,
+  insertShopFeeSchema,
+  insertDiscountSchema,
+  insertTaxSettingsSchema,
+  insertJobCategorySchema,
+  insertPaymentTypeSchema,
+  insertInvoiceSettingsSchema,
+  insertRoSettingsSchema,
+  insertPartsMatrixSchema,
+  insertLaborMatrixSchema,
+  insertLeadSourceSchema,
+  insertCustomerSettingsSchema,
+  insertTransparencySettingsSchema,
+  insertOrgBrandingSchema,
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 
@@ -763,6 +777,669 @@ export async function registerRoutes(
       res.json({ description: improved });
     } catch (error: any) {
       console.error('AI improve description error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============================================
+  // PHASE 1: CONFIGURATION SETTINGS ROUTES
+  // ============================================
+
+  // Labor Rates
+  app.get("/api/settings/labor-rates/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      const rates = await storage.getLaborRatesByLocation(req.params.locationId);
+      res.json(rates);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/settings/labor-rates", requireAuth, async (req, res) => {
+    try {
+      const result = insertLaborRateSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const location = await storage.getLocation(result.data.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const rate = await storage.createLaborRate(result.data);
+      res.status(201).json(rate);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/settings/labor-rates/:id", requireAuth, async (req, res) => {
+    try {
+      const rate = await storage.updateLaborRate(req.params.id, req.body);
+      if (!rate) {
+        return res.status(404).json({ message: "Labor rate not found" });
+      }
+      res.json(rate);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/settings/labor-rates/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteLaborRate(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Shop Fees
+  app.get("/api/settings/shop-fees/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      const fees = await storage.getShopFeesByLocation(req.params.locationId);
+      res.json(fees);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/settings/shop-fees", requireAuth, async (req, res) => {
+    try {
+      const result = insertShopFeeSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const location = await storage.getLocation(result.data.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const fee = await storage.createShopFee(result.data);
+      res.status(201).json(fee);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/settings/shop-fees/:id", requireAuth, async (req, res) => {
+    try {
+      const fee = await storage.updateShopFee(req.params.id, req.body);
+      if (!fee) {
+        return res.status(404).json({ message: "Shop fee not found" });
+      }
+      res.json(fee);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/settings/shop-fees/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteShopFee(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Discounts
+  app.get("/api/settings/discounts/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      const discounts = await storage.getDiscountsByLocation(req.params.locationId);
+      res.json(discounts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/settings/discounts", requireAuth, async (req, res) => {
+    try {
+      const result = insertDiscountSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const location = await storage.getLocation(result.data.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const discount = await storage.createDiscount(result.data);
+      res.status(201).json(discount);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/settings/discounts/:id", requireAuth, async (req, res) => {
+    try {
+      const discount = await storage.updateDiscount(req.params.id, req.body);
+      if (!discount) {
+        return res.status(404).json({ message: "Discount not found" });
+      }
+      res.json(discount);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/settings/discounts/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteDiscount(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Tax Settings
+  app.get("/api/settings/tax/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      const settings = await storage.getTaxSettingsByLocation(req.params.locationId);
+      res.json(settings || { locationId: req.params.locationId });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/settings/tax", requireAuth, async (req, res) => {
+    try {
+      const result = insertTaxSettingsSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const location = await storage.getLocation(result.data.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const settings = await storage.upsertTaxSettings(result.data);
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Job Categories
+  app.get("/api/settings/job-categories/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      const categories = await storage.getJobCategoriesByLocation(req.params.locationId);
+      res.json(categories);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/settings/job-categories", requireAuth, async (req, res) => {
+    try {
+      const result = insertJobCategorySchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const location = await storage.getLocation(result.data.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const category = await storage.createJobCategory(result.data);
+      res.status(201).json(category);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/settings/job-categories/:id", requireAuth, async (req, res) => {
+    try {
+      const category = await storage.updateJobCategory(req.params.id, req.body);
+      if (!category) {
+        return res.status(404).json({ message: "Job category not found" });
+      }
+      res.json(category);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/settings/job-categories/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteJobCategory(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Payment Types
+  app.get("/api/settings/payment-types/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      const types = await storage.getPaymentTypesByLocation(req.params.locationId);
+      res.json(types);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/settings/payment-types", requireAuth, async (req, res) => {
+    try {
+      const result = insertPaymentTypeSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const location = await storage.getLocation(result.data.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const type = await storage.createPaymentType(result.data);
+      res.status(201).json(type);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/settings/payment-types/:id", requireAuth, async (req, res) => {
+    try {
+      const type = await storage.updatePaymentType(req.params.id, req.body);
+      if (!type) {
+        return res.status(404).json({ message: "Payment type not found" });
+      }
+      res.json(type);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/settings/payment-types/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deletePaymentType(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Invoice Settings
+  app.get("/api/settings/invoice/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      const settings = await storage.getInvoiceSettingsByLocation(req.params.locationId);
+      res.json(settings || { locationId: req.params.locationId });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/settings/invoice", requireAuth, async (req, res) => {
+    try {
+      const result = insertInvoiceSettingsSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const location = await storage.getLocation(result.data.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const settings = await storage.upsertInvoiceSettings(result.data);
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // RO Settings
+  app.get("/api/settings/ro/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      const settings = await storage.getRoSettingsByLocation(req.params.locationId);
+      res.json(settings || { locationId: req.params.locationId });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/settings/ro", requireAuth, async (req, res) => {
+    try {
+      const result = insertRoSettingsSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const location = await storage.getLocation(result.data.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const settings = await storage.upsertRoSettings(result.data);
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Parts Matrix
+  app.get("/api/settings/parts-matrix/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      const matrices = await storage.getPartsMatricesByLocation(req.params.locationId);
+      res.json(matrices);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/settings/parts-matrix", requireAuth, async (req, res) => {
+    try {
+      const result = insertPartsMatrixSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const location = await storage.getLocation(result.data.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const matrix = await storage.createPartsMatrix(result.data);
+      res.status(201).json(matrix);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/settings/parts-matrix/:id", requireAuth, async (req, res) => {
+    try {
+      const matrix = await storage.updatePartsMatrix(req.params.id, req.body);
+      if (!matrix) {
+        return res.status(404).json({ message: "Parts matrix not found" });
+      }
+      res.json(matrix);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/settings/parts-matrix/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deletePartsMatrix(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Labor Matrix
+  app.get("/api/settings/labor-matrix/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      const matrices = await storage.getLaborMatricesByLocation(req.params.locationId);
+      res.json(matrices);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/settings/labor-matrix", requireAuth, async (req, res) => {
+    try {
+      const result = insertLaborMatrixSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const location = await storage.getLocation(result.data.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const matrix = await storage.createLaborMatrix(result.data);
+      res.status(201).json(matrix);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/settings/labor-matrix/:id", requireAuth, async (req, res) => {
+    try {
+      const matrix = await storage.updateLaborMatrix(req.params.id, req.body);
+      if (!matrix) {
+        return res.status(404).json({ message: "Labor matrix not found" });
+      }
+      res.json(matrix);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/settings/labor-matrix/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteLaborMatrix(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Lead Sources
+  app.get("/api/settings/lead-sources/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      const sources = await storage.getLeadSourcesByLocation(req.params.locationId);
+      res.json(sources);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/settings/lead-sources", requireAuth, async (req, res) => {
+    try {
+      const result = insertLeadSourceSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const location = await storage.getLocation(result.data.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const source = await storage.createLeadSource(result.data);
+      res.status(201).json(source);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/settings/lead-sources/:id", requireAuth, async (req, res) => {
+    try {
+      const source = await storage.updateLeadSource(req.params.id, req.body);
+      if (!source) {
+        return res.status(404).json({ message: "Lead source not found" });
+      }
+      res.json(source);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/settings/lead-sources/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteLeadSource(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Customer Settings
+  app.get("/api/settings/customer/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      const settings = await storage.getCustomerSettingsByLocation(req.params.locationId);
+      res.json(settings || { locationId: req.params.locationId });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/settings/customer", requireAuth, async (req, res) => {
+    try {
+      const result = insertCustomerSettingsSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const location = await storage.getLocation(result.data.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const settings = await storage.upsertCustomerSettings(result.data);
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Transparency Settings
+  app.get("/api/settings/transparency/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      const settings = await storage.getTransparencySettingsByLocation(req.params.locationId);
+      res.json(settings || { locationId: req.params.locationId });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/settings/transparency", requireAuth, async (req, res) => {
+    try {
+      const result = insertTransparencySettingsSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const location = await storage.getLocation(result.data.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const settings = await storage.upsertTransparencySettings(result.data);
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Org Branding (organization-level settings)
+  app.get("/api/settings/branding", requireAuth, async (req, res) => {
+    try {
+      const branding = await storage.getOrgBranding(req.user!.orgId);
+      res.json(branding || { orgId: req.user!.orgId });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/settings/branding", requireAuth, async (req, res) => {
+    try {
+      const result = insertOrgBrandingSchema.safeParse({
+        ...req.body,
+        orgId: req.user!.orgId,
+      });
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const branding = await storage.upsertOrgBranding(result.data);
+      res.json(branding);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get all settings for a location (batch endpoint)
+  app.get("/api/settings/all/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      
+      const [
+        laborRates,
+        shopFees,
+        discounts,
+        taxSettings,
+        jobCategories,
+        paymentTypes,
+        invoiceSettings,
+        roSettings,
+        partsMatrices,
+        laborMatrices,
+        leadSources,
+        customerSettings,
+        transparencySettings,
+        orgBranding,
+      ] = await Promise.all([
+        storage.getLaborRatesByLocation(req.params.locationId),
+        storage.getShopFeesByLocation(req.params.locationId),
+        storage.getDiscountsByLocation(req.params.locationId),
+        storage.getTaxSettingsByLocation(req.params.locationId),
+        storage.getJobCategoriesByLocation(req.params.locationId),
+        storage.getPaymentTypesByLocation(req.params.locationId),
+        storage.getInvoiceSettingsByLocation(req.params.locationId),
+        storage.getRoSettingsByLocation(req.params.locationId),
+        storage.getPartsMatricesByLocation(req.params.locationId),
+        storage.getLaborMatricesByLocation(req.params.locationId),
+        storage.getLeadSourcesByLocation(req.params.locationId),
+        storage.getCustomerSettingsByLocation(req.params.locationId),
+        storage.getTransparencySettingsByLocation(req.params.locationId),
+        storage.getOrgBranding(req.user!.orgId),
+      ]);
+
+      res.json({
+        location,
+        laborRates,
+        shopFees,
+        discounts,
+        taxSettings: taxSettings || { locationId: req.params.locationId },
+        jobCategories,
+        paymentTypes,
+        invoiceSettings: invoiceSettings || { locationId: req.params.locationId },
+        roSettings: roSettings || { locationId: req.params.locationId },
+        partsMatrices,
+        laborMatrices,
+        leadSources,
+        customerSettings: customerSettings || { locationId: req.params.locationId },
+        transparencySettings: transparencySettings || { locationId: req.params.locationId },
+        orgBranding: orgBranding || { orgId: req.user!.orgId },
+      });
+    } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
