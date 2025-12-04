@@ -1774,11 +1774,14 @@ function BrandingTab({ settings, onRefresh }: { settings: any; onRefresh: () => 
 }
 
 function WorkflowsTab({ workflows }: { workflows: any[] }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [activeWorkflowId, setActiveWorkflowId] = useState('');
   const [editingStage, setEditingStage] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [newStageLabel, setNewStageLabel] = useState('');
   const [newWorkflowName, setNewWorkflowName] = useState('');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   useEffect(() => {
     if (workflows.length > 0 && !activeWorkflowId) {
@@ -1786,12 +1789,47 @@ function WorkflowsTab({ workflows }: { workflows: any[] }) {
     }
   }, [workflows, activeWorkflowId]);
 
+  const createWorkflowMutation = useMutation({
+    mutationFn: (name: string) => apiRequest('/api/workflows', {
+      method: 'POST',
+      body: JSON.stringify({
+        name,
+        description: '',
+        isDefault: workflows.length === 0,
+        stages: [
+          { id: 'check-in', label: 'Check-In', color: '#94a3b8', type: 'SYSTEM', order: 0, isEnabled: true },
+          { id: 'waiting-approval', label: 'Waiting Approval', color: '#fbbf24', type: 'SYSTEM', order: 1, isEnabled: true },
+          { id: 'in-progress', label: 'In Progress', color: '#2563eb', type: 'SYSTEM', order: 2, isEnabled: true },
+          { id: 'ready-for-pickup', label: 'Ready for Pickup', color: '#10b981', type: 'SYSTEM', order: 3, isEnabled: true },
+          { id: 'completed', label: 'Completed', color: '#6b7280', type: 'SYSTEM', order: 4, isEnabled: true },
+        ],
+      }),
+    }),
+    onSuccess: (data) => {
+      toast({ title: 'Workflow created successfully' });
+      queryClient.invalidateQueries({ queryKey: ['workflows'] });
+      setNewWorkflowName('');
+      setIsCreateDialogOpen(false);
+      if (data?.id) {
+        setActiveWorkflowId(data.id);
+      }
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error creating workflow', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const activeWorkflow = workflows.find(w => w.id === activeWorkflowId);
   const stages = (activeWorkflow?.stages || []) as WorkflowStage[];
 
   const startEditing = (stage: WorkflowStage) => {
     setEditingStage(stage.id);
     setEditValue(stage.label);
+  };
+
+  const handleCreateWorkflow = () => {
+    if (!newWorkflowName.trim()) return;
+    createWorkflowMutation.mutate(newWorkflowName.trim());
   };
 
   return (
@@ -1803,7 +1841,7 @@ function WorkflowsTab({ workflows }: { workflows: any[] }) {
             Manage different workflows for different job types (e.g., Standard Repair, Quick Lube).
           </CardDescription>
         </div>
-        <Dialog>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" className="gap-2" data-testid="button-new-workflow">
               <Plus className="w-4 h-4" /> New Workflow
@@ -1823,8 +1861,17 @@ function WorkflowsTab({ workflows }: { workflows: any[] }) {
                   data-testid="input-workflow-name"
                 />
               </div>
-              <Button disabled={!newWorkflowName} className="w-full" data-testid="button-create-workflow">
-                Create Workflow
+              <Button 
+                disabled={!newWorkflowName.trim() || createWorkflowMutation.isPending} 
+                className="w-full" 
+                onClick={handleCreateWorkflow}
+                data-testid="button-create-workflow"
+              >
+                {createWorkflowMutation.isPending ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating...</>
+                ) : (
+                  'Create Workflow'
+                )}
               </Button>
             </div>
           </DialogContent>

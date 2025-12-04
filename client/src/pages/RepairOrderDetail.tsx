@@ -50,7 +50,8 @@ import {
   ExternalLink,
   Wrench,
   ShoppingCart,
-  Package
+  Package,
+  ChevronDown
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
@@ -62,6 +63,7 @@ import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface ServiceJob {
   id: string;
@@ -1189,11 +1191,44 @@ export default function RepairOrderDetail() {
               <Badge variant="outline" className="text-sm uppercase">
                 {ro.status.replace(/-/g, ' ')}
               </Badge>
-              {activeWorkflow && (
+              {activeWorkflow && workflows.length > 1 ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-6 text-xs gap-1 px-2" data-testid="button-change-workflow">
+                      {activeWorkflow.name}
+                      <ChevronDown className="w-3 h-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {workflows.map(wf => (
+                      <DropdownMenuItem
+                        key={wf.id}
+                        onClick={() => {
+                          if (wf.id !== ro.workflowId) {
+                            const newStages = (wf.stages as any[]) || [];
+                            const firstStage = newStages.sort((a, b) => a.order - b.order)[0];
+                            updateRO.mutate({
+                              id: ro.id,
+                              updates: { 
+                                workflowId: wf.id,
+                                status: firstStage?.id || 'check-in',
+                              },
+                            });
+                          }
+                        }}
+                        data-testid={`workflow-option-${wf.id}`}
+                      >
+                        {wf.name}
+                        {wf.id === ro.workflowId && <Check className="w-4 h-4 ml-2" />}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : activeWorkflow ? (
                 <Badge variant="secondary" className="text-xs">
                   {activeWorkflow.name}
                 </Badge>
-              )}
+              ) : null}
             </div>
             <p className="text-muted-foreground text-sm">
               Created {format(new Date(ro.createdAt), 'MMM d, yyyy h:mm a')}
