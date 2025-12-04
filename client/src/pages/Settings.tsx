@@ -46,6 +46,7 @@ interface WorkflowStage {
   color: string;
   type: 'SYSTEM' | 'CUSTOM';
   order: number;
+  isEnabled?: boolean;
 }
 
 type SettingsTab = 'shop' | 'ro' | 'markups' | 'marketing' | 'branding' | 'workflows' | 'cannedjobs';
@@ -1819,6 +1820,20 @@ function WorkflowsTab({ workflows }: { workflows: any[] }) {
     },
   });
 
+  const updateWorkflowMutation = useMutation({
+    mutationFn: ({ id, stages }: { id: number; stages: WorkflowStage[] }) => apiRequest(`/api/workflows/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ stages }),
+    }),
+    onSuccess: () => {
+      toast({ title: 'Workflow updated' });
+      queryClient.invalidateQueries({ queryKey: ['workflows'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error updating workflow', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const activeWorkflow = workflows.find(w => w.id === activeWorkflowId);
   const stages = (activeWorkflow?.stages || []) as WorkflowStage[];
 
@@ -1830,6 +1845,53 @@ function WorkflowsTab({ workflows }: { workflows: any[] }) {
   const handleCreateWorkflow = () => {
     if (!newWorkflowName.trim()) return;
     createWorkflowMutation.mutate(newWorkflowName.trim());
+  };
+
+  const handleDeleteStage = (stageId: string) => {
+    if (!activeWorkflow) return;
+    const updatedStages = stages
+      .filter(s => s.id !== stageId)
+      .map((s, idx) => ({ ...s, order: idx }));
+    updateWorkflowMutation.mutate({ id: activeWorkflow.id, stages: updatedStages });
+  };
+
+  const handleMoveStage = (stageId: string, direction: 'up' | 'down') => {
+    if (!activeWorkflow) return;
+    const sortedStages = [...stages].sort((a, b) => a.order - b.order);
+    const idx = sortedStages.findIndex(s => s.id === stageId);
+    if (idx === -1) return;
+    const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (newIdx < 0 || newIdx >= sortedStages.length) return;
+    
+    const temp = sortedStages[idx];
+    sortedStages[idx] = sortedStages[newIdx];
+    sortedStages[newIdx] = temp;
+    
+    const updatedStages = sortedStages.map((s, i) => ({ ...s, order: i }));
+    updateWorkflowMutation.mutate({ id: activeWorkflow.id, stages: updatedStages });
+  };
+
+  const handleSaveStageLabel = (stageId: string) => {
+    if (!activeWorkflow || !editValue.trim()) return;
+    const updatedStages = stages.map(s => 
+      s.id === stageId ? { ...s, label: editValue.trim() } : s
+    );
+    updateWorkflowMutation.mutate({ id: activeWorkflow.id, stages: updatedStages });
+    setEditingStage(null);
+  };
+
+  const handleAddStage = () => {
+    if (!activeWorkflow || !newStageLabel.trim()) return;
+    const newStage: WorkflowStage = {
+      id: `custom-${Date.now()}`,
+      label: newStageLabel.trim(),
+      color: '#8b5cf6',
+      type: 'CUSTOM',
+      order: stages.length,
+      isEnabled: true,
+    };
+    updateWorkflowMutation.mutate({ id: activeWorkflow.id, stages: [...stages, newStage] });
+    setNewStageLabel('');
   };
 
   return (
@@ -1922,7 +1984,8 @@ function WorkflowsTab({ workflows }: { workflows: any[] }) {
                                 variant="ghost" 
                                 size="icon" 
                                 className="h-4 w-4" 
-                                disabled={index === 0}
+                                disabled={index === 0 || updateWorkflowMutation.isPending}
+                                onClick={() => handleMoveStage(stage.id, 'up')}
                               >
                                 ▲
                               </Button>
@@ -1930,7 +1993,8 @@ function WorkflowsTab({ workflows }: { workflows: any[] }) {
                                 variant="ghost" 
                                 size="icon" 
                                 className="h-4 w-4"
-                                disabled={index === stages.length - 1}
+                                disabled={index === stages.length - 1 || updateWorkflowMutation.isPending}
+                                onClick={() => handleMoveStage(stage.id, 'down')}
                               >
                                 ▼
                               </Button>
@@ -1944,7 +2008,7 @@ function WorkflowsTab({ workflows }: { workflows: any[] }) {
                                   onChange={(e) => setEditValue(e.target.value)}
                                   className="h-8 w-48"
                                 />
-                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingStage(null)}>
+                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleSaveStageLabel(stage.id)}>
                                   <Check className="w-4 h-4 text-green-600" />
                                 </Button>
                                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingStage(null)}>
@@ -1971,8 +2035,14 @@ function WorkflowsTab({ workflows }: { workflows: any[] }) {
                               <Button variant="ghost" size="icon" onClick={() => startEditing(stage)}>
                                 <Pencil className="w-4 h-4 text-muted-foreground" />
                               </Button>
-                              {stage.type === 'CUSTOM' && (
-                                <Button variant="ghost" size="icon">
+                              {stages.length > 2 && index !== 0 && index !== stages.length - 1 && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  onClick={() => handleDeleteStage(stage.id)}
+                                  disabled={updateWorkflowMutation.isPending}
+                                  data-testid={`button-delete-stage-${stage.id}`}
+                                >
                                   <Trash2 className="w-4 h-4 text-destructive" />
                                 </Button>
                               )}
@@ -1994,7 +2064,11 @@ function WorkflowsTab({ workflows }: { workflows: any[] }) {
                       data-testid="input-stage-name"
                     />
                   </div>
-                  <Button disabled={!newStageLabel} data-testid="button-add-stage">
+                  <Button 
+                    disabled={!newStageLabel.trim() || updateWorkflowMutation.isPending} 
+                    onClick={handleAddStage}
+                    data-testid="button-add-stage"
+                  >
                     <Plus className="w-4 h-4 mr-2" />
                     Add Stage
                   </Button>
