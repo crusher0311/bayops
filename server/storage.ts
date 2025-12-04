@@ -171,6 +171,8 @@ export interface IStorage {
   getInspectionsByRO(roId: string): Promise<Inspection[]>;
   createInspection(inspection: InsertInspection): Promise<Inspection>;
   updateInspection(id: string, updates: Partial<InsertInspection>): Promise<Inspection | undefined>;
+  deleteInspection(id: string): Promise<boolean>;
+  getInspectionByShareToken(token: string): Promise<Inspection | undefined>;
 
   // Audit Logs
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
@@ -595,6 +597,16 @@ export class DatabaseStorage implements IStorage {
 
   async updateInspection(id: string, updates: Partial<InsertInspection>): Promise<Inspection | undefined> {
     const [inspection] = await db.update(inspections).set(updates).where(eq(inspections.id, id)).returning();
+    return inspection || undefined;
+  }
+
+  async deleteInspection(id: string): Promise<boolean> {
+    await db.delete(inspections).where(eq(inspections.id, id));
+    return true;
+  }
+
+  async getInspectionByShareToken(token: string): Promise<Inspection | undefined> {
+    const [inspection] = await db.select().from(inspections).where(eq(inspections.shareToken, token));
     return inspection || undefined;
   }
 

@@ -283,16 +283,31 @@ export const inventoryItemsRelations = relations(inventoryItems, ({ one }) => ({
   }),
 }));
 
+// Inspection Template Item Type
+export interface InspectionTemplateItem {
+  id: string;
+  label: string;
+  category: string;
+  sortOrder: number;
+}
+
+// Inspection Result Item Type  
+export interface InspectionResultItem {
+  itemId: string;
+  status: 'GREEN' | 'YELLOW' | 'RED' | null;
+  finding?: string;
+  recommendation?: string;
+  photos?: string[];
+}
+
 // Inspection Templates
 export const inspectionTemplates = pgTable("inspection_templates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
   name: text("name").notNull(),
-  items: jsonb("items").notNull().$type<Array<{
-    id: string;
-    label: string;
-    category: string;
-  }>>(),
+  description: text("description"),
+  items: jsonb("items").notNull().$type<InspectionTemplateItem[]>(),
+  isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -310,12 +325,11 @@ export const inspections = pgTable("inspections", {
   roId: varchar("ro_id").notNull().references(() => repairOrders.id, { onDelete: 'cascade' }),
   templateId: varchar("template_id").notNull().references(() => inspectionTemplates.id),
   technicianId: varchar("technician_id").notNull().references(() => users.id),
-  items: jsonb("items").notNull().$type<Array<{
-    itemId: string;
-    status: 'GREEN' | 'YELLOW' | 'RED';
-    notes?: string;
-    imageUrl?: string;
-  }>>(),
+  vehicleId: varchar("vehicle_id").references(() => vehicles.id),
+  items: jsonb("items").notNull().$type<InspectionResultItem[]>(),
+  notes: text("notes"),
+  customerViewable: boolean("customer_viewable").notNull().default(false),
+  shareToken: varchar("share_token"),
   startedAt: timestamp("started_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
 });

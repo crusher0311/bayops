@@ -269,3 +269,120 @@ If no description was provided, write a new one based on the job name.`;
 
   return response.choices[0]?.message?.content?.trim() || currentDescription;
 }
+
+// ==========================================
+// DVI (Digital Vehicle Inspection) AI Functions
+// ==========================================
+
+interface InspectionItemContext {
+  itemLabel: string;
+  category: string;
+  status: 'GREEN' | 'YELLOW' | 'RED';
+  techNotes?: string;
+}
+
+interface InspectionDraftResult {
+  finding: string;
+  recommendation: string;
+}
+
+export async function generateInspectionFinding(
+  item: InspectionItemContext,
+  vehicle: VehicleInfo,
+  techNotes?: string
+): Promise<InspectionDraftResult> {
+  const statusDescriptions = {
+    GREEN: 'passed inspection / good condition',
+    YELLOW: 'needs attention soon / shows wear',
+    RED: 'requires immediate attention / safety concern'
+  };
+
+  const prompt = `You are an experienced automotive technician writing an inspection report. Generate professional findings and recommendations for this inspection item.
+
+Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.mileage ? ` with ${vehicle.mileage.toLocaleString()} miles` : ''}
+
+Inspection Item: ${item.itemLabel}
+Category: ${item.category}
+Status: ${item.status} (${statusDescriptions[item.status]})
+${techNotes ? `Technician's Notes: ${techNotes}` : ''}
+
+Write a response in JSON format:
+{
+  "finding": "1-2 sentences describing what was observed during inspection. Be specific and professional.",
+  "recommendation": "${item.status === 'GREEN' ? 'A brief statement that this item is in good condition. Keep it short.' : 'Specific recommended action for the customer. Explain why this matters for safety/reliability.'}"
+}
+
+Guidelines:
+- Be professional but avoid overly technical jargon
+- For GREEN items, keep recommendations brief (e.g., "Continue regular maintenance")
+- For YELLOW items, indicate timeline (e.g., "recommend service within 30-60 days")
+- For RED items, emphasize urgency and safety implications
+- Be specific to the ${vehicle.year} ${vehicle.make} when relevant`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 300,
+      temperature: 0.6,
+      response_format: { type: "json_object" },
+    });
+
+    const content = response.choices[0]?.message?.content || "{}";
+    const parsed = JSON.parse(content);
+    
+    return {
+      finding: typeof parsed.finding === 'string' ? parsed.finding : '',
+      recommendation: typeof parsed.recommendation === 'string' ? parsed.recommendation : '',
+    };
+  } catch (error) {
+    console.error('AI inspection finding error:', error);
+    return { finding: '', recommendation: '' };
+  }
+}
+
+export async function generateInspectionSummary(
+  items: Array<{ label: string; status: 'GREEN' | 'YELLOW' | 'RED'; finding?: string; recommendation?: string }>,
+  vehicle: VehicleInfo
+): Promise<string> {
+  const greenCount = items.filter(i => i.status === 'GREEN').length;
+  const yellowCount = items.filter(i => i.status === 'YELLOW').length;
+  const redCount = items.filter(i => i.status === 'RED').length;
+  
+  const concernItems = items.filter(i => i.status !== 'GREEN');
+
+  const prompt = `You are an experienced automotive service advisor writing a customer-friendly inspection summary.
+
+Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.mileage ? ` with ${vehicle.mileage.toLocaleString()} miles` : ''}
+
+Inspection Results:
+- ${greenCount} items passed (good condition)
+- ${yellowCount} items need attention soon
+- ${redCount} items require immediate attention
+
+${concernItems.length > 0 ? `Items needing attention:
+${concernItems.map(i => `- ${i.label} (${i.status}): ${i.finding || 'Needs service'}`).join('\n')}` : ''}
+
+Write a brief 2-3 paragraph summary for the customer that:
+1. Opens with an overview of the vehicle's condition
+2. Highlights any safety concerns (RED items) first
+3. Mentions items that will need attention soon (YELLOW items)
+4. Ends with a positive note about items in good condition
+5. Uses friendly, professional language
+
+Keep the tone helpful and not pushy.`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 400,
+      temperature: 0.7,
+    });
+
+    return response.choices[0]?.message?.content?.trim() || "";
+  } catch (error) {
+    console.error('AI inspection summary error:', error);
+    return "";
+  }
+}

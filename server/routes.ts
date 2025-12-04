@@ -4,6 +4,13 @@ import { storage } from "./storage";
 import { setupAuth, requireAuth, hashPassword } from "./auth";
 import passport from "passport";
 import { 
+  generateInspectionFinding, 
+  generateInspectionSummary,
+  generateServiceDescription,
+  generateAuthorizationRequest,
+  improveJobDescription,
+} from "./ai";
+import { 
   insertUserSchema,
   insertOrganizationSchema,
   insertLocationSchema,
@@ -560,6 +567,81 @@ export async function registerRoutes(
     try {
       const inspection = await storage.updateInspection(req.params.id, req.body);
       if (!inspection) {
+        return res.status(404).json({ message: "Inspection not found" });
+      }
+      res.json(inspection);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get single inspection
+  app.get("/api/inspections/:id", requireAuth, async (req, res) => {
+    try {
+      const inspection = await storage.getInspection(req.params.id);
+      if (!inspection) {
+        return res.status(404).json({ message: "Inspection not found" });
+      }
+      res.json(inspection);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Delete inspection
+  app.delete("/api/inspections/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteInspection(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // DVI AI - Generate finding/recommendation for inspection item
+  app.post("/api/inspections/ai/finding", requireAuth, async (req, res) => {
+    try {
+      const { itemLabel, category, status, techNotes, vehicle } = req.body;
+      
+      if (!itemLabel || !category || !status || !vehicle) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const result = await generateInspectionFinding(
+        { itemLabel, category, status, techNotes },
+        vehicle,
+        techNotes
+      );
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error('DVI AI finding error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // DVI AI - Generate inspection summary
+  app.post("/api/inspections/ai/summary", requireAuth, async (req, res) => {
+    try {
+      const { items, vehicle } = req.body;
+      
+      if (!items || !vehicle) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const summary = await generateInspectionSummary(items, vehicle);
+      res.json({ summary });
+    } catch (error: any) {
+      console.error('DVI AI summary error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get inspection by share token (public route for customer view)
+  app.get("/api/inspections/shared/:token", async (req, res) => {
+    try {
+      const inspection = await storage.getInspectionByShareToken(req.params.token);
+      if (!inspection || !inspection.customerViewable) {
         return res.status(404).json({ message: "Inspection not found" });
       }
       res.json(inspection);
