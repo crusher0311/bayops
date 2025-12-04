@@ -228,10 +228,10 @@ export default function ServiceQueue() {
             customers={customers}
           />
 
-          <Link href={`/check-in/${selectedLocationId}`}>
+          <Link href="/quick-checkin">
             <Button variant="outline" className="gap-2" data-testid="button-view-checkin">
               <QrCode className="w-4 h-4" />
-              Check-In Page
+              Quick Check-In
             </Button>
           </Link>
         </div>

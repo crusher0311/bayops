@@ -1175,6 +1175,25 @@ export async function registerRoutes(
         jobs: [],
       });
 
+      // Auto-add to service queue for waitlist management
+      try {
+        await storage.createServiceQueueEntry({
+          locationId,
+          customerId,
+          vehicleId,
+          customerName: `${String(customer.firstName).trim()} ${String(customer.lastName).trim()}`,
+          vehicleInfo: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+          phone: String(customer.phone).replace(/[^\d+\-() ]/g, '').substring(0, 20),
+          status: 'WAITING',
+          serviceDescription: serviceDescription ? String(serviceDescription).substring(0, 500) : null,
+          checkInSource: 'QR_CHECKIN',
+          repairOrderId: repairOrder.id,
+        });
+      } catch (queueError) {
+        console.error('Failed to add to service queue:', queueError);
+        // Continue even if queue entry fails - the RO is still created
+      }
+
       res.json({
         success: true,
         roId: repairOrder.id,
