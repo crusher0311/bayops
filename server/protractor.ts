@@ -211,15 +211,15 @@ export class ProtractorClient {
 
   // Get locations
   async getLocations(): Promise<ProtractorLocation[]> {
-    const result = await this.request<{ Locations: ProtractorLocation[] }>("/Location/");
-    return result.Locations || [];
+    const result = await this.request<{ ItemCollection?: ProtractorLocation[]; Locations?: ProtractorLocation[] }>("/Location/");
+    return result.ItemCollection || result.Locations || [];
   }
 
   // Search contacts (requires locationId for results)
   async searchContacts(searchString: string, locationId?: string): Promise<ProtractorContact[]> {
     const encoded = encodeURIComponent(searchString);
-    const result = await this.request<{ Contacts: ProtractorContact[] }>(`/Contact/Search/?searchString=${encoded}`, {}, locationId);
-    return result.Contacts || [];
+    const result = await this.request<{ ItemCollection?: ProtractorContact[]; Contacts?: ProtractorContact[] }>(`/Contact/Search/?searchString=${encoded}`, {}, locationId);
+    return result.ItemCollection || result.Contacts || [];
   }
 
   // Get contact by ID
@@ -231,8 +231,8 @@ export class ProtractorClient {
   async getAllContacts(locationId?: string): Promise<ProtractorContact[]> {
     try {
       // Try wildcard search first
-      const result = await this.request<{ Contacts: ProtractorContact[] }>("/Contact/Search/?searchString=*", {}, locationId);
-      return result.Contacts || [];
+      const result = await this.request<{ ItemCollection?: ProtractorContact[]; Contacts?: ProtractorContact[] }>("/Contact/Search/?searchString=*", {}, locationId);
+      return result.ItemCollection || result.Contacts || [];
     } catch (error) {
       // If wildcard fails, try common patterns and aggregate
       console.log("[Protractor] Wildcard search failed, trying letter-based search...");
@@ -264,23 +264,23 @@ export class ProtractorClient {
 
   // Get service items by owner ID
   async getServiceItemsByOwner(ownerId: string, locationId?: string): Promise<ProtractorServiceItem[]> {
-    const result = await this.request<{ ServiceItems: ProtractorServiceItem[] }>(`/ServiceItem/Search/OwnerID/${ownerId}`, {}, locationId);
-    return result.ServiceItems || [];
+    const result = await this.request<{ ItemCollection?: ProtractorServiceItem[]; ServiceItems?: ProtractorServiceItem[] }>(`/ServiceItem/Search/OwnerID/${ownerId}`, {}, locationId);
+    return result.ItemCollection || result.ServiceItems || [];
   }
 
   // Search service items (vehicles)
   async searchServiceItems(searchString: string, locationId?: string): Promise<ProtractorServiceItem[]> {
     const encoded = encodeURIComponent(searchString);
-    const result = await this.request<{ ServiceItems: ProtractorServiceItem[] }>(`/ServiceItem/Search/?searchString=${encoded}`, {}, locationId);
-    return result.ServiceItems || [];
+    const result = await this.request<{ ItemCollection?: ProtractorServiceItem[]; ServiceItems?: ProtractorServiceItem[] }>(`/ServiceItem/Search/?searchString=${encoded}`, {}, locationId);
+    return result.ItemCollection || result.ServiceItems || [];
   }
 
   // Get all service items for a location
   async getAllServiceItems(locationId?: string): Promise<ProtractorServiceItem[]> {
     try {
       // Try wildcard search
-      const result = await this.request<{ ServiceItems: ProtractorServiceItem[] }>("/ServiceItem/Search/?searchString=*", {}, locationId);
-      return result.ServiceItems || [];
+      const result = await this.request<{ ItemCollection?: ProtractorServiceItem[]; ServiceItems?: ProtractorServiceItem[] }>("/ServiceItem/Search/?searchString=*", {}, locationId);
+      return result.ItemCollection || result.ServiceItems || [];
     } catch (error) {
       console.log("[Protractor] ServiceItem wildcard search failed, trying letter-based search...");
       const allItems: Map<string, ProtractorServiceItem> = new Map();
@@ -314,8 +314,8 @@ export class ProtractorClient {
       url += `&endDate=${endDate.toISOString()}`;
     }
 
-    const result = await this.request<{ WorkOrders: ProtractorWorkOrder[] }>(url, {}, locationId);
-    return result.WorkOrders || [];
+    const result = await this.request<{ ItemCollection?: ProtractorWorkOrder[]; WorkOrders?: ProtractorWorkOrder[] }>(url, {}, locationId);
+    return result.ItemCollection || result.WorkOrders || [];
   }
 
   // Get work order by ID (with full details)
@@ -326,8 +326,8 @@ export class ProtractorClient {
   // Get invoices by date range
   async getInvoices(startDate: Date, endDate: Date, locationId?: string): Promise<ProtractorInvoice[]> {
     const url = `/Invoice/?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
-    const result = await this.request<{ Invoices: ProtractorInvoice[] }>(url, {}, locationId);
-    return result.Invoices || [];
+    const result = await this.request<{ ItemCollection?: ProtractorInvoice[]; Invoices?: ProtractorInvoice[] }>(url, {}, locationId);
+    return result.ItemCollection || result.Invoices || [];
   }
 
   // Get invoice by ID
@@ -337,27 +337,27 @@ export class ProtractorClient {
 
   // Get employees (technicians and service advisors)
   async getEmployees(type: "All" | "ServiceAdvisor" | "Technician" = "All"): Promise<any[]> {
-    const result = await this.request<{ Employees: any[] }>(`/Employee/${type}`);
-    return result.Employees || [];
+    const result = await this.request<{ ItemCollection?: any[]; Employees?: any[] }>(`/Employee/${type}`);
+    return result.ItemCollection || result.Employees || [];
   }
 
   // Get service categories
   async getServiceCategories(): Promise<any[]> {
-    const result = await this.request<{ ServiceCategories: any[] }>("/ServiceCategory/");
-    return result.ServiceCategories || [];
+    const result = await this.request<{ ItemCollection?: any[]; ServiceCategories?: any[] }>("/ServiceCategory/");
+    return result.ItemCollection || result.ServiceCategories || [];
   }
 
   // Get vendors
   async getVendors(): Promise<any[]> {
-    const result = await this.request<{ Vendors: any[] }>("/Vendor");
-    return result.Vendors || [];
+    const result = await this.request<{ ItemCollection?: any[]; Vendors?: any[] }>("/Vendor");
+    return result.ItemCollection || result.Vendors || [];
   }
 
   // Get deferred work for a vehicle
   async getDeferredWork(serviceItemId: string, startDate: Date, endDate: Date): Promise<any[]> {
     const url = `/ServicePackage/DeferredWorks?serviceItemID=${serviceItemId}&startDate=${encodeURIComponent(startDate.toISOString())}&endDate=${encodeURIComponent(endDate.toISOString())}`;
-    const result = await this.request<{ DeferredWorks: any[] }>(url);
-    return result.DeferredWorks || [];
+    const result = await this.request<{ ItemCollection?: any[]; DeferredWorks?: any[] }>(url);
+    return result.ItemCollection || result.DeferredWorks || [];
   }
 }
 
