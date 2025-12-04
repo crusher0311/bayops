@@ -258,6 +258,32 @@ export default function InspectionReport() {
                             <span className="font-medium">Recommendation:</span> {item.recommendation}
                           </div>
                         )}
+                        
+                        {item.photos && item.photos.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {item.photos.map((media, index) => {
+                              const isVideo = media.startsWith('data:video');
+                              return isVideo ? (
+                                <video 
+                                  key={index}
+                                  src={media}
+                                  className="w-20 h-20 object-cover rounded-lg border border-slate-300 cursor-pointer"
+                                  controls
+                                  muted
+                                  playsInline
+                                />
+                              ) : (
+                                <img 
+                                  key={index}
+                                  src={media} 
+                                  alt={`${item.template?.label} - Photo ${index + 1}`}
+                                  className="w-20 h-20 object-cover rounded-lg border border-slate-300 cursor-pointer hover:opacity-90 transition-opacity"
+                                  onClick={() => window.open(media, '_blank')}
+                                />
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -294,29 +320,57 @@ export default function InspectionReport() {
                         <div 
                           key={templateItem.id} 
                           className={cn(
-                            "flex items-center gap-3 p-3 rounded-lg border",
+                            "p-3 rounded-lg border",
                             result?.status ? config.bg : "bg-slate-50 border-slate-200"
                           )}
                           data-testid={`inspection-item-${templateItem.id}`}
                         >
-                          <Icon className={cn("w-5 h-5 shrink-0", config.color)} />
-                          <div className="flex-1">
-                            <div className="font-medium text-slate-900">{templateItem.label}</div>
-                            {result?.finding && (
-                              <div className="text-sm text-slate-600 mt-1">{result.finding}</div>
-                            )}
+                          <div className="flex items-center gap-3">
+                            <Icon className={cn("w-5 h-5 shrink-0", config.color)} />
+                            <div className="flex-1">
+                              <div className="font-medium text-slate-900">{templateItem.label}</div>
+                              {result?.finding && (
+                                <div className="text-sm text-slate-600 mt-1">{result.finding}</div>
+                              )}
+                            </div>
+                            <Badge 
+                              variant="outline" 
+                              className={cn(
+                                "text-xs",
+                                status === 'GREEN' && "bg-green-100 text-green-700 border-green-300",
+                                status === 'YELLOW' && "bg-yellow-100 text-yellow-700 border-yellow-300",
+                                status === 'RED' && "bg-red-100 text-red-700 border-red-300",
+                              )}
+                            >
+                              {config.label}
+                            </Badge>
                           </div>
-                          <Badge 
-                            variant="outline" 
-                            className={cn(
-                              "text-xs",
-                              status === 'GREEN' && "bg-green-100 text-green-700 border-green-300",
-                              status === 'YELLOW' && "bg-yellow-100 text-yellow-700 border-yellow-300",
-                              status === 'RED' && "bg-red-100 text-red-700 border-red-300",
-                            )}
-                          >
-                            {config.label}
-                          </Badge>
+                          
+                          {result?.photos && result.photos.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-3 ml-8">
+                              {result.photos.map((media, index) => {
+                                const isVideo = media.startsWith('data:video');
+                                return isVideo ? (
+                                  <video 
+                                    key={index}
+                                    src={media}
+                                    className="w-16 h-16 object-cover rounded-lg border border-slate-300"
+                                    controls
+                                    muted
+                                    playsInline
+                                  />
+                                ) : (
+                                  <img 
+                                    key={index}
+                                    src={media} 
+                                    alt={`${templateItem.label} - Photo ${index + 1}`}
+                                    className="w-16 h-16 object-cover rounded-lg border border-slate-300 cursor-pointer hover:opacity-90 transition-opacity"
+                                    onClick={() => window.open(media, '_blank')}
+                                  />
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       );
                     })}

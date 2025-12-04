@@ -166,9 +166,12 @@ Settings page with 6 tabs for comprehensive shop configuration:
 - **Share token design**: UUIDs serve as authorization (like Google Docs sharing) - possession of token grants read-only access to sanitized inspection data
 - **Public endpoint sanitization**: `/api/inspections/shared/:token` returns only customer-facing data (no internal notes, technician info)
 
-### Remaining DVI Work
-- Photo/video capture during inspections
-- Media storage and display
+### DVI Media Support (COMPLETE)
+- Photo and video capture during inspections (via device camera or file upload)
+- Base64 encoding for inline storage in database
+- Media display in technician inspection form with hover-to-play videos
+- Media display in customer report with click-to-expand images and video controls
+- Remove media functionality with confirmation
 
 ## Future Phase 3 Features
 

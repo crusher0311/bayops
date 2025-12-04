@@ -371,7 +371,7 @@ export function InspectionForm({
         type="file"
         ref={fileInputRef}
         className="hidden"
-        accept="image/*"
+        accept="image/*,video/*"
         capture="environment"
         onChange={handleFileChange}
       />
@@ -607,28 +607,46 @@ export function InspectionForm({
                                 
                                 {result.photos && result.photos.length > 0 ? (
                                   <div className="flex flex-wrap gap-2">
-                                    {result.photos.map((photo, index) => (
-                                      <div key={index} className="relative group">
-                                        <img 
-                                          src={photo} 
-                                          alt={`Photo ${index + 1}`}
-                                          className="w-24 h-24 object-cover rounded-lg border border-slate-600"
-                                        />
-                                        {!isCompleted && (
-                                          <button
-                                            onClick={() => handleRemovePhoto(templateItem.id, index)}
-                                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                          >
-                                            <X className="w-4 h-4 text-white" />
-                                          </button>
-                                        )}
-                                      </div>
-                                    ))}
+                                    {result.photos.map((media, index) => {
+                                      const isVideo = media.startsWith('data:video');
+                                      return (
+                                        <div key={index} className="relative group">
+                                          {isVideo ? (
+                                            <video 
+                                              src={media}
+                                              className="w-24 h-24 object-cover rounded-lg border border-slate-600"
+                                              muted
+                                              playsInline
+                                              onMouseEnter={(e) => (e.target as HTMLVideoElement).play()}
+                                              onMouseLeave={(e) => {
+                                                const video = e.target as HTMLVideoElement;
+                                                video.pause();
+                                                video.currentTime = 0;
+                                              }}
+                                            />
+                                          ) : (
+                                            <img 
+                                              src={media} 
+                                              alt={`Photo ${index + 1}`}
+                                              className="w-24 h-24 object-cover rounded-lg border border-slate-600"
+                                            />
+                                          )}
+                                          {!isCompleted && (
+                                            <button
+                                              onClick={() => handleRemovePhoto(templateItem.id, index)}
+                                              className="absolute -top-2 -right-2 w-6 h-6 bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                              <X className="w-4 h-4 text-white" />
+                                            </button>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 ) : (
                                   <div className="flex items-center gap-2 text-slate-500 text-sm">
                                     <ImageIcon className="w-4 h-4" />
-                                    No photos attached
+                                    No media attached
                                   </div>
                                 )}
                               </div>
