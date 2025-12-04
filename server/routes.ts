@@ -4062,11 +4062,38 @@ async function runProtractorImport(
       throw new Error("No default workflow found");
     }
 
-    // Import contacts (customers)
+    // First, get all Protractor locations to iterate through
+    console.log(`[Protractor Import ${jobId}] Fetching Protractor locations...`);
+    const protractorLocations = await client.getLocations();
+    console.log(`[Protractor Import ${jobId}] Found ${protractorLocations.length} Protractor location(s)`);
+
+    // If no locations found, try fetching without location filter (some Protractor accounts may not use locations)
+    const locationIds = protractorLocations.length > 0 
+      ? protractorLocations.map(l => l.ID) 
+      : [undefined]; // undefined means no location filter
+
+    // Import contacts (customers) from all Protractor locations
     if (job.importType === 'FULL' || job.importType === 'CUSTOMERS') {
       console.log(`[Protractor Import ${jobId}] Fetching contacts...`);
-      const contacts = await client.getAllContacts();
+      
+      const allContacts: Map<string, any> = new Map();
+      for (const protractorLocationId of locationIds) {
+        try {
+          const contacts = await client.getAllContacts(protractorLocationId);
+          console.log(`[Protractor Import ${jobId}] Found ${contacts.length} contacts from location ${protractorLocationId || 'default'}`);
+          for (const contact of contacts) {
+            if (contact.ID && !allContacts.has(contact.ID)) {
+              allContacts.set(contact.ID, contact);
+            }
+          }
+        } catch (err: any) {
+          console.log(`[Protractor Import ${jobId}] Error fetching contacts from location ${protractorLocationId}: ${err.message}`);
+        }
+      }
+      
+      const contacts = Array.from(allContacts.values());
       totalRecords += contacts.length;
+      console.log(`[Protractor Import ${jobId}] Total unique contacts to import: ${contacts.length}`);
 
       for (const contact of contacts) {
         try {
@@ -4125,7 +4152,22 @@ async function runProtractorImport(
 
       for (const customer of protractorCustomers) {
         try {
-          const vehicles = await client.getServiceItemsByOwner(customer.protractorId!);
+          // Try fetching vehicles from all locations
+          const allVehicles: Map<string, any> = new Map();
+          for (const protractorLocationId of locationIds) {
+            try {
+              const vehicles = await client.getServiceItemsByOwner(customer.protractorId!, protractorLocationId);
+              for (const vehicle of vehicles) {
+                if (vehicle.ID && !allVehicles.has(vehicle.ID)) {
+                  allVehicles.set(vehicle.ID, vehicle);
+                }
+              }
+            } catch (e) {
+              // Continue on error
+            }
+          }
+          
+          const vehicles = Array.from(allVehicles.values());
           totalRecords += vehicles.length;
 
           for (const vehicle of vehicles) {
@@ -4179,7 +4221,24 @@ async function runProtractorImport(
       const endDate = job.endDate || new Date();
 
       try {
-        const invoices = await client.getInvoices(startDate, endDate);
+        // Fetch invoices from all locations
+        const allInvoices: Map<string, any> = new Map();
+        for (const protractorLocationId of locationIds) {
+          try {
+            const locationInvoices = await client.getInvoices(startDate, endDate, protractorLocationId);
+            console.log(`[Protractor Import ${jobId}] Found ${locationInvoices.length} invoices from location ${protractorLocationId || 'default'}`);
+            for (const invoice of locationInvoices) {
+              if (invoice.ID && !allInvoices.has(invoice.ID)) {
+                allInvoices.set(invoice.ID, invoice);
+              }
+            }
+          } catch (e: any) {
+            console.log(`[Protractor Import ${jobId}] Error fetching invoices from location ${protractorLocationId}: ${e.message}`);
+          }
+        }
+        
+        const invoices = Array.from(allInvoices.values());
+        console.log(`[Protractor Import ${jobId}] Total unique invoices to import: ${invoices.length}`);
         totalRecords += invoices.length;
 
         for (const invoice of invoices) {

@@ -153,7 +153,7 @@ export class ProtractorClient {
   }
 
   // Make authenticated API request
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  private async request<T>(endpoint: string, options: RequestInit = {}, locationId?: string): Promise<T> {
     const url = `${PROTRACTOR_BASE_URL}${endpoint}`;
     
     const headers: Record<string, string> = {
@@ -164,6 +164,11 @@ export class ProtractorClient {
       "Content-Type": "application/json",
       ...(options.headers as Record<string, string> || {}),
     };
+
+    // Add locationId header if provided (required for most data endpoints)
+    if (locationId) {
+      headers["locationId"] = locationId;
+    }
 
     const response = await fetch(url, {
       ...options,
@@ -201,23 +206,23 @@ export class ProtractorClient {
     return result.Locations || [];
   }
 
-  // Search contacts
-  async searchContacts(searchString: string): Promise<ProtractorContact[]> {
+  // Search contacts (requires locationId for results)
+  async searchContacts(searchString: string, locationId?: string): Promise<ProtractorContact[]> {
     const encoded = encodeURIComponent(searchString);
-    const result = await this.request<{ Contacts: ProtractorContact[] }>(`/Contact/Search/?searchString=${encoded}`);
+    const result = await this.request<{ Contacts: ProtractorContact[] }>(`/Contact/Search/?searchString=${encoded}`, {}, locationId);
     return result.Contacts || [];
   }
 
   // Get contact by ID
-  async getContact(id: string): Promise<ProtractorContact> {
-    return this.request<ProtractorContact>(`/Contact/${id}`);
+  async getContact(id: string, locationId?: string): Promise<ProtractorContact> {
+    return this.request<ProtractorContact>(`/Contact/${id}`, {}, locationId);
   }
 
-  // Get all contacts - Protractor requires a search pattern, use '*' for all
-  async getAllContacts(): Promise<ProtractorContact[]> {
+  // Get all contacts for a location - Protractor requires a search pattern, use '*' for all
+  async getAllContacts(locationId?: string): Promise<ProtractorContact[]> {
     try {
       // Try wildcard search first
-      const result = await this.request<{ Contacts: ProtractorContact[] }>("/Contact/Search/?searchString=*");
+      const result = await this.request<{ Contacts: ProtractorContact[] }>("/Contact/Search/?searchString=*", {}, locationId);
       return result.Contacts || [];
     } catch (error) {
       // If wildcard fails, try common patterns and aggregate
@@ -228,7 +233,7 @@ export class ProtractorClient {
       const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.split('');
       for (const letter of letters) {
         try {
-          const contacts = await this.searchContacts(letter);
+          const contacts = await this.searchContacts(letter, locationId);
           for (const contact of contacts) {
             if (contact.ID && !allContacts.has(contact.ID)) {
               allContacts.set(contact.ID, contact);
@@ -244,25 +249,53 @@ export class ProtractorClient {
   }
 
   // Get service item (vehicle) by ID
-  async getServiceItem(id: string): Promise<ProtractorServiceItem> {
-    return this.request<ProtractorServiceItem>(`/ServiceItem/${id}`);
+  async getServiceItem(id: string, locationId?: string): Promise<ProtractorServiceItem> {
+    return this.request<ProtractorServiceItem>(`/ServiceItem/${id}`, {}, locationId);
   }
 
   // Get service items by owner ID
-  async getServiceItemsByOwner(ownerId: string): Promise<ProtractorServiceItem[]> {
-    const result = await this.request<{ ServiceItems: ProtractorServiceItem[] }>(`/ServiceItem/Search/OwnerID/${ownerId}`);
+  async getServiceItemsByOwner(ownerId: string, locationId?: string): Promise<ProtractorServiceItem[]> {
+    const result = await this.request<{ ServiceItems: ProtractorServiceItem[] }>(`/ServiceItem/Search/OwnerID/${ownerId}`, {}, locationId);
     return result.ServiceItems || [];
   }
 
   // Search service items (vehicles)
-  async searchServiceItems(searchString: string): Promise<ProtractorServiceItem[]> {
+  async searchServiceItems(searchString: string, locationId?: string): Promise<ProtractorServiceItem[]> {
     const encoded = encodeURIComponent(searchString);
-    const result = await this.request<{ ServiceItems: ProtractorServiceItem[] }>(`/ServiceItem/Search/?searchString=${encoded}`);
+    const result = await this.request<{ ServiceItems: ProtractorServiceItem[] }>(`/ServiceItem/Search/?searchString=${encoded}`, {}, locationId);
     return result.ServiceItems || [];
   }
 
+  // Get all service items for a location
+  async getAllServiceItems(locationId?: string): Promise<ProtractorServiceItem[]> {
+    try {
+      // Try wildcard search
+      const result = await this.request<{ ServiceItems: ProtractorServiceItem[] }>("/ServiceItem/Search/?searchString=*", {}, locationId);
+      return result.ServiceItems || [];
+    } catch (error) {
+      console.log("[Protractor] ServiceItem wildcard search failed, trying letter-based search...");
+      const allItems: Map<string, ProtractorServiceItem> = new Map();
+      
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.split('');
+      for (const letter of letters) {
+        try {
+          const items = await this.searchServiceItems(letter, locationId);
+          for (const item of items) {
+            if (item.ID && !allItems.has(item.ID)) {
+              allItems.set(item.ID, item);
+            }
+          }
+        } catch (e) {
+          // Continue on error
+        }
+      }
+      
+      return Array.from(allItems.values());
+    }
+  }
+
   // Get active work orders
-  async getActiveWorkOrders(startDate?: Date, endDate?: Date): Promise<ProtractorWorkOrder[]> {
+  async getActiveWorkOrders(startDate?: Date, endDate?: Date, locationId?: string): Promise<ProtractorWorkOrder[]> {
     let url = "/WorkOrder/?readInProgress=true";
     
     if (startDate) {
@@ -272,25 +305,25 @@ export class ProtractorClient {
       url += `&endDate=${endDate.toISOString()}`;
     }
 
-    const result = await this.request<{ WorkOrders: ProtractorWorkOrder[] }>(url);
+    const result = await this.request<{ WorkOrders: ProtractorWorkOrder[] }>(url, {}, locationId);
     return result.WorkOrders || [];
   }
 
   // Get work order by ID (with full details)
-  async getWorkOrder(id: string): Promise<ProtractorWorkOrder> {
-    return this.request<ProtractorWorkOrder>(`/WorkOrder/${id}`);
+  async getWorkOrder(id: string, locationId?: string): Promise<ProtractorWorkOrder> {
+    return this.request<ProtractorWorkOrder>(`/WorkOrder/${id}`, {}, locationId);
   }
 
   // Get invoices by date range
-  async getInvoices(startDate: Date, endDate: Date): Promise<ProtractorInvoice[]> {
+  async getInvoices(startDate: Date, endDate: Date, locationId?: string): Promise<ProtractorInvoice[]> {
     const url = `/Invoice/?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
-    const result = await this.request<{ Invoices: ProtractorInvoice[] }>(url);
+    const result = await this.request<{ Invoices: ProtractorInvoice[] }>(url, {}, locationId);
     return result.Invoices || [];
   }
 
   // Get invoice by ID
-  async getInvoice(id: string): Promise<ProtractorInvoice> {
-    return this.request<ProtractorInvoice>(`/Invoice/${id}`);
+  async getInvoice(id: string, locationId?: string): Promise<ProtractorInvoice> {
+    return this.request<ProtractorInvoice>(`/Invoice/${id}`, {}, locationId);
   }
 
   // Get employees (technicians and service advisors)
