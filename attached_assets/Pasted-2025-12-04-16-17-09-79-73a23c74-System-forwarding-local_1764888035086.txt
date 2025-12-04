@@ -1,0 +1,181 @@
+2025-12-04 16:17:09.79
+73a23c74
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+
+2025-12-04 16:17:09.79
+73a23c74
+System
+metasidecar: loaded enterprise status from environment is_enterprise=false
+2025-12-04 16:17:12.27
+73a23c74
+User
+> rest-express@1.0.0 start
+2025-12-04 16:17:12.27
+73a23c74
+User
+> NODE_ENV=production node dist/index.cjs
+2025-12-04 16:17:14.11
+73a23c74
+User
+10:17:14 PM [express] serving on port 5000
+2025-12-04 16:17:47.44
+73a23c74
+User
+10:17:47 PM [express] GET /api/auth/me 401 in 4ms :: {"message":"Not authenticated"}
+2025-12-04 16:17:56.21
+73a23c74
+User
+10:17:56 PM [express] POST /api/auth/login 200 in 291ms :: {"user":{"id":"f3df3565-8655-497c-8c5c-a3cc4021066d","orgId":"9cd72a5e-75e6-4958-b441-6519ce7fa2b4","username":"owner","name":"Sarah Chen","email":"sarah@apexauto.com","role":"OWNER","locationIds":["ed5c5c05-90bd-4605-8777-4eabbbf2f8f7","963c8b4d-5277-4a79-be3d-2025ad199918"],"avatarUrl":null,"createdAt":"2025-12-03T21:30:01.118Z"}}
+2025-12-04 16:17:56.35
+73a23c74
+User
+10:17:56 PM [express] GET /api/repair-orders 401 in 1ms :: {"message":"Unauthorized"}
+2025-12-04 16:17:56.36
+73a23c74
+User
+10:17:56 PM [express] GET /api/locations 401 in 1ms :: {"message":"Unauthorized"}
+2025-12-04 16:17:56.36
+73a23c74
+User
+10:17:56 PM [express] GET /api/settings 200 in 2ms
+2025-12-04 16:18:09.92
+73a23c74
+User
+10:18:09 PM [express] GET /api/customers 401 in 1ms :: {"message":"Unauthorized"}
+2025-12-04 16:18:09.92
+73a23c74
+User
+10:18:09 PM [express] GET /api/users 401 in 1ms :: {"message":"Unauthorized"}
+2025-12-04 16:18:09.92
+73a23c74
+User
+10:18:09 PM [express] GET /api/repair-orders 401 in 1ms :: {"message":"Unauthorized"}
+2025-12-04 16:18:09.92
+73a23c74
+User
+10:18:09 PM [express] GET /api/workflows 401 in 0ms :: {"message":"Unauthorized"}
+2025-12-04 16:18:09.93
+73a23c74
+User
+10:18:09 PM [express] GET /api/locations 401 in 0ms :: {"message":"Unauthorized"}
+2025-12-04 16:18:11.50
+73a23c74
+User
+10:18:11 PM [express] GET /api/customers 401 in 2ms :: {"message":"Unauthorized"}
+2025-12-04 16:18:11.50
+73a23c74
+User
+10:18:11 PM [express] GET /api/repair-orders 401 in 1ms :: {"message":"Unauthorized"}
+2025-12-04 16:18:11.50
+73a23c74
+User
+10:18:11 PM [express] GET /api/workflows 401 in 1ms :: {"message":"Unauthorized"}
+2025-12-04 16:18:11.50
+73a23c74
+User
+10:18:11 PM [express] GET /api/vehicles 401 in 0ms :: {"message":"Unauthorized"}
+2025-12-04 16:18:11.50
+73a23c74
+User
+10:18:11 PM [express] GET /api/users 401 in 2ms :: {"message":"Unauthorized"}
+2025-12-04 16:18:18.40
+73a23c74
+User
+10:18:18 PM [express] GET /api/locations 401 in 1ms :: {"message":"Unauthorized"}
+2025-12-04 16:18:18.41
+73a23c74
+User
+10:18:18 PM [express] GET /api/workflows 401 in 0ms :: {"message":"Unauthorized"}
+2025-12-04 16:18:18.41
+73a23c74
+User
+10:18:18 PM [express] GET /api/repair-orders 401 in 1ms :: {"message":"Unauthorized"}
+2025-12-04 16:18:18.41
+73a23c74
+User
+10:18:18 PM [express] GET /api/customers 401 in 1ms :: {"message":"Unauthorized"}
+2025-12-04 16:18:20.84
+73a23c74
+User
+10:18:20 PM [express] GET /api/locations 401 in 1ms :: {"message":"Unauthorized"}
+2025-12-04 16:33:25.61
+73a23c74
+System
+system: received signal terminated
+2025-12-04 16:34:00.99
+f2195d9b
+System
+starting up user application
+2025-12-04 16:34:00.99
+f2195d9b
+System
+metasidecar: loaded enterprise status from environment is_enterprise=false
+2025-12-04 16:34:00.99
+f2195d9b
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+2025-12-04 16:34:02.57
+f2195d9b
+User
+> rest-express@1.0.0 start
+2025-12-04 16:34:02.57
+f2195d9b
+User
+> NODE_ENV=production node dist/index.cjs
+2025-12-04 16:34:06.68
+f2195d9b
+User
+📊 Database already has data, skipping auto-seed
+2025-12-04 16:34:06.75
+f2195d9b
+User
+10:34:06 PM [express] serving on port 5000
+2025-12-04 16:34:39.83
+f2195d9b
+User
+10:34:39 PM [express] GET /api/auth/me 401 in 2ms :: {"message":"Not authenticated"}
+2025-12-04 16:34:46.12
+f2195d9b
+User
+10:34:46 PM [express] POST /api/auth/login 200 in 285ms :: {"user":{"id":"f3df3565-8655-497c-8c5c-a3cc4021066d","orgId":"9cd72a5e-75e6-4958-b441-6519ce7fa2b4","username":"owner","name":"Sarah Chen","email":"sarah@apexauto.com","role":"OWNER","locationIds":["ed5c5c05-90bd-4605-8777-4eabbbf2f8f7","963c8b4d-5277-4a79-be3d-2025ad199918"],"avatarUrl":null,"createdAt":"2025-12-03T21:30:01.118Z"}}
+2025-12-04 16:34:46.22
+f2195d9b
+User
+10:34:46 PM [express] GET /api/locations 401 in 1ms :: {"message":"Unauthorized"}
+2025-12-04 16:34:46.22
+f2195d9b
+User
+10:34:46 PM [express] GET /api/settings 200 in 3ms
+2025-12-04 16:34:46.25
+f2195d9b
+User
+10:34:46 PM [express] GET /api/repair-orders 401 in 1ms :: {"message":"Unauthorized"}
+2025-12-04 16:34:50.07
+f2195d9b
+User
+10:34:50 PM [express] GET /api/locations 401 in 2ms :: {"message":"Unauthorized"}
+2025-12-04 16:34:50.09
+f2195d9b
+User
+10:34:50 PM [express] GET /api/users 401 in 1ms :: {"message":"Unauthorized"}
+2025-12-04 16:34:50.11
+f2195d9b
+User
+10:34:50 PM [express] GET /api/customers 401 in 1ms :: {"message":"Unauthorized"}
+2025-12-04 16:34:50.12
+f2195d9b
+User
+10:34:50 PM [express] GET /api/workflows 401 in 1ms :: {"message":"Unauthorized"}
+2025-12-04 16:34:50.12
+f2195d9b
+User
+10:34:50 PM [express] GET /api/repair-orders 401 in 1ms :: {"message":"Unauthorized"}
+2025-12-04 16:34:53.68
+f2195d9b
+User
+10:34:53 PM [express] GET /api/locations 401 in 1ms :: {"message":"Unauthorized"}
+2025-12-04 16:34:53.68
+f2195d9b
+User
+10:34:53 PM [express] GET /api/customers 401 in 0ms :: {"message":"Unauthorized"}
