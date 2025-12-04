@@ -171,17 +171,25 @@ export class ProtractorClient {
       ...(options.headers as Record<string, string> || {}),
     };
 
+    console.log(`[Protractor API] ${options.method || 'GET'} ${urlObj.pathname}${urlObj.search.replace(/apiKey=[^&]+/, 'apiKey=***').replace(/authentication=[^&]+/, 'authentication=***')}`);
+
     const response = await fetch(urlObj.toString(), {
       ...options,
       headers,
     });
 
+    const responseText = await response.text();
+    console.log(`[Protractor API] Response ${response.status}: ${responseText.substring(0, 500)}`);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Protractor API error ${response.status}: ${errorText}`);
+      throw new Error(`Protractor API error ${response.status}: ${responseText}`);
     }
 
-    return response.json();
+    try {
+      return JSON.parse(responseText);
+    } catch (e) {
+      throw new Error(`Protractor API returned non-JSON: ${responseText}`);
+    }
   }
 
   // Test connection by fetching locations
