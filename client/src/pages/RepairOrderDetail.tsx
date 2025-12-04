@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useRoute, Link } from 'wouter';
+import { useQuery } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { 
   useRepairOrder, 
@@ -14,9 +15,13 @@ import {
   type LaborGuideRepair 
 } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
+
 import { Badge } from '@/components/ui/badge';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { Separator } from '@/components/ui/separator';
+
 import { 
   ArrowLeft, 
   Printer, 
@@ -62,6 +67,9 @@ interface LineItem {
   unitCost: number;
   unitPrice: number;
   approved: boolean;
+  manufacturer?: string;
+  supplier?: string;
+  partNumber?: string;
 }
 
 interface LaborGuideDialogProps {
@@ -69,6 +77,14 @@ interface LaborGuideDialogProps {
   onClose: () => void;
   vehicle: { year: number; make: string; model: string } | null;
   onSelect: (repair: LaborGuideRepair) => void;
+}
+
+interface PartsMatrix {
+  id: string;
+  name: string;
+  minCost: string;
+  maxCost: string;
+  markupPercent: string;
 }
 
 function LaborGuideDialog({ isOpen, onClose, vehicle, onSelect }: LaborGuideDialogProps) {
@@ -202,6 +218,16 @@ export default function RepairOrderDetail() {
   const { data: vehicle } = useVehicle(ro?.vehicleId || '');
   const { data: workflows = [] } = useWorkflows();
   const updateRO = useUpdateRepairOrder();
+  
+  const { data: settings } = useQuery({
+    queryKey: ['settings', ro?.locationId],
+    queryFn: async () => {
+      const res = await fetch(`/api/settings/all/${ro?.locationId}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch settings');
+      return res.json() as Promise<{ partsMatrices: PartsMatrix[] }>;
+    },
+    enabled: !!ro?.locationId,
+  });
 
   const [newJobName, setNewJobName] = useState('');
   const [isAddJobDialogOpen, setIsAddJobDialogOpen] = useState(false);
@@ -221,6 +247,19 @@ export default function RepairOrderDetail() {
   const generateDescription = useGenerateServiceDescription();
   const generateAuth = useGenerateAuthorizationRequest();
   const improveDescription = useImproveJobDescription();
+  
+  const applyPartsMatrix = (cost: number): number => {
+    const matrices = settings?.partsMatrices || [];
+    for (const matrix of matrices) {
+      const minCost = parseFloat(matrix.minCost);
+      const maxCost = parseFloat(matrix.maxCost);
+      const markup = parseFloat(matrix.markupPercent);
+      if (cost >= minCost && cost <= maxCost) {
+        return Math.round(cost * (1 + markup / 100) * 100) / 100;
+      }
+    }
+    return cost;
+  };
 
   if (roLoading) {
     return (
@@ -425,7 +464,7 @@ export default function RepairOrderDetail() {
     const newItem: LineItem = {
       id: `li-${Date.now()}`,
       type: 'LABOR',
-      description: 'New Labor Item',
+      description: '',
       quantity: 1,
       unitCost: 0,
       unitPrice: 0,
@@ -441,6 +480,17 @@ export default function RepairOrderDetail() {
     updateRO.mutate({
       id: ro.id,
       updates: { jobs: updatedJobs as any },
+    }, {
+      onSuccess: () => {
+        setEditingItem({ jobId, item: newItem });
+        setEditForm({
+          description: newItem.description,
+          type: newItem.type,
+          quantity: newItem.quantity,
+          unitCost: newItem.unitCost,
+          unitPrice: newItem.unitPrice,
+        });
+      }
     });
   };
 
@@ -448,11 +498,14 @@ export default function RepairOrderDetail() {
     const newItem: LineItem = {
       id: `li-${Date.now()}`,
       type: 'PART',
-      description: 'New Part Item',
+      description: '',
       quantity: 1,
       unitCost: 0,
       unitPrice: 0,
-      approved: true
+      approved: true,
+      manufacturer: '',
+      supplier: '',
+      partNumber: '',
     };
     
     const updatedJobs = jobs.map(job => 
@@ -464,6 +517,20 @@ export default function RepairOrderDetail() {
     updateRO.mutate({
       id: ro.id,
       updates: { jobs: updatedJobs as any },
+    }, {
+      onSuccess: () => {
+        setEditingItem({ jobId, item: newItem });
+        setEditForm({
+          description: newItem.description,
+          type: newItem.type,
+          quantity: newItem.quantity,
+          unitCost: newItem.unitCost,
+          unitPrice: newItem.unitPrice,
+          manufacturer: newItem.manufacturer,
+          supplier: newItem.supplier,
+          partNumber: newItem.partNumber,
+        });
+      }
     });
   };
 
@@ -488,6 +555,9 @@ export default function RepairOrderDetail() {
       quantity: item.quantity,
       unitCost: item.unitCost,
       unitPrice: item.unitPrice,
+      manufacturer: item.manufacturer || '',
+      supplier: item.supplier || '',
+      partNumber: item.partNumber || '',
     });
   };
 
@@ -872,9 +942,11 @@ export default function RepairOrderDetail() {
       </div>
 
       <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
-            <DialogTitle>Edit Line Item</DialogTitle>
+            <DialogTitle>
+              {editForm.type === 'LABOR' ? 'Edit Labor' : editForm.type === 'PART' ? 'Edit Part' : editForm.type === 'TIRE' ? 'Edit Tire' : 'Edit Fee'}
+            </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
@@ -883,27 +955,49 @@ export default function RepairOrderDetail() {
                 id="edit-description"
                 value={editForm.description || ''}
                 onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                placeholder={editForm.type === 'PART' ? 'Enter part description' : editForm.type === 'LABOR' ? 'Enter labor description' : 'Enter description'}
                 data-testid="input-edit-description"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-type">Type</Label>
-              <Select
-                value={editForm.type || 'LABOR'}
-                onValueChange={(value) => setEditForm({ ...editForm, type: value as LineItem['type'] })}
-              >
-                <SelectTrigger data-testid="select-edit-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="LABOR">Labor</SelectItem>
-                  <SelectItem value="PART">Part</SelectItem>
-                  <SelectItem value="TIRE">Tire</SelectItem>
-                  <SelectItem value="FEE">Fee</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+            
+            {(editForm.type === 'PART' || editForm.type === 'TIRE') && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-part-number">Part Number</Label>
+                    <Input
+                      id="edit-part-number"
+                      value={editForm.partNumber || ''}
+                      onChange={(e) => setEditForm({ ...editForm, partNumber: e.target.value })}
+                      placeholder="e.g., ABC-12345"
+                      data-testid="input-edit-part-number"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-manufacturer">Manufacturer</Label>
+                    <Input
+                      id="edit-manufacturer"
+                      value={editForm.manufacturer || ''}
+                      onChange={(e) => setEditForm({ ...editForm, manufacturer: e.target.value })}
+                      placeholder="e.g., ACDelco"
+                      data-testid="input-edit-manufacturer"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-supplier">Supplier</Label>
+                  <Input
+                    id="edit-supplier"
+                    value={editForm.supplier || ''}
+                    onChange={(e) => setEditForm({ ...editForm, supplier: e.target.value })}
+                    placeholder="e.g., AutoZone, NAPA, O'Reilly"
+                    data-testid="input-edit-supplier"
+                  />
+                </div>
+              </>
+            )}
+            
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-quantity">Quantity</Label>
                 <Input
@@ -916,8 +1010,25 @@ export default function RepairOrderDetail() {
                   data-testid="input-edit-quantity"
                 />
               </div>
+              {editForm.type !== 'LABOR' && (
+                <div className="space-y-2">
+                  <Label htmlFor="edit-unit-cost">Cost ($)</Label>
+                  <Input
+                    id="edit-unit-cost"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editForm.unitCost || 0}
+                    onChange={(e) => {
+                      const cost = parseFloat(e.target.value) || 0;
+                      setEditForm({ ...editForm, unitCost: cost });
+                    }}
+                    data-testid="input-edit-unit-cost"
+                  />
+                </div>
+              )}
               <div className="space-y-2">
-                <Label htmlFor="edit-unit-price">Unit Price ($)</Label>
+                <Label htmlFor="edit-unit-price">Sale ($)</Label>
                 <Input
                   id="edit-unit-price"
                   type="number"
@@ -929,18 +1040,28 @@ export default function RepairOrderDetail() {
                 />
               </div>
             </div>
-            {editForm.type !== 'LABOR' && (
-              <div className="space-y-2">
-                <Label htmlFor="edit-unit-cost">Unit Cost ($)</Label>
-                <Input
-                  id="edit-unit-cost"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={editForm.unitCost || 0}
-                  onChange={(e) => setEditForm({ ...editForm, unitCost: parseFloat(e.target.value) || 0 })}
-                  data-testid="input-edit-unit-cost"
-                />
+            
+            {editForm.type !== 'LABOR' && (editForm.unitCost || 0) > 0 && (
+              <div className="flex items-center justify-between">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const salePrice = applyPartsMatrix(editForm.unitCost || 0);
+                    setEditForm({ ...editForm, unitPrice: salePrice });
+                  }}
+                  disabled={!settings?.partsMatrices?.length}
+                  data-testid="button-apply-matrix"
+                >
+                  <DollarSign className="w-3 h-3 mr-1" />
+                  Apply Matrix
+                </Button>
+                {(editForm.unitPrice || 0) > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    Margin: {((1 - (editForm.unitCost || 0) / (editForm.unitPrice || 1)) * 100).toFixed(1)}%
+                  </span>
+                )}
               </div>
             )}
           </div>

@@ -205,6 +205,9 @@ export const repairOrders = pgTable("repair_orders", {
       inventoryItemId?: string;
       technicianId?: string;
       approved: boolean;
+      manufacturer?: string;
+      supplier?: string;
+      partNumber?: string;
     }>;
   }>>(),
   notes: text("notes").notNull().default(''),
