@@ -28,6 +28,15 @@ import {
   insertCustomerSettingsSchema,
   insertTransparencySettingsSchema,
   insertOrgBrandingSchema,
+  insertServiceBaySchema,
+  insertAppointmentSchema,
+  insertAppointmentServiceSchema,
+  insertTechnicianTimeLogSchema,
+  insertVendorSchema,
+  insertPartOrderSchema,
+  insertPartOrderItemSchema,
+  insertInvoiceSchema,
+  insertPaymentSchema,
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 
@@ -1439,6 +1448,468 @@ export async function registerRoutes(
         transparencySettings: transparencySettings || { locationId: req.params.locationId },
         orgBranding: orgBranding || { orgId: req.user!.orgId },
       });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============================================
+  // PHASE 2: OPERATIONAL WORKFLOWS ROUTES
+  // ============================================
+
+  // Service Bays
+  app.get("/api/service-bays/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      const bays = await storage.getServiceBaysByLocation(req.params.locationId);
+      res.json(bays);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/service-bays", requireAuth, async (req, res) => {
+    try {
+      const result = insertServiceBaySchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const location = await storage.getLocation(result.data.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const bay = await storage.createServiceBay(result.data);
+      res.status(201).json(bay);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/service-bays/:id", requireAuth, async (req, res) => {
+    try {
+      const bay = await storage.updateServiceBay(req.params.id, req.body);
+      if (!bay) {
+        return res.status(404).json({ message: "Service bay not found" });
+      }
+      res.json(bay);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/service-bays/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteServiceBay(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Appointments
+  app.get("/api/appointments/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      const appointments = await storage.getAppointmentsByLocation(req.params.locationId, startDate, endDate);
+      res.json(appointments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/appointments/detail/:id", requireAuth, async (req, res) => {
+    try {
+      const appointment = await storage.getAppointment(req.params.id);
+      if (!appointment) {
+        return res.status(404).json({ message: "Appointment not found" });
+      }
+      const location = await storage.getLocation(appointment.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const services = await storage.getAppointmentServices(appointment.id);
+      res.json({ ...appointment, services });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/appointments", requireAuth, async (req, res) => {
+    try {
+      const { services, ...appointmentData } = req.body;
+      const result = insertAppointmentSchema.safeParse(appointmentData);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const location = await storage.getLocation(result.data.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const appointment = await storage.createAppointment(result.data);
+      if (services && Array.isArray(services)) {
+        for (const service of services) {
+          await storage.createAppointmentService({
+            ...service,
+            appointmentId: appointment.id,
+          });
+        }
+      }
+      const createdServices = await storage.getAppointmentServices(appointment.id);
+      res.status(201).json({ ...appointment, services: createdServices });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/appointments/:id", requireAuth, async (req, res) => {
+    try {
+      const { services, ...updates } = req.body;
+      const appointment = await storage.updateAppointment(req.params.id, updates);
+      if (!appointment) {
+        return res.status(404).json({ message: "Appointment not found" });
+      }
+      if (services && Array.isArray(services)) {
+        await storage.deleteAppointmentServices(appointment.id);
+        for (const service of services) {
+          await storage.createAppointmentService({
+            ...service,
+            appointmentId: appointment.id,
+          });
+        }
+      }
+      const updatedServices = await storage.getAppointmentServices(appointment.id);
+      res.json({ ...appointment, services: updatedServices });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/appointments/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteAppointment(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Time Tracking
+  app.get("/api/time-logs/active", requireAuth, async (req, res) => {
+    try {
+      const activeLog = await storage.getActiveTimeLog(req.user!.id);
+      res.json(activeLog || null);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/time-logs/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      const logs = await storage.getTimeLogsByLocation(req.params.locationId, startDate, endDate);
+      res.json(logs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/time-logs/clock-in", requireAuth, async (req, res) => {
+    try {
+      const activeLog = await storage.getActiveTimeLog(req.user!.id);
+      if (activeLog) {
+        return res.status(400).json({ message: "Already clocked in" });
+      }
+      const log = await storage.createTimeLog({
+        userId: req.user!.id,
+        locationId: req.body.locationId,
+        clockIn: new Date(),
+        repairOrderId: req.body.repairOrderId,
+        jobId: req.body.jobId,
+      });
+      res.status(201).json(log);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/time-logs/clock-out", requireAuth, async (req, res) => {
+    try {
+      const activeLog = await storage.getActiveTimeLog(req.user!.id);
+      if (!activeLog) {
+        return res.status(400).json({ message: "Not clocked in" });
+      }
+      const log = await storage.updateTimeLog(activeLog.id, {
+        clockOut: new Date(),
+        breakMinutes: req.body.breakMinutes || 0,
+        notes: req.body.notes,
+      });
+      res.json(log);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/time-logs/start-job", requireAuth, async (req, res) => {
+    try {
+      const activeLog = await storage.getActiveTimeLog(req.user!.id);
+      if (activeLog && activeLog.repairOrderId) {
+        await storage.updateTimeLog(activeLog.id, { clockOut: new Date() });
+      }
+      const log = await storage.createTimeLog({
+        userId: req.user!.id,
+        locationId: req.body.locationId,
+        clockIn: new Date(),
+        repairOrderId: req.body.repairOrderId,
+        jobId: req.body.jobId,
+      });
+      res.status(201).json(log);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Vendors
+  app.get("/api/vendors", requireAuth, async (req, res) => {
+    try {
+      const vendors = await storage.getVendorsByOrg(req.user!.orgId);
+      res.json(vendors);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/vendors", requireAuth, async (req, res) => {
+    try {
+      const result = insertVendorSchema.safeParse({
+        ...req.body,
+        orgId: req.user!.orgId,
+      });
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const vendor = await storage.createVendor(result.data);
+      res.status(201).json(vendor);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/vendors/:id", requireAuth, async (req, res) => {
+    try {
+      const vendor = await storage.updateVendor(req.params.id, req.body);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor not found" });
+      }
+      res.json(vendor);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/vendors/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteVendor(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Part Orders
+  app.get("/api/part-orders/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      const orders = await storage.getPartOrdersByLocation(req.params.locationId);
+      res.json(orders);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/part-orders/detail/:id", requireAuth, async (req, res) => {
+    try {
+      const order = await storage.getPartOrder(req.params.id);
+      if (!order) {
+        return res.status(404).json({ message: "Part order not found" });
+      }
+      const items = await storage.getPartOrderItems(order.id);
+      res.json({ ...order, items });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/part-orders", requireAuth, async (req, res) => {
+    try {
+      const { items, ...orderData } = req.body;
+      const result = insertPartOrderSchema.safeParse(orderData);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const location = await storage.getLocation(result.data.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const order = await storage.createPartOrder(result.data);
+      if (items && Array.isArray(items)) {
+        for (const item of items) {
+          await storage.createPartOrderItem({
+            ...item,
+            partOrderId: order.id,
+          });
+        }
+      }
+      const createdItems = await storage.getPartOrderItems(order.id);
+      res.status(201).json({ ...order, items: createdItems });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/part-orders/:id", requireAuth, async (req, res) => {
+    try {
+      const order = await storage.updatePartOrder(req.params.id, req.body);
+      if (!order) {
+        return res.status(404).json({ message: "Part order not found" });
+      }
+      res.json(order);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Part Order Items
+  app.post("/api/part-order-items", requireAuth, async (req, res) => {
+    try {
+      const result = insertPartOrderItemSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const item = await storage.createPartOrderItem(result.data);
+      res.status(201).json(item);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/part-order-items/:id", requireAuth, async (req, res) => {
+    try {
+      const item = await storage.updatePartOrderItem(req.params.id, req.body);
+      if (!item) {
+        return res.status(404).json({ message: "Part order item not found" });
+      }
+      res.json(item);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/part-order-items/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deletePartOrderItem(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Invoices
+  app.get("/api/invoices/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      const invoices = await storage.getInvoicesByLocation(req.params.locationId);
+      res.json(invoices);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/invoices/detail/:id", requireAuth, async (req, res) => {
+    try {
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      const payments = await storage.getPaymentsByInvoice(invoice.id);
+      res.json({ ...invoice, payments });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/invoices/repair-order/:roId", requireAuth, async (req, res) => {
+    try {
+      const invoice = await storage.getInvoiceByRepairOrder(req.params.roId);
+      res.json(invoice || null);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/invoices", requireAuth, async (req, res) => {
+    try {
+      const invoiceNumber = await storage.getNextInvoiceNumber(req.body.locationId);
+      const result = insertInvoiceSchema.safeParse({
+        ...req.body,
+        invoiceNumber,
+      });
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const location = await storage.getLocation(result.data.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const invoice = await storage.createInvoice(result.data);
+      res.status(201).json(invoice);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/invoices/:id", requireAuth, async (req, res) => {
+    try {
+      const invoice = await storage.updateInvoice(req.params.id, req.body);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      res.json(invoice);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Payments
+  app.post("/api/payments", requireAuth, async (req, res) => {
+    try {
+      const result = insertPaymentSchema.safeParse({
+        ...req.body,
+        processedBy: req.user!.id,
+      });
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).toString() });
+      }
+      const payment = await storage.createPayment(result.data);
+      res.status(201).json(payment);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
