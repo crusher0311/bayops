@@ -1982,6 +1982,19 @@ export class DatabaseStorage implements IStorage {
         sql`${messages.readAt} IS NULL`
       ));
   }
+
+  async getConversationByPhoneNumber(phoneNumber: string): Promise<Conversation | undefined> {
+    // Normalize phone number to find matches
+    const normalizedPhone = phoneNumber.replace(/\D/g, '');
+    const [conversation] = await db.select().from(conversations)
+      .where(and(
+        sql`REPLACE(${conversations.phoneNumber}, '+', '') LIKE '%' || ${normalizedPhone} || '%'`,
+        eq(conversations.isArchived, false)
+      ))
+      .orderBy(desc(conversations.lastMessageAt))
+      .limit(1);
+    return conversation || undefined;
+  }
 }
 
 export const storage = new DatabaseStorage();

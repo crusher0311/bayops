@@ -5133,4 +5133,55 @@ function setupMessagingRoutes(app: Express) {
       res.status(500).json({ message: error.message });
     }
   });
+
+  // Telnyx Inbound SMS Webhook (no auth required - webhook from Telnyx)
+  app.post("/api/webhooks/telnyx/inbound", async (req, res) => {
+    try {
+      const { parseTelnyxInboundMessage, formatPhoneNumber } = await import('./messaging');
+      
+      const eventType = req.body?.data?.event_type;
+      
+      // Only process inbound messages
+      if (eventType !== 'message.received') {
+        return res.status(200).json({ received: true });
+      }
+      
+      const parsed = parseTelnyxInboundMessage(req.body);
+      if (!parsed) {
+        console.error('Failed to parse Telnyx inbound message:', req.body);
+        return res.status(200).json({ received: true });
+      }
+      
+      console.log('Received inbound SMS from:', parsed.from, 'Text:', parsed.text);
+      
+      // Find a conversation with this phone number
+      const conversation = await storage.getConversationByPhoneNumber(parsed.from);
+      
+      if (conversation) {
+        // Add message to existing conversation
+        await storage.createMessage({
+          conversationId: conversation.id,
+          orgId: conversation.orgId,
+          direction: 'INBOUND',
+          channel: 'SMS',
+          status: 'DELIVERED',
+          content: parsed.text,
+          fromNumber: parsed.from,
+          toNumber: parsed.to,
+          externalId: parsed.messageId,
+          deliveredAt: parsed.receivedAt,
+        });
+        
+        console.log('Added inbound message to conversation:', conversation.id);
+      } else {
+        console.log('No conversation found for phone number:', parsed.from);
+        // Could create a new conversation here if needed
+      }
+      
+      res.status(200).json({ received: true });
+    } catch (error: any) {
+      console.error('Telnyx webhook error:', error);
+      res.status(200).json({ received: true }); // Always return 200 to Telnyx
+    }
+  });
 }

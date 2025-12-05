@@ -2,7 +2,7 @@ import Telnyx from 'telnyx';
 import { Resend } from 'resend';
 
 const telnyxClient = process.env.TELNYX_API_KEY
-  ? new Telnyx(process.env.TELNYX_API_KEY)
+  ? new Telnyx({ apiKey: process.env.TELNYX_API_KEY })
   : null;
 
 const resend = process.env.RESEND_API_KEY
@@ -50,7 +50,7 @@ export async function sendSMS({ to, message }: SendSMSParams): Promise<{ success
   
   try {
     const formattedTo = formatPhoneNumber(to);
-    const result = await telnyxClient.messages.create({
+    const result = await telnyxClient.messages.send({
       from: process.env.TELNYX_PHONE_NUMBER,
       to: formattedTo,
       text: message,
