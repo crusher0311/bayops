@@ -692,17 +692,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createRepairOrder(insertRO: InsertRepairOrder): Promise<RepairOrder> {
-    const [ro] = await db.insert(repairOrders).values(insertRO).returning();
-    
-    // Dual-write: also insert into normalized ro_jobs and ro_job_lines tables
-    if (insertRO.jobs && Array.isArray(insertRO.jobs) && insertRO.jobs.length > 0) {
-      await this.syncJobsToNormalizedTables(ro.id, ro.orgId, ro.locationId, insertRO.jobs);
-    }
-    
-    return ro;
+    // Use transaction to ensure atomic dual-write
+    return await db.transaction(async (tx) => {
+      const [ro] = await tx.insert(repairOrders).values(insertRO).returning();
+      
+      // Dual-write: also insert into normalized ro_jobs and ro_job_lines tables
+      if (insertRO.jobs && Array.isArray(insertRO.jobs) && insertRO.jobs.length > 0) {
+        await this.syncJobsToNormalizedTablesTx(tx, ro.id, ro.orgId, ro.locationId, insertRO.jobs);
+      }
+      
+      return ro;
+    });
   }
   
-  private async syncJobsToNormalizedTables(
+  private async syncJobsToNormalizedTablesTx(
+    tx: any,
     repairOrderId: string, 
     orgId: string, 
     locationId: string, 
@@ -726,14 +730,14 @@ export class DatabaseStorage implements IStorage {
       }>;
     }>
   ): Promise<void> {
-    // Delete existing normalized jobs for this RO (for updates)
-    await db.delete(roJobs).where(eq(roJobs.repairOrderId, repairOrderId));
+    // Delete existing normalized jobs for this RO (cascades to line items)
+    await tx.delete(roJobs).where(eq(roJobs.repairOrderId, repairOrderId));
     
     // Insert new normalized jobs and line items
     for (let jobIndex = 0; jobIndex < jobs.length; jobIndex++) {
       const job = jobs[jobIndex];
       
-      const [insertedJob] = await db.insert(roJobs).values({
+      const [insertedJob] = await tx.insert(roJobs).values({
         orgId,
         locationId,
         repairOrderId,
@@ -747,7 +751,7 @@ export class DatabaseStorage implements IStorage {
         for (let lineIndex = 0; lineIndex < job.lineItems.length; lineIndex++) {
           const lineItem = job.lineItems[lineIndex];
           
-          await db.insert(roJobLines).values({
+          await tx.insert(roJobLines).values({
             jobId: insertedJob.id,
             type: lineItem.type,
             description: lineItem.description,
@@ -768,16 +772,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateRepairOrder(id: string, orgId: string, updates: Partial<InsertRepairOrder>): Promise<RepairOrder | undefined> {
-    const [ro] = await db.update(repairOrders).set(updates).where(
-      and(eq(repairOrders.id, id), eq(repairOrders.orgId, orgId))
-    ).returning();
-    
-    // Dual-write: sync jobs to normalized tables if jobs were updated
-    if (ro && updates.jobs && Array.isArray(updates.jobs)) {
-      await this.syncJobsToNormalizedTables(ro.id, ro.orgId, ro.locationId, updates.jobs);
-    }
-    
-    return ro || undefined;
+    // Use transaction to ensure atomic dual-write
+    return await db.transaction(async (tx) => {
+      const [ro] = await tx.update(repairOrders).set(updates).where(
+        and(eq(repairOrders.id, id), eq(repairOrders.orgId, orgId))
+      ).returning();
+      
+      // Dual-write: sync jobs to normalized tables if jobs were updated
+      if (ro && updates.jobs && Array.isArray(updates.jobs)) {
+        await this.syncJobsToNormalizedTablesTx(tx, ro.id, ro.orgId, ro.locationId, updates.jobs);
+      }
+      
+      return ro || undefined;
+    });
   }
 
   // Inventory
