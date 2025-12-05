@@ -4716,6 +4716,7 @@ async function runProtractorImport(
               legacySystem: 'protractor' as const,
               legacyId: invoice.ID,
               legacyInvoiceNumber: invoice.InvoiceNumber || invoice.Number,
+              originalInvoiceDate: invoice.InvoiceTime ? new Date(invoice.InvoiceTime) : null,
             };
 
             if (existing) {

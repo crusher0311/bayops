@@ -325,6 +325,7 @@ export const repairOrders = pgTable("repair_orders", {
   totalSublet: real("total_sublet"),
   totalTax: real("total_tax"),
   grandTotal: real("grand_total"),
+  originalInvoiceDate: timestamp("original_invoice_date"),
 });
 
 export const repairOrdersRelations = relations(repairOrders, ({ one, many }) => ({
