@@ -350,19 +350,19 @@ export class ProtractorClient {
       invoice = result;
     }
     
-    // Log the first invoice response for debugging
-    console.log(`[Protractor API] Invoice ${id} ALL FIELDS: ${Object.keys(invoice || {}).join(', ')}`);
-    console.log(`[Protractor API] Invoice ${id} ContactID=${invoice?.ContactID}, ServiceItemID=${invoice?.ServiceItemID}`);
-    
-    // Check for Contact object structure (common in Protractor)
-    if (invoice?.Contact) {
-      console.log(`[Protractor API] Invoice ${id} Contact object: ${JSON.stringify(invoice.Contact).substring(0, 500)}`);
+    // Extract ContactID and ServiceItemID from embedded objects if not directly available
+    // Protractor returns full Contact and ServiceItem objects embedded in the invoice
+    if (!invoice?.ContactID && invoice?.Contact) {
+      // Try Contact.ID, Contact.Header.ID, or Contact.Header?.ID
+      invoice.ContactID = invoice.Contact.ID || invoice.Contact.Header?.ID;
     }
     
-    // Check for ServiceItem object structure
-    if (invoice?.ServiceItem) {
-      console.log(`[Protractor API] Invoice ${id} ServiceItem object: ${JSON.stringify(invoice.ServiceItem).substring(0, 500)}`);
+    if (!invoice?.ServiceItemID && invoice?.ServiceItem) {
+      // Try ServiceItem.ID, ServiceItem.Header.ID, or ServiceItem.Header?.ID
+      invoice.ServiceItemID = invoice.ServiceItem.ID || invoice.ServiceItem.Header?.ID;
     }
+    
+    console.log(`[Protractor API] Invoice ${id} resolved ContactID=${invoice?.ContactID}, ServiceItemID=${invoice?.ServiceItemID}`);
     
     return invoice;
   }
