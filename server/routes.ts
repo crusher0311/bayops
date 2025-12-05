@@ -4470,14 +4470,14 @@ async function runProtractorImport(
           console.log(`[Protractor Import ${jobId}] Field names: ${Object.keys(invoices[0]).join(', ')}`);
           console.log(`[Protractor Import ${jobId}] Raw data: ${JSON.stringify(invoices[0], null, 2)}`);
           
-          // Try fetching a single invoice with full details to see if that has more fields
+          // Try fetching WorkOrder for full details - WorkOrder endpoint returns complete line item pricing
           try {
-            const singleInvoice = await client.getInvoice(invoices[0].ID);
-            console.log(`[Protractor Import ${jobId}] SINGLE INVOICE DETAIL STRUCTURE:`);
-            console.log(`[Protractor Import ${jobId}] Detail field names: ${Object.keys(singleInvoice).join(', ')}`);
-            console.log(`[Protractor Import ${jobId}] Detail raw data: ${JSON.stringify(singleInvoice, null, 2)}`);
+            const singleWorkOrder = await client.getWorkOrder(invoices[0].ID);
+            console.log(`[Protractor Import ${jobId}] SINGLE WORKORDER DETAIL STRUCTURE:`);
+            console.log(`[Protractor Import ${jobId}] Detail field names: ${Object.keys(singleWorkOrder).join(', ')}`);
+            console.log(`[Protractor Import ${jobId}] Detail raw data (first 8000 chars): ${JSON.stringify(singleWorkOrder, null, 2).substring(0, 8000)}`);
           } catch (e: any) {
-            console.log(`[Protractor Import ${jobId}] Could not fetch single invoice detail: ${e.message}`);
+            console.log(`[Protractor Import ${jobId}] Could not fetch single workorder detail: ${e.message}`);
           }
         }
         
@@ -4485,24 +4485,38 @@ async function runProtractorImport(
 
         for (const listInvoice of invoices) {
           try {
-            // Fetch full invoice details - the list endpoint may not include ContactID/ServiceItemID
+            // Fetch full WorkOrder details - the Invoice endpoint returns truncated data without line items
+            // The WorkOrder endpoint returns complete ServicePackageLines with Price, Total, ExtendedTotal, TotalCost
             let invoice = listInvoice;
             try {
-              const fullInvoice = await client.getInvoice(listInvoice.ID);
-              invoice = fullInvoice;
+              // Use WorkOrder endpoint instead of Invoice - same ID but returns full line item details
+              const fullWorkOrder = await client.getWorkOrder(listInvoice.ID);
+              invoice = fullWorkOrder;
               
-              // Log first detailed invoice for debugging - show ALL fields
+              // Log first detailed workorder for debugging - show ALL fields
               if (processedRecords === 0 && failedRecords === 0) {
-                console.log(`[Protractor Import ${jobId}] FIRST FULL INVOICE FIELDS: ${Object.keys(invoice).join(', ')}`);
-                console.log(`[Protractor Import ${jobId}] FIRST FULL INVOICE DATA: ${JSON.stringify(invoice, null, 2)}`);
+                console.log(`[Protractor Import ${jobId}] FIRST FULL WORKORDER FIELDS: ${Object.keys(invoice).join(', ')}`);
+                console.log(`[Protractor Import ${jobId}] FIRST FULL WORKORDER DATA: ${JSON.stringify(invoice, null, 2).substring(0, 10000)}`);
                 // Check for various possible field name patterns
                 const possibleContactFields = ['ContactID', 'contactId', 'ContactId', 'contact_id', 'Contact', 'customerId', 'CustomerID', 'Owner', 'OwnerID'];
                 const possibleVehicleFields = ['ServiceItemID', 'serviceItemId', 'ServiceItemId', 'service_item_id', 'ServiceItem', 'vehicleId', 'VehicleID', 'Vehicle'];
                 console.log(`[Protractor Import ${jobId}] Contact field check: ${possibleContactFields.map(f => `${f}=${(invoice as any)[f]}`).join(', ')}`);
                 console.log(`[Protractor Import ${jobId}] Vehicle field check: ${possibleVehicleFields.map(f => `${f}=${(invoice as any)[f]}`).join(', ')}`);
+                
+                // Log ServicePackages structure for debugging line items
+                if (invoice.ServicePackages) {
+                  console.log(`[Protractor Import ${jobId}] ServicePackages structure: ${JSON.stringify(invoice.ServicePackages, null, 2).substring(0, 5000)}`);
+                }
               }
             } catch (e: any) {
-              console.log(`[Protractor Import ${jobId}] Could not fetch invoice detail for ${listInvoice.ID}: ${e.message}`);
+              console.log(`[Protractor Import ${jobId}] Could not fetch workorder detail for ${listInvoice.ID}: ${e.message}`);
+              // Fallback to Invoice endpoint if WorkOrder fails
+              try {
+                const fullInvoice = await client.getInvoice(listInvoice.ID);
+                invoice = fullInvoice;
+              } catch (e2: any) {
+                console.log(`[Protractor Import ${jobId}] Fallback invoice fetch also failed: ${e2.message}`);
+              }
             }
             
             // Try multiple field name patterns for customer/contact reference
@@ -4594,7 +4608,11 @@ async function runProtractorImport(
               }
             }
             
-            // Map service packages to jobs
+            // Map service packages to jobs and calculate totals from line items
+            let calculatedTotalLabor = 0;
+            let calculatedTotalParts = 0;
+            let calculatedTotalSublet = 0;
+            
             const jobs = servicePackages.map((pkg: any, idx: number) => {
               // Normalize Lines array - Protractor uses ServicePackageLines.ItemCollection
               let lines: any[] = [];
@@ -4616,25 +4634,58 @@ async function runProtractorImport(
               const jobTitle = pkg.ServicePackageHeader?.Title || pkg.Title || pkg.title || pkg.Name || pkg.name || 'Service';
               const jobDescription = pkg.ServicePackageHeader?.Description || pkg.Description || pkg.description || '';
               
+              // Map line items and calculate totals
+              const mappedLineItems = lines.map((line: any, lineIdx: number) => {
+                const lineType = line.Type || line.type;
+                const lineTotal = parseFloat(line.ExtendedTotal || line.Total || line.SellPrice || line.sellPrice || line.Price || line.price || 0);
+                
+                // Accumulate totals by type
+                if (lineType === 'Labor') {
+                  calculatedTotalLabor += lineTotal;
+                } else if (lineType === 'Material' || lineType === 'Part') {
+                  calculatedTotalParts += lineTotal;
+                } else if (lineType === 'Sublet') {
+                  calculatedTotalSublet += lineTotal;
+                }
+                
+                return {
+                  id: `line-${idx}-${lineIdx}`,
+                  type: lineType === 'Labor' ? 'LABOR' 
+                      : (lineType === 'Material' || lineType === 'Part') ? 'PART' 
+                      : lineType === 'Sublet' ? 'SUBLET' : 'FEE',
+                  description: line.Description || line.description || '',
+                  quantity: parseFloat(line.Quantity || line.quantity || 1),
+                  unitCost: parseFloat(line.TotalCost || line.Cost || line.cost || 0),
+                  unitPrice: lineTotal,
+                  approved: true,
+                  manufacturer: line.Manufacturer || line.manufacturer || null,
+                  partNumber: line.PartNumber || line.partNumber || null,
+                };
+              });
+              
               return {
                 id: `job-${idx}`,
                 name: jobTitle,
                 description: jobDescription,
-                lineItems: lines.map((line: any, lineIdx: number) => ({
-                  id: `line-${idx}-${lineIdx}`,
-                  type: line.Type === 'Labor' || line.type === 'Labor' ? 'LABOR' 
-                      : line.Type === 'Material' || line.type === 'Material' ? 'PART' 
-                      : line.Type === 'Part' || line.type === 'Part' ? 'PART' : 'FEE',
-                  description: line.Description || line.description || '',
-                  quantity: parseFloat(line.Quantity || line.quantity || 1),
-                  unitCost: parseFloat(line.TotalCost || line.Cost || line.cost || 0),
-                  unitPrice: parseFloat(line.ExtendedTotal || line.Total || line.SellPrice || line.sellPrice || line.Price || line.price || 0),
-                  approved: true,
-                  manufacturer: line.Manufacturer || line.manufacturer || null,
-                  partNumber: line.PartNumber || line.partNumber || null,
-                })),
+                lineItems: mappedLineItems,
               };
             });
+            
+            // Use Summary field if available (contains accurate totals including fees and taxes)
+            // Otherwise fall back to calculated totals from line items
+            const summary = (invoice as any).Summary;
+            const summaryLaborTotal = summary?.LaborTotal;
+            const summaryPartsTotal = summary?.PartsTotal;
+            const summarySubletTotal = summary?.SubletTotal;
+            const summaryTaxTotal = summary?.TaxTotal;
+            const summaryGrandTotal = summary?.GrandTotal;
+            
+            // Log totals comparison for first invoice
+            if (processedRecords === 0 && failedRecords === 0) {
+              console.log(`[Protractor Import ${jobId}] Calculated from lines: Labor=$${calculatedTotalLabor.toFixed(2)}, Parts=$${calculatedTotalParts.toFixed(2)}, Sublet=$${calculatedTotalSublet.toFixed(2)}`);
+              console.log(`[Protractor Import ${jobId}] Summary field: Labor=$${summaryLaborTotal || 'N/A'}, Parts=$${summaryPartsTotal || 'N/A'}, Sublet=$${summarySubletTotal || 'N/A'}, Tax=$${summaryTaxTotal || 'N/A'}, Grand=$${summaryGrandTotal || 'N/A'}`);
+              console.log(`[Protractor Import ${jobId}] Jobs count: ${jobs.length}, Total line items: ${jobs.reduce((sum, j) => sum + j.lineItems.length, 0)}`);
+            }
 
             const roData = {
               orgId,
@@ -4650,15 +4701,17 @@ async function runProtractorImport(
               completedAt: invoice.CompletedDate ? new Date(invoice.CompletedDate) : null,
               protractorId: invoice.ID,
               protractorInvoiceNumber: invoice.InvoiceNumber || invoice.Number,
-              totalLabor: invoice.TotalLabor || null,
-              totalParts: invoice.TotalParts || null,
-              totalSublet: invoice.TotalSublet || null,
-              totalTax: invoice.TotalTax || null,
-              grandTotal: invoice.GrandTotal || null,
+              totalLabor: summaryLaborTotal ?? (calculatedTotalLabor > 0 ? calculatedTotalLabor : null),
+              totalParts: summaryPartsTotal ?? (calculatedTotalParts > 0 ? calculatedTotalParts : null),
+              totalSublet: summarySubletTotal ?? (calculatedTotalSublet > 0 ? calculatedTotalSublet : null),
+              totalTax: summaryTaxTotal ?? (invoice.TotalTax || null),
+              grandTotal: summaryGrandTotal ?? ((calculatedTotalLabor + calculatedTotalParts + calculatedTotalSublet) > 0 
+                ? (calculatedTotalLabor + calculatedTotalParts + calculatedTotalSublet)
+                : null),
             };
 
             if (existing) {
-              await storage.updateRepairOrder(existing.id, roData);
+              await storage.updateRepairOrder(existing.id, orgId, roData);
             } else {
               // For new ROs, we need an advisor - use the first available user
               const users = await storage.getUsersByOrg(orgId);

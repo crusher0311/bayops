@@ -327,6 +327,10 @@ export default function Customers() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   
+  // Track if user is actively typing to maintain focus
+  const isTypingRef = useRef(false);
+  const lastSelectionRef = useRef<{ start: number | null; end: number | null }>({ start: null, end: null });
+  
   // Debounce search to prevent focus loss and excessive API calls
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -335,12 +339,58 @@ export default function Customers() {
     return () => clearTimeout(timer);
   }, [search]);
   
-  // Restore focus to search input after data refetch
+  // Store selection position before focus might be lost
+  const handleSearchFocus = () => {
+    isTypingRef.current = true;
+  };
+  
+  const handleSearchBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    // Check if blur is due to clicking elsewhere in the document (intentional blur)
+    // vs being stolen by a re-render (unintentional)
+    // If relatedTarget exists, user clicked on something else - respect that
+    if (e.relatedTarget) {
+      isTypingRef.current = false;
+    } else if (search.length > 0 && searchInputRef.current) {
+      // Focus was lost without clicking elsewhere - might be a re-render stealing focus
+      lastSelectionRef.current = {
+        start: searchInputRef.current.selectionStart,
+        end: searchInputRef.current.selectionEnd
+      };
+    }
+  };
+  
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    isTypingRef.current = true;
+    if (searchInputRef.current) {
+      lastSelectionRef.current = {
+        start: e.target.selectionStart,
+        end: e.target.selectionEnd
+      };
+    }
+    setSearch(e.target.value);
+  };
+  
   const { data: customers = [], isLoading, isFetching } = useCustomers(debouncedSearch || undefined);
   
+  // Restore focus to search input after data refetch - with small delay to ensure DOM is ready
   useEffect(() => {
-    if (!isFetching && searchInputRef.current && document.activeElement !== searchInputRef.current && search.length > 0) {
-      searchInputRef.current.focus();
+    if (!isFetching && isTypingRef.current && searchInputRef.current && search.length > 0) {
+      // Use requestAnimationFrame to restore focus after DOM updates
+      requestAnimationFrame(() => {
+        if (searchInputRef.current && document.activeElement !== searchInputRef.current) {
+          searchInputRef.current.focus();
+          // Restore cursor position
+          if (lastSelectionRef.current.start !== null && lastSelectionRef.current.end !== null) {
+            searchInputRef.current.setSelectionRange(
+              lastSelectionRef.current.start,
+              lastSelectionRef.current.end
+            );
+          }
+        }
+        // Reset typing flag after focus restoration attempt (don't hijack indefinitely)
+        // User will set it back to true on next keystroke
+        isTypingRef.current = false;
+      });
     }
   }, [isFetching, search]);
   
@@ -520,7 +570,9 @@ export default function Customers() {
             placeholder="Search name, email, phone..." 
             className="pl-9 bg-background"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={handleSearchChange}
+            onFocus={handleSearchFocus}
+            onBlur={handleSearchBlur}
             data-testid="input-search-customers"
           />
         </div>
