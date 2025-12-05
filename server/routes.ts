@@ -4071,6 +4071,54 @@ export async function registerRoutes(
     }
   });
 
+  // Debug: Search for invoice by invoice number and get full schema
+  app.get("/api/integrations/protractor/:locationId/debug/invoice-by-number/:invoiceNumber", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+
+      const connection = await storage.getProtractorConnection(req.params.locationId);
+      if (!connection) {
+        return res.status(400).json({ message: "Protractor not connected" });
+      }
+
+      const client = createProtractorClient(connection.connectionId, connection.apiKey, connection.authentication);
+      
+      // Fetch invoices from a date range that would include 10/24/2025
+      const startDate = new Date('2025-10-01');
+      const endDate = new Date('2025-10-31');
+      
+      const invoices = await client.getInvoices(startDate, endDate);
+      const targetNumber = parseInt(req.params.invoiceNumber);
+      
+      // Find the invoice by number
+      const matchingInvoice = invoices.find((inv: any) => 
+        inv.InvoiceNumber === targetNumber || inv.invoiceNumber === targetNumber
+      );
+      
+      if (!matchingInvoice) {
+        return res.json({ 
+          message: `Invoice ${targetNumber} not found in date range`,
+          invoicesFound: invoices.length,
+          sampleNumbers: invoices.slice(0, 10).map((i: any) => i.InvoiceNumber || i.invoiceNumber)
+        });
+      }
+      
+      // Fetch full invoice details
+      const fullInvoice = await client.getInvoice(matchingInvoice.ID || matchingInvoice.Header?.ID);
+      
+      res.json({ 
+        invoice: fullInvoice,
+        fieldNames: Object.keys(fullInvoice),
+        allFields: JSON.stringify(fullInvoice, null, 2)
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Debug: Fetch a specific invoice with all details
   app.get("/api/integrations/protractor/:locationId/debug/invoice/:invoiceId", requireAuth, async (req, res) => {
     try {

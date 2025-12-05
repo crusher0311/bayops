@@ -4,6 +4,7 @@ import {
   locations,
   customers,
   vehicles,
+  deferredWork,
   workflows,
   repairOrders,
   inventoryItems,
@@ -53,6 +54,8 @@ import {
   type InsertCustomer,
   type Vehicle,
   type InsertVehicle,
+  type DeferredWork,
+  type InsertDeferredWork,
   type Workflow,
   type InsertWorkflow,
   type RepairOrder,
@@ -171,6 +174,16 @@ export interface IStorage {
   searchVehiclesByVin(vin: string, orgId: string): Promise<Vehicle[]>;
   createVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
   updateVehicle(id: string, updates: Partial<InsertVehicle>): Promise<Vehicle | undefined>;
+
+  // Deferred Work
+  getDeferredWork(id: string): Promise<DeferredWork | undefined>;
+  getDeferredWorkByVehicle(vehicleId: string): Promise<DeferredWork[]>;
+  getDeferredWorkByCustomer(customerId: string): Promise<DeferredWork[]>;
+  getDeferredWorkByOrg(orgId: string): Promise<DeferredWork[]>;
+  createDeferredWork(dw: InsertDeferredWork): Promise<DeferredWork>;
+  updateDeferredWork(id: string, updates: Partial<InsertDeferredWork>): Promise<DeferredWork | undefined>;
+  deleteDeferredWork(id: string): Promise<boolean>;
+  getDeferredWorkByProtractorId(protractorId: string): Promise<DeferredWork | undefined>;
 
   // Workflows
   getWorkflow(id: string, orgId: string): Promise<Workflow | undefined>;
@@ -571,6 +584,50 @@ export class DatabaseStorage implements IStorage {
   async updateVehicle(id: string, updates: Partial<InsertVehicle>): Promise<Vehicle | undefined> {
     const [vehicle] = await db.update(vehicles).set(updates).where(eq(vehicles.id, id)).returning();
     return vehicle || undefined;
+  }
+
+  // Deferred Work
+  async getDeferredWork(id: string): Promise<DeferredWork | undefined> {
+    const [dw] = await db.select().from(deferredWork).where(eq(deferredWork.id, id));
+    return dw || undefined;
+  }
+
+  async getDeferredWorkByVehicle(vehicleId: string): Promise<DeferredWork[]> {
+    return db.select().from(deferredWork)
+      .where(eq(deferredWork.vehicleId, vehicleId))
+      .orderBy(desc(deferredWork.declinedAt));
+  }
+
+  async getDeferredWorkByCustomer(customerId: string): Promise<DeferredWork[]> {
+    return db.select().from(deferredWork)
+      .where(eq(deferredWork.customerId, customerId))
+      .orderBy(desc(deferredWork.declinedAt));
+  }
+
+  async getDeferredWorkByOrg(orgId: string): Promise<DeferredWork[]> {
+    return db.select().from(deferredWork)
+      .where(eq(deferredWork.orgId, orgId))
+      .orderBy(desc(deferredWork.declinedAt));
+  }
+
+  async createDeferredWork(insertDw: InsertDeferredWork): Promise<DeferredWork> {
+    const [dw] = await db.insert(deferredWork).values(insertDw).returning();
+    return dw;
+  }
+
+  async updateDeferredWork(id: string, updates: Partial<InsertDeferredWork>): Promise<DeferredWork | undefined> {
+    const [dw] = await db.update(deferredWork).set(updates).where(eq(deferredWork.id, id)).returning();
+    return dw || undefined;
+  }
+
+  async deleteDeferredWork(id: string): Promise<boolean> {
+    const result = await db.delete(deferredWork).where(eq(deferredWork.id, id));
+    return true;
+  }
+
+  async getDeferredWorkByProtractorId(protractorId: string): Promise<DeferredWork | undefined> {
+    const [dw] = await db.select().from(deferredWork).where(eq(deferredWork.protractorId, protractorId));
+    return dw || undefined;
   }
 
   // Workflows
