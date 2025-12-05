@@ -4142,8 +4142,24 @@ async function runProtractorImport(
       ? protractorLocations.map(l => l.ID) 
       : [undefined]; // undefined means no location filter
 
+    // Check if we should skip customer/vehicle phases (for INVOICES_ONLY or when already imported)
+    const existingCustomerCount = (await storage.getCustomersByOrg(orgId)).filter(c => c.protractorId).length;
+    const existingVehicleCount = (await storage.getVehiclesByOrg(orgId)).filter(v => v.protractorId).length;
+    
+    const skipCustomerPhase = job.importType === 'INVOICES_ONLY' || job.importType === 'WORK_ORDERS' ||
+      (job.importType === 'FULL' && existingCustomerCount > 1000); // Skip if we already have lots of customers
+    const skipVehiclePhase = job.importType === 'INVOICES_ONLY' || job.importType === 'WORK_ORDERS' ||
+      (job.importType === 'FULL' && existingVehicleCount > 1000); // Skip if we already have lots of vehicles
+    
+    if (skipCustomerPhase) {
+      console.log(`[Protractor Import ${jobId}] Skipping customer phase - ${existingCustomerCount} customers already imported`);
+    }
+    if (skipVehiclePhase) {
+      console.log(`[Protractor Import ${jobId}] Skipping vehicle phase - ${existingVehicleCount} vehicles already imported`);
+    }
+
     // Import contacts (customers) from all Protractor locations
-    if (job.importType === 'FULL' || job.importType === 'CUSTOMERS') {
+    if (!skipCustomerPhase && (job.importType === 'FULL' || job.importType === 'CUSTOMERS')) {
       console.log(`[Protractor Import ${jobId}] Fetching contacts...`);
       
       const allContacts: Map<string, any> = new Map();
@@ -4213,7 +4229,7 @@ async function runProtractorImport(
     }
 
     // Import vehicles
-    if (job.importType === 'FULL' || job.importType === 'VEHICLES') {
+    if (!skipVehiclePhase && (job.importType === 'FULL' || job.importType === 'VEHICLES')) {
       console.log(`[Protractor Import ${jobId}] Fetching vehicles...`);
       
       // Get all customers with protractor IDs to fetch their vehicles
