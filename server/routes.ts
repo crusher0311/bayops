@@ -4730,7 +4730,9 @@ async function runProtractorImport(
             };
 
             if (existing) {
-              await storage.updateRepairOrder(existing.id, orgId, roData);
+              // For updates, preserve existing advisorId - don't overwrite with null
+              const { advisorId, ...updateData } = roData;
+              await storage.updateRepairOrder(existing.id, orgId, updateData);
             } else {
               // For new ROs, we need an advisor - use the first available user
               const users = await storage.getUsersByOrg(orgId);
@@ -4738,6 +4740,8 @@ async function runProtractorImport(
               if (advisor) {
                 roData.advisorId = advisor.id;
                 await storage.createRepairOrder(roData);
+              } else {
+                throw new Error('No advisor found to assign repair order');
               }
             }
             
