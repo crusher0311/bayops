@@ -85,18 +85,44 @@ export default function Dashboard() {
     img.src = url;
   };
 
-  // Simple stat calculations
-  const activeRos = ros.filter(ro => ro.status !== 'completed');
-  const completedToday = ros.filter(ro => 
-    ro.status === 'completed' && 
-    ro.completedAt && 
-    new Date(ro.completedAt).toDateString() === new Date().toDateString()
-  );
+  // Helper to get the effective date for an RO (use original invoice date for imports, otherwise completion date)
+  const getEffectiveDate = (ro: any): Date | null => {
+    if (ro.originalInvoiceDate) {
+      return new Date(ro.originalInvoiceDate);
+    }
+    if (ro.completedAt) {
+      return new Date(ro.completedAt);
+    }
+    return null;
+  };
+
+  const today = new Date().toDateString();
   
-  // Calculate "Sales" roughly from completed ROs
+  // Simple stat calculations - exclude imported historical ROs from "active"
+  const activeRos = ros.filter(ro => ro.status !== 'completed' && !ro.originalInvoiceDate);
+  
+  // Completed today = only ROs that were actually completed/invoiced TODAY (not historical imports)
+  const completedToday = ros.filter(ro => {
+    if (ro.status !== 'completed') return false;
+    const effectiveDate = getEffectiveDate(ro);
+    return effectiveDate && effectiveDate.toDateString() === today;
+  });
+  
+  // Today's revenue - only from ROs completed/invoiced today
+  const todayRevenue = completedToday.reduce((sum, ro) => {
+    if (ro.grandTotal) return sum + ro.grandTotal;
+    const jobs = ro.jobs as Array<{ lineItems: Array<{ unitPrice: number; quantity: number }> }>;
+    const roTotal = jobs.reduce((jobSum, job) => 
+      jobSum + job.lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0)
+    , 0);
+    return sum + roTotal;
+  }, 0);
+
+  // Total historical revenue (all completed ROs)
   const totalRevenue = ros
     .filter(ro => ro.status === 'completed')
     .reduce((sum, ro) => {
+      if (ro.grandTotal) return sum + ro.grandTotal;
       const jobs = ro.jobs as Array<{ lineItems: Array<{ unitPrice: number; quantity: number }> }>;
       const roTotal = jobs.reduce((jobSum, job) => 
         jobSum + job.lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0)
@@ -151,15 +177,15 @@ export default function Dashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">Today's Sales</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-total-revenue">
-              ${totalRevenue.toLocaleString()}
+            <div className="text-2xl font-bold" data-testid="text-today-revenue">
+              ${todayRevenue.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
-              From {completedCount} completed ROs
+              {completedToday.length} invoiced today
             </p>
           </CardContent>
         </Card>

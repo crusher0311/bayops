@@ -12,17 +12,51 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Search, Filter, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link, useLocation } from 'wouter';
+import { useState, useMemo } from 'react';
 
 export default function RepairOrders() {
   const { currentLocationId } = useShopStore();
   const { data: ros = [], isLoading } = useRepairOrders(currentLocationId || undefined);
   const { data: customers = [] } = useCustomers();
   const [, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState<'active' | 'invoiced' | 'all'>('active');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const getCustomer = (id: string) => customers.find(c => c.id === id);
+
+  // Filter ROs based on active tab
+  const filteredRos = useMemo(() => {
+    let filtered = ros;
+    
+    // Apply tab filter
+    if (activeTab === 'active') {
+      // Active = not completed (excludes all invoiced/completed ROs including imports)
+      filtered = ros.filter(ro => ro.status !== 'completed');
+    } else if (activeTab === 'invoiced') {
+      // Invoiced = completed status
+      filtered = ros.filter(ro => ro.status === 'completed');
+    }
+    
+    // Apply search filter
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(ro => {
+        const customer = getCustomer(ro.customerId);
+        const customerName = `${customer?.firstName || ''} ${customer?.lastName || ''}`.toLowerCase();
+        return (
+          ro.roNumber?.toString().includes(search) ||
+          customerName.includes(search) ||
+          ro.id.toLowerCase().includes(search)
+        );
+      });
+    }
+    
+    return filtered;
+  }, [ros, activeTab, searchTerm]);
 
   if (isLoading) {
     return (
@@ -52,18 +86,29 @@ export default function RepairOrders() {
       </div>
 
       <div className="flex items-center gap-4 bg-card p-4 rounded-lg border shadow-sm">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'active' | 'invoiced' | 'all')}>
+          <TabsList>
+            <TabsTrigger value="active" data-testid="tab-active">
+              Active ({ros.filter(ro => ro.status !== 'completed').length})
+            </TabsTrigger>
+            <TabsTrigger value="invoiced" data-testid="tab-invoiced">
+              Invoiced ({ros.filter(ro => ro.status === 'completed').length})
+            </TabsTrigger>
+            <TabsTrigger value="all" data-testid="tab-all">
+              All ({ros.length})
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
           <Input 
-            placeholder="Search by RO #, Customer, or VIN..." 
+            placeholder="Search by RO #, Customer..." 
             className="pl-9 bg-background"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             data-testid="input-search-ro"
           />
         </div>
-        <Button variant="outline" className="gap-2" data-testid="button-filter">
-          <Filter className="w-4 h-4" />
-          Filter Status
-        </Button>
       </div>
 
       <div className="rounded-md border bg-card">
@@ -80,14 +125,20 @@ export default function RepairOrders() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {ros.length === 0 ? (
+            {filteredRos.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                  No repair orders yet. Create your first one!
+                  {ros.length === 0 
+                    ? 'No repair orders yet. Create your first one!'
+                    : activeTab === 'active' 
+                      ? 'No active repair orders.'
+                      : activeTab === 'invoiced'
+                        ? 'No invoiced repair orders.'
+                        : 'No repair orders match your search.'}
                 </TableCell>
               </TableRow>
             ) : (
-              ros.map((ro) => {
+              filteredRos.map((ro) => {
                 const customer = getCustomer(ro.customerId);
                 const jobs = ro.jobs as Array<{ name: string; lineItems: Array<{ unitPrice: number; quantity: number }> }>;
                 const total = jobs.reduce((jobAcc, job) => 
