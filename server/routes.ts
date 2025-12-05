@@ -4738,15 +4738,16 @@ async function runProtractorImport(
                 // Create deferred work record
                 await storage.createDeferredWork({
                   orgId,
+                  locationId: location.id,
                   customerId: customer.id,
                   vehicleId: vehicle.id,
-                  sourceRoId: existing?.id || null,
-                  jobName: jobTitle,
-                  jobDescription,
-                  lineItems,
-                  estimatedTotal: estimatedTotal.toString(),
+                  originalRoId: existing?.id || null,
+                  serviceName: jobTitle,
+                  serviceDescription: jobDescription,
+                  estimatedPrice: estimatedTotal.toString(),
                   status: 'PENDING',
-                  inspectionFinding,
+                  reason: inspectionFinding,
+                  notes: lineItems.length > 0 ? JSON.stringify(lineItems) : null,
                   declinedAt: new Date(deferredPkg.Header?.CreationTime || invoice.InvoiceTime || Date.now()),
                   protractorId: protractorDeferredId,
                 });

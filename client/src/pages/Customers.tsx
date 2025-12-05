@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { useCustomers, useCreateCustomer, useUpdateCustomer, useVehiclesByCustomer } from '@/lib/hooks';
+import { useCustomers, useCreateCustomer, useUpdateCustomer, useVehiclesByCustomer, useDeferredWorkByVehicle, useUpdateDeferredWork } from '@/lib/hooks';
 import { 
   Table, 
   TableBody, 
@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, Phone, Mail, MapPin, Loader2, Pencil, ChevronDown, ChevronRight, Car } from 'lucide-react';
+import { Plus, Search, Phone, Mail, MapPin, Loader2, Pencil, ChevronDown, ChevronRight, Car, AlertTriangle, Wrench, DollarSign, Calendar, CheckCircle, X, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   Dialog,
@@ -24,7 +24,132 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Checkbox } from '@/components/ui/checkbox';
-import type { Customer, Vehicle } from '@shared/schema';
+import { Badge } from '@/components/ui/badge';
+import type { Customer, Vehicle, DeferredWork } from '@shared/schema';
+
+function VehicleDeferredWork({ vehicleId }: { vehicleId: string }) {
+  const { data: deferredWork = [], isLoading } = useDeferredWorkByVehicle(vehicleId);
+  const updateDeferredWork = useUpdateDeferredWork();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const pendingWork = deferredWork.filter((dw: DeferredWork) => dw.status === 'PENDING');
+  
+  if (isLoading || pendingWork.length === 0) {
+    return null;
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'PENDING':
+        return <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+      case 'CONTACTED':
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200"><Phone className="w-3 h-3 mr-1" />Contacted</Badge>;
+      case 'CONVERTED':
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200"><CheckCircle className="w-3 h-3 mr-1" />Converted</Badge>;
+      case 'DISMISSED':
+        return <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200"><X className="w-3 h-3 mr-1" />Dismissed</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const parseLineItems = (notes: string | null): any[] => {
+    if (!notes) return [];
+    try {
+      return JSON.parse(notes);
+    } catch {
+      return [];
+    }
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t border-orange-200">
+      <div className="flex items-center gap-2 mb-2 text-sm font-medium text-orange-700">
+        <AlertTriangle className="w-4 h-4" />
+        Deferred Work ({pendingWork.length})
+      </div>
+      <div className="space-y-2">
+        {pendingWork.map((dw: DeferredWork) => {
+          const lineItems = parseLineItems(dw.notes);
+          return (
+            <div
+              key={dw.id}
+              className="bg-orange-50 border border-orange-200 rounded-md p-3"
+              data-testid={`deferred-work-${dw.id}`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Wrench className="w-4 h-4 text-orange-600" />
+                    <span className="font-medium text-sm">{dw.serviceName}</span>
+                    {getStatusBadge(dw.status)}
+                  </div>
+                  {dw.reason && (
+                    <p className="text-xs text-muted-foreground mt-1 italic">
+                      "{dw.reason}"
+                    </p>
+                  )}
+                  <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <DollarSign className="w-3 h-3" />
+                      ${parseFloat(dw.estimatedPrice || '0').toFixed(2)}
+                    </span>
+                    {dw.declinedAt && (
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        Declined: {format(new Date(dw.declinedAt), 'MMM d, yyyy')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    onClick={() => updateDeferredWork.mutate({ id: dw.id, updates: { status: 'CONTACTED' } })}
+                    data-testid={`btn-contact-${dw.id}`}
+                  >
+                    Mark Contacted
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-7 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                    onClick={() => updateDeferredWork.mutate({ id: dw.id, updates: { status: 'DISMISSED' } })}
+                    data-testid={`btn-dismiss-${dw.id}`}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+              {expandedId === dw.id && lineItems.length > 0 && (
+                <div className="mt-3 pt-2 border-t border-orange-200">
+                  <div className="text-xs font-medium mb-1">Line Items:</div>
+                  <div className="space-y-1">
+                    {lineItems.map((item, idx) => (
+                      <div key={idx} className="flex justify-between text-xs text-muted-foreground">
+                        <span>{item.description}</span>
+                        <span>${parseFloat(item.total || '0').toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <button 
+                className="text-xs text-orange-600 hover:text-orange-700 mt-2"
+                onClick={() => setExpandedId(expandedId === dw.id ? null : dw.id)}
+                data-testid={`btn-expand-${dw.id}`}
+              >
+                {expandedId === dw.id ? 'Hide details' : 'Show details'}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function CustomerVehicles({ customerId }: { customerId: string }) {
   const { data: vehicles = [], isLoading } = useVehiclesByCustomer(customerId);
@@ -56,29 +181,32 @@ function CustomerVehicles({ customerId }: { customerId: string }) {
         {vehicles.map((vehicle: Vehicle) => (
           <div 
             key={vehicle.id} 
-            className="bg-background p-3 rounded-md border flex items-center justify-between"
+            className="bg-background p-3 rounded-md border"
             data-testid={`vehicle-card-${vehicle.id}`}
           >
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                <Car className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <div className="font-medium">
-                  {vehicle.year} {vehicle.make} {vehicle.model}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                  <Car className="w-5 h-5 text-primary" />
                 </div>
-                <div className="text-sm text-muted-foreground flex gap-4">
-                  {vehicle.vin && <span>VIN: {vehicle.vin}</span>}
-                  {vehicle.licensePlate && <span>Plate: {vehicle.licensePlate}</span>}
-                  {vehicle.color && <span>Color: {vehicle.color}</span>}
+                <div>
+                  <div className="font-medium">
+                    {vehicle.year} {vehicle.make} {vehicle.model}
+                  </div>
+                  <div className="text-sm text-muted-foreground flex gap-4">
+                    {vehicle.vin && <span>VIN: {vehicle.vin}</span>}
+                    {vehicle.licensePlate && <span>Plate: {vehicle.licensePlate}</span>}
+                    {vehicle.color && <span>Color: {vehicle.color}</span>}
+                  </div>
                 </div>
               </div>
+              {(vehicle.engineCylinders || vehicle.engineDisplacement) && (
+                <div className="text-sm text-muted-foreground">
+                  {[vehicle.engineCylinders, vehicle.engineDisplacement].filter(Boolean).join(' ')}
+                </div>
+              )}
             </div>
-            {(vehicle.engineCylinders || vehicle.engineDisplacement) && (
-              <div className="text-sm text-muted-foreground">
-                {[vehicle.engineCylinders, vehicle.engineDisplacement].filter(Boolean).join(' ')}
-              </div>
-            )}
+            <VehicleDeferredWork vehicleId={vehicle.id} />
           </div>
         ))}
       </div>

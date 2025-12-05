@@ -4,6 +4,7 @@ import type {
   User,
   Customer,
   Vehicle,
+  DeferredWork,
   Workflow,
   RepairOrder,
   InventoryItem,
@@ -124,6 +125,22 @@ class ApiClient {
 
   async updateVehicle(id: string, updates: Partial<InsertVehicle>): Promise<Vehicle> {
     return this.request(`/api/vehicles/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    });
+  }
+
+  // Deferred Work
+  async getDeferredWorkByVehicle(vehicleId: string): Promise<DeferredWork[]> {
+    return this.request(`/api/deferred-work/vehicle/${vehicleId}`);
+  }
+
+  async getDeferredWorkByCustomer(customerId: string): Promise<DeferredWork[]> {
+    return this.request(`/api/deferred-work/customer/${customerId}`);
+  }
+
+  async updateDeferredWork(id: string, updates: Partial<DeferredWork>): Promise<DeferredWork> {
+    return this.request(`/api/deferred-work/${id}`, {
       method: "PATCH",
       body: JSON.stringify(updates),
     });

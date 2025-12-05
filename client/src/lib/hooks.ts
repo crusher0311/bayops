@@ -3,7 +3,8 @@ import { api } from './api';
 import type { 
   Location, 
   Customer, 
-  Vehicle, 
+  Vehicle,
+  DeferredWork, 
   RepairOrder, 
   Workflow,
   InventoryItem,
@@ -99,6 +100,34 @@ export function useCreateVehicle() {
     mutationFn: (vehicle: InsertVehicle) => api.createVehicle(vehicle),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+    },
+  });
+}
+
+// Deferred Work
+export function useDeferredWorkByVehicle(vehicleId: string) {
+  return useQuery<DeferredWork[]>({
+    queryKey: ['deferred-work', 'vehicle', vehicleId],
+    queryFn: () => api.getDeferredWorkByVehicle(vehicleId),
+    enabled: !!vehicleId,
+  });
+}
+
+export function useDeferredWorkByCustomer(customerId: string) {
+  return useQuery<DeferredWork[]>({
+    queryKey: ['deferred-work', 'customer', customerId],
+    queryFn: () => api.getDeferredWorkByCustomer(customerId),
+    enabled: !!customerId,
+  });
+}
+
+export function useUpdateDeferredWork() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<DeferredWork> }) => 
+      api.updateDeferredWork(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deferred-work'] });
     },
   });
 }
