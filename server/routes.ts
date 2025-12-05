@@ -4648,6 +4648,115 @@ async function runProtractorImport(
                 await storage.createRepairOrder(roData);
               }
             }
+            
+            // Extract and store deferred work from DeferredServicePackages
+            let deferredPackages: any[] = [];
+            const rawDeferred = (invoice as any).DeferredServicePackages;
+            
+            if (Array.isArray(rawDeferred)) {
+              deferredPackages = rawDeferred;
+            } else if (rawDeferred && typeof rawDeferred === 'object') {
+              if (rawDeferred.ItemCollection && Array.isArray(rawDeferred.ItemCollection)) {
+                deferredPackages = rawDeferred.ItemCollection;
+              } else if (rawDeferred.ServicePackage) {
+                deferredPackages = Array.isArray(rawDeferred.ServicePackage) 
+                  ? rawDeferred.ServicePackage 
+                  : [rawDeferred.ServicePackage];
+              } else if (rawDeferred.ID || rawDeferred.Header) {
+                deferredPackages = [rawDeferred];
+              }
+            }
+            
+            for (const deferredPkg of deferredPackages) {
+              try {
+                const protractorDeferredId = deferredPkg.ID || deferredPkg.Header?.ID;
+                if (!protractorDeferredId) continue;
+                
+                // Check if already imported
+                const existingDeferred = await storage.getDeferredWorkByProtractorId(protractorDeferredId);
+                if (existingDeferred) continue;
+                
+                // Extract job name and description
+                const jobTitle = deferredPkg.ServicePackageHeader?.Title || deferredPkg.Title || 'Deferred Service';
+                const jobDescription = deferredPkg.ServicePackageHeader?.Description || deferredPkg.Description || '';
+                
+                // Extract line items for pricing
+                let deferredLines: any[] = [];
+                const rawDeferredLines = deferredPkg.ServicePackageLines || deferredPkg.Lines;
+                if (Array.isArray(rawDeferredLines)) {
+                  deferredLines = rawDeferredLines;
+                } else if (rawDeferredLines?.ItemCollection) {
+                  deferredLines = rawDeferredLines.ItemCollection;
+                }
+                
+                // Calculate totals from line items
+                let laborTotal = 0;
+                let partsTotal = 0;
+                const lineItems: any[] = [];
+                
+                for (const line of deferredLines) {
+                  const lineTotal = parseFloat(line.ExtendedTotal || line.Total || line.Price || 0);
+                  const lineType = line.Type || line.type;
+                  
+                  if (lineType === 'Labor') {
+                    laborTotal += lineTotal;
+                  } else if (lineType === 'Material' || lineType === 'Part') {
+                    partsTotal += lineTotal;
+                  }
+                  
+                  lineItems.push({
+                    type: lineType === 'Labor' ? 'LABOR' : 'PART',
+                    description: line.Description || line.description || '',
+                    quantity: parseFloat(line.Quantity || line.quantity || 1),
+                    unitPrice: parseFloat(line.Price || line.price || 0),
+                    total: lineTotal,
+                    partNumber: line.PartNumber || line.partNumber || null,
+                    manufacturer: line.Manufacturer || line.manufacturer || null,
+                  });
+                }
+                
+                const estimatedTotal = laborTotal + partsTotal;
+                
+                // Get the inspection reference if linked to DVI finding
+                const inspectionReferenceId = deferredPkg.InspectionReferenceID && 
+                  deferredPkg.InspectionReferenceID !== '00000000-0000-0000-0000-000000000000'
+                    ? deferredPkg.InspectionReferenceID : null;
+                
+                // Find the inspection finding note if available
+                let inspectionFinding = null;
+                if (inspectionReferenceId && servicePackages.length > 0) {
+                  for (const pkg of servicePackages) {
+                    const inspLines = pkg.ServicePackageInspectionLines?.ItemCollection || [];
+                    const foundLine = inspLines.find((line: any) => line.ID === inspectionReferenceId);
+                    if (foundLine) {
+                      inspectionFinding = foundLine.Notes || foundLine.Title || null;
+                      break;
+                    }
+                  }
+                }
+                
+                // Create deferred work record
+                await storage.createDeferredWork({
+                  orgId,
+                  customerId: customer.id,
+                  vehicleId: vehicle.id,
+                  sourceRoId: existing?.id || null,
+                  jobName: jobTitle,
+                  jobDescription,
+                  lineItems,
+                  estimatedTotal: estimatedTotal.toString(),
+                  status: 'PENDING',
+                  inspectionFinding,
+                  declinedAt: new Date(deferredPkg.Header?.CreationTime || invoice.InvoiceTime || Date.now()),
+                  protractorId: protractorDeferredId,
+                });
+                
+                console.log(`[Protractor Import ${jobId}] Imported deferred work: ${jobTitle} ($${estimatedTotal.toFixed(2)})`);
+              } catch (deferredErr: any) {
+                console.error(`[Protractor Import ${jobId}] Error importing deferred work: ${deferredErr.message}`);
+              }
+            }
+            
             processedRecords++;
           } catch (err: any) {
             failedRecords++;
