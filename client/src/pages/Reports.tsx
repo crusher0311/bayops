@@ -113,13 +113,15 @@ function ChangeIndicator({ change, suffix = '%' }: { change?: number; suffix?: s
   );
 }
 
-function KPICard({ title, value, subtitle, icon: Icon, change, format: formatType = 'currency' }: {
+function KPICard({ title, value, subtitle, icon: Icon, change, format: formatType = 'currency', onClick, clickable = false }: {
   title: string;
   value: number;
   subtitle?: string;
   icon: any;
   change?: number;
   format?: 'currency' | 'number' | 'percent';
+  onClick?: () => void;
+  clickable?: boolean;
 }) {
   const formattedValue = formatType === 'currency' 
     ? formatCurrency(value) 
@@ -128,7 +130,11 @@ function KPICard({ title, value, subtitle, icon: Icon, change, format: formatTyp
       : formatNumber(value);
   
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card 
+      className={`hover:shadow-md transition-shadow ${clickable ? 'cursor-pointer hover:border-primary/50' : ''}`}
+      onClick={onClick}
+      data-testid={`kpi-card-${title.toLowerCase().replace(/\s+/g, '-')}`}
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
         <Icon className="h-4 w-4 text-muted-foreground" />
@@ -138,10 +144,21 @@ function KPICard({ title, value, subtitle, icon: Icon, change, format: formatTyp
           <div className="text-2xl font-bold">{formattedValue}</div>
           <ChangeIndicator change={change} />
         </div>
-        {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
+        {subtitle && (
+          <p className="text-xs text-muted-foreground mt-1">
+            {subtitle}
+            {clickable && <span className="text-primary ml-1">→ View details</span>}
+          </p>
+        )}
       </CardContent>
     </Card>
   );
+}
+
+interface DrillDownData {
+  metric: string;
+  title: string;
+  data: any[];
 }
 
 export default function Reports() {
@@ -173,9 +190,31 @@ export default function Reports() {
     refetchInterval: 60000,
   });
 
+  const { data: drillDownData, isLoading: drillDownLoading } = useQuery<DrillDownData>({
+    queryKey: ['drilldown', currentLocationId, drillDownType, dateRange],
+    queryFn: async () => {
+      if (!currentLocationId || !drillDownType) return null;
+      const res = await fetch(
+        `/api/reports/drilldown/${currentLocationId}/${drillDownType}?range=${dateRange}`,
+        { credentials: 'include' }
+      );
+      if (!res.ok) throw new Error('Failed to fetch drill-down data');
+      return res.json();
+    },
+    enabled: !!currentLocationId && !!drillDownType,
+  });
+
   const handleExport = async (type: string) => {
     if (!currentLocationId) return;
     window.open(`/api/reports/export/${currentLocationId}?type=${type}&range=${dateRange}`, '_blank');
+  };
+
+  const openDrillDown = (metric: string) => {
+    setDrillDownType(metric);
+  };
+
+  const closeDrillDown = () => {
+    setDrillDownType(null);
   };
 
   const currentLocation = locations.find(l => l.id === currentLocationId);
@@ -292,6 +331,8 @@ export default function Reports() {
                 icon={DollarSign}
                 change={compareEnabled ? analytics.kpis.totalRevenue.change : undefined}
                 subtitle={`${analytics.invoices.paid} paid invoices`}
+                clickable
+                onClick={() => openDrillDown('revenue')}
               />
               <KPICard 
                 title="Average RO" 
@@ -299,6 +340,8 @@ export default function Reports() {
                 icon={TrendingUp}
                 change={compareEnabled ? analytics.kpis.avgRO.change : undefined}
                 subtitle="Average repair order value"
+                clickable
+                onClick={() => openDrillDown('avgro')}
               />
               <KPICard 
                 title="Car Count" 
@@ -307,6 +350,8 @@ export default function Reports() {
                 change={compareEnabled ? analytics.kpis.carCount.change : undefined}
                 format="number"
                 subtitle="Unique vehicles serviced"
+                clickable
+                onClick={() => openDrillDown('carcount')}
               />
               <KPICard 
                 title="Completed ROs" 
@@ -315,6 +360,8 @@ export default function Reports() {
                 change={compareEnabled ? analytics.kpis.completedROs.change : undefined}
                 format="number"
                 subtitle="Repair orders completed"
+                clickable
+                onClick={() => openDrillDown('completedros')}
               />
             </div>
 
@@ -417,7 +464,11 @@ export default function Reports() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card 
+                className="cursor-pointer hover:shadow-md hover:border-amber-500/50 transition-all"
+                onClick={() => openDrillDown('deferred')}
+                data-testid="card-deferred-work"
+              >
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Deferred Work</CardTitle>
                 </CardHeader>
@@ -435,10 +486,15 @@ export default function Reports() {
                       <div className="font-semibold">{analytics.deferredWork.conversionRate.toFixed(1)}%</div>
                     </div>
                   </div>
+                  <p className="text-xs text-amber-600 mt-2">→ View pending items</p>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card 
+                className="cursor-pointer hover:shadow-md hover:border-red-500/50 transition-all"
+                onClick={() => openDrillDown('outstanding')}
+                data-testid="card-outstanding-ar"
+              >
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Outstanding A/R</CardTitle>
                 </CardHeader>
@@ -456,6 +512,7 @@ export default function Reports() {
                       <div className="font-semibold text-red-600">{formatCurrency(analytics.aging.days90)}</div>
                     </div>
                   </div>
+                  <p className="text-xs text-red-600 mt-2">→ View outstanding invoices</p>
                 </CardContent>
               </Card>
             </div>
@@ -819,6 +876,142 @@ export default function Reports() {
           </TabsContent>
         </Tabs>
       )}
+
+      {/* Drill-down Modal */}
+      <Dialog open={!!drillDownType} onOpenChange={() => closeDrillDown()}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>{drillDownData?.title || 'Details'}</DialogTitle>
+            <DialogDescription>
+              Detailed breakdown for the selected metric
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-[60vh]">
+            {drillDownLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : drillDownData && drillDownData.data.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {drillDownType === 'revenue' || drillDownType === 'avgro' ? (
+                      <>
+                        <TableHead>Invoice</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Vehicle</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead>Paid Date</TableHead>
+                      </>
+                    ) : drillDownType === 'carcount' ? (
+                      <>
+                        <TableHead>Vehicle</TableHead>
+                        <TableHead>VIN</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead className="text-right">Visits</TableHead>
+                        <TableHead>Last Visit</TableHead>
+                      </>
+                    ) : drillDownType === 'completedros' ? (
+                      <>
+                        <TableHead>RO #</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Vehicle</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead>Completed</TableHead>
+                      </>
+                    ) : drillDownType === 'outstanding' ? (
+                      <>
+                        <TableHead>Invoice</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead className="text-right">Amount Due</TableHead>
+                        <TableHead>Days Past</TableHead>
+                        <TableHead>Status</TableHead>
+                      </>
+                    ) : drillDownType === 'deferred' ? (
+                      <>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Vehicle</TableHead>
+                        <TableHead className="text-right">Est. Amount</TableHead>
+                        <TableHead>Priority</TableHead>
+                      </>
+                    ) : null}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {drillDownData.data.map((item: any, idx: number) => (
+                    <TableRow key={item.id || idx}>
+                      {drillDownType === 'revenue' || drillDownType === 'avgro' ? (
+                        <>
+                          <TableCell className="font-medium">{item.invoiceNumber}</TableCell>
+                          <TableCell>{item.customer}</TableCell>
+                          <TableCell>{item.vehicle}</TableCell>
+                          <TableCell className="text-right font-medium">{formatCurrency(item.total)}</TableCell>
+                          <TableCell>{item.paidAt ? format(new Date(item.paidAt), 'MMM d, yyyy') : '-'}</TableCell>
+                        </>
+                      ) : drillDownType === 'carcount' ? (
+                        <>
+                          <TableCell className="font-medium">{item.vehicle}</TableCell>
+                          <TableCell className="font-mono text-xs">{item.vin || '-'}</TableCell>
+                          <TableCell>{item.customer}</TableCell>
+                          <TableCell className="text-right font-medium">{item.visits}</TableCell>
+                          <TableCell>{format(new Date(item.lastVisit), 'MMM d, yyyy')}</TableCell>
+                        </>
+                      ) : drillDownType === 'completedros' ? (
+                        <>
+                          <TableCell className="font-medium">{item.roNumber}</TableCell>
+                          <TableCell>{item.customer}</TableCell>
+                          <TableCell>{item.vehicle}</TableCell>
+                          <TableCell className="text-right font-medium">
+                            {item.total !== null ? formatCurrency(item.total) : '-'}
+                          </TableCell>
+                          <TableCell>{format(new Date(item.completedAt), 'MMM d, yyyy')}</TableCell>
+                        </>
+                      ) : drillDownType === 'outstanding' ? (
+                        <>
+                          <TableCell className="font-medium">{item.invoiceNumber}</TableCell>
+                          <TableCell>{item.customer}</TableCell>
+                          <TableCell className="text-right font-medium">{formatCurrency(item.amountDue)}</TableCell>
+                          <TableCell>
+                            <Badge variant={item.daysPast > 90 ? 'destructive' : item.daysPast > 30 ? 'secondary' : 'outline'}>
+                              {item.daysPast} days
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{item.status}</TableCell>
+                        </>
+                      ) : drillDownType === 'deferred' ? (
+                        <>
+                          <TableCell className="font-medium max-w-[200px] truncate">{item.description}</TableCell>
+                          <TableCell>{item.customer}</TableCell>
+                          <TableCell>{item.vehicle}</TableCell>
+                          <TableCell className="text-right font-medium">{formatCurrency(item.estimatedAmount)}</TableCell>
+                          <TableCell>
+                            <Badge variant={item.priority === 'HIGH' ? 'destructive' : item.priority === 'MEDIUM' ? 'secondary' : 'outline'}>
+                              {item.priority}
+                            </Badge>
+                          </TableCell>
+                        </>
+                      ) : null}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="py-10 text-center text-muted-foreground">
+                No data available
+              </div>
+            )}
+          </ScrollArea>
+          <div className="flex justify-between items-center pt-4 border-t">
+            <div className="text-sm text-muted-foreground">
+              {drillDownData?.data.length || 0} records
+            </div>
+            <Button variant="outline" onClick={closeDrillDown}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

@@ -3276,6 +3276,164 @@ export async function registerRoutes(
     }
   });
 
+  // Drill-down data for reports
+  app.get("/api/reports/drilldown/:locationId/:metric", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const metric = req.params.metric;
+      const dateRange = req.query.range as string || 'month';
+      const now = new Date();
+      
+      let startDate: Date;
+      if (dateRange === 'today') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      } else if (dateRange === 'week') {
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      } else if (dateRange === 'month') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      } else if (dateRange === 'quarter') {
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        startDate = new Date(now.getFullYear(), currentQuarter * 3, 1);
+      } else if (dateRange === 'year') {
+        startDate = new Date(now.getFullYear(), 0, 1);
+      } else if (dateRange === 'last30') {
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      } else if (dateRange === 'last90') {
+        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      } else {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      }
+
+      const ros = await storage.getRepairOrdersByLocation(req.params.locationId);
+      const invoices = await storage.getInvoicesByLocation(req.params.locationId);
+      const customers = await storage.getCustomersByOrg(req.user!.orgId);
+      const vehicles = await storage.getVehiclesByOrg(req.user!.orgId);
+
+      if (metric === 'revenue' || metric === 'avgro') {
+        const paidInvoices = invoices
+          .filter(i => i.status === 'PAID' && new Date(i.createdAt) >= startDate)
+          .sort((a, b) => new Date(b.paidAt || b.createdAt).getTime() - new Date(a.paidAt || a.createdAt).getTime());
+        
+        const data = paidInvoices.map(inv => {
+          const customer = customers.find(c => c.id === inv.customerId);
+          const ro = ros.find(r => r.id === inv.repairOrderId);
+          const vehicle = vehicles.find(v => v.id === ro?.vehicleId);
+          return {
+            id: inv.id,
+            invoiceNumber: inv.invoiceNumber,
+            customer: customer ? `${customer.firstName} ${customer.lastName}` : 'Unknown',
+            vehicle: vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'N/A',
+            total: parseFloat(inv.total),
+            paidAt: inv.paidAt,
+          };
+        });
+        
+        res.json({ metric, title: metric === 'revenue' ? 'Revenue Details' : 'Average RO Details', data });
+      } else if (metric === 'carcount') {
+        const filteredRos = ros
+          .filter(ro => {
+            const d = ro.completedAt ? new Date(ro.completedAt) : new Date(ro.createdAt);
+            return d >= startDate;
+          })
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        
+        const vehicleMap = new Map<string, { vehicle: any; count: number; ros: any[] }>();
+        for (const ro of filteredRos) {
+          const vehicle = vehicles.find(v => v.id === ro.vehicleId);
+          if (vehicle) {
+            const existing = vehicleMap.get(vehicle.id) || { vehicle, count: 0, ros: [] };
+            existing.count++;
+            existing.ros.push(ro);
+            vehicleMap.set(vehicle.id, existing);
+          }
+        }
+        
+        const data = Array.from(vehicleMap.values()).map(({ vehicle, count, ros: vRos }) => {
+          const customer = customers.find(c => c.id === vehicle.customerId);
+          return {
+            id: vehicle.id,
+            vehicle: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+            vin: vehicle.vin,
+            customer: customer ? `${customer.firstName} ${customer.lastName}` : 'Unknown',
+            visits: count,
+            lastVisit: vRos[0].createdAt,
+          };
+        });
+        
+        res.json({ metric, title: 'Vehicles Serviced', data });
+      } else if (metric === 'completedros') {
+        const completed = ros
+          .filter(ro => ro.completedAt && new Date(ro.completedAt) >= startDate)
+          .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime());
+        
+        const data = completed.map(ro => {
+          const customer = customers.find(c => c.id === ro.customerId);
+          const vehicle = vehicles.find(v => v.id === ro.vehicleId);
+          const invoice = invoices.find(i => i.repairOrderId === ro.id);
+          return {
+            id: ro.id,
+            roNumber: ro.roNumber,
+            customer: customer ? `${customer.firstName} ${customer.lastName}` : 'Unknown',
+            vehicle: vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'N/A',
+            completedAt: ro.completedAt,
+            total: invoice ? parseFloat(invoice.total) : null,
+          };
+        });
+        
+        res.json({ metric, title: 'Completed Repair Orders', data });
+      } else if (metric === 'outstanding') {
+        const outstanding = invoices
+          .filter(i => i.status !== 'PAID' && i.status !== 'VOID')
+          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        
+        const data = outstanding.map(inv => {
+          const customer = customers.find(c => c.id === inv.customerId);
+          const daysPast = Math.floor((now.getTime() - new Date(inv.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+          return {
+            id: inv.id,
+            invoiceNumber: inv.invoiceNumber,
+            customer: customer ? `${customer.firstName} ${customer.lastName}` : 'Unknown',
+            amountDue: parseFloat(inv.amountDue),
+            createdAt: inv.createdAt,
+            daysPast,
+            status: inv.status,
+          };
+        });
+        
+        res.json({ metric, title: 'Outstanding Invoices', data });
+      } else if (metric === 'deferred') {
+        const deferredWork = await storage.getDeferredWorkByOrg(req.user!.orgId);
+        const pending = deferredWork
+          .filter(d => d.locationId === req.params.locationId && (d.status === 'PENDING' || d.status === 'QUOTED'))
+          .sort((a, b) => parseFloat(b.estimatedAmount || '0') - parseFloat(a.estimatedAmount || '0'));
+        
+        const data = pending.map(d => {
+          const customer = customers.find(c => c.id === d.customerId);
+          const vehicle = vehicles.find(v => v.id === d.vehicleId);
+          return {
+            id: d.id,
+            description: d.description,
+            customer: customer ? `${customer.firstName} ${customer.lastName}` : 'Unknown',
+            vehicle: vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'N/A',
+            estimatedAmount: parseFloat(d.estimatedAmount || '0'),
+            priority: d.priority,
+            status: d.status,
+          };
+        });
+        
+        res.json({ metric, title: 'Pending Deferred Work', data });
+      } else {
+        res.status(400).json({ message: 'Unknown metric type' });
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ============================================
   // VIN Decode (NHTSA - Free, no API key required)
   // ============================================
