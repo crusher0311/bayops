@@ -331,9 +331,24 @@ export class ProtractorClient {
     return result.ItemCollection || result.Invoices || [];
   }
 
-  // Get invoice by ID
+  // Get invoice by ID - returns full details with ContactID and ServiceItemID
   async getInvoice(id: string, locationId?: string): Promise<ProtractorInvoice> {
-    return this.request<ProtractorInvoice>(`/Invoice/${id}`, {}, locationId);
+    const result = await this.request<any>(`/Invoice/${id}`, {}, locationId);
+    
+    // Handle various response formats - Protractor may wrap in ItemCollection or return directly
+    if (result.ItemCollection && Array.isArray(result.ItemCollection) && result.ItemCollection.length > 0) {
+      return result.ItemCollection[0];
+    }
+    if (result.Invoice) {
+      return result.Invoice;
+    }
+    // Direct return if the response is the invoice itself
+    if (result.ID || result.Header?.ID) {
+      return result;
+    }
+    
+    console.log(`[Protractor API] getInvoice unexpected response structure:`, JSON.stringify(result, null, 2).substring(0, 2000));
+    return result;
   }
 
   // Get employees (technicians and service advisors)

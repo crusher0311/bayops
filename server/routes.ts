@@ -4337,9 +4337,15 @@ async function runProtractorImport(
               const fullInvoice = await client.getInvoice(listInvoice.ID);
               invoice = fullInvoice;
               
-              // Log first detailed invoice for debugging
+              // Log first detailed invoice for debugging - show ALL fields
               if (processedRecords === 0 && failedRecords === 0) {
-                console.log(`[Protractor Import ${jobId}] FIRST FULL INVOICE: ContactID=${invoice.ContactID}, ServiceItemID=${invoice.ServiceItemID}`);
+                console.log(`[Protractor Import ${jobId}] FIRST FULL INVOICE FIELDS: ${Object.keys(invoice).join(', ')}`);
+                console.log(`[Protractor Import ${jobId}] FIRST FULL INVOICE DATA: ${JSON.stringify(invoice, null, 2)}`);
+                // Check for various possible field name patterns
+                const possibleContactFields = ['ContactID', 'contactId', 'ContactId', 'contact_id', 'Contact', 'customerId', 'CustomerID', 'Owner', 'OwnerID'];
+                const possibleVehicleFields = ['ServiceItemID', 'serviceItemId', 'ServiceItemId', 'service_item_id', 'ServiceItem', 'vehicleId', 'VehicleID', 'Vehicle'];
+                console.log(`[Protractor Import ${jobId}] Contact field check: ${possibleContactFields.map(f => `${f}=${(invoice as any)[f]}`).join(', ')}`);
+                console.log(`[Protractor Import ${jobId}] Vehicle field check: ${possibleVehicleFields.map(f => `${f}=${(invoice as any)[f]}`).join(', ')}`);
               }
             } catch (e: any) {
               console.log(`[Protractor Import ${jobId}] Could not fetch invoice detail for ${listInvoice.ID}: ${e.message}`);
