@@ -672,12 +672,12 @@ export default function RepairOrderDetail() {
   });
 
   const sendAuthorizationMutation = useMutation({
-    mutationFn: async (method: 'sms' | 'email') => {
+    mutationFn: async ({ method, recipient }: { method: 'sms' | 'email'; recipient: string }) => {
       const res = await fetch(`/api/repair-orders/${roId}/send-authorization`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ method }),
+        body: JSON.stringify({ method, recipient }),
       });
       if (!res.ok) {
         const error = await res.json();
@@ -685,7 +685,7 @@ export default function RepairOrderDetail() {
       }
       return res.json();
     },
-    onSuccess: (_, method) => {
+    onSuccess: (_, { method }) => {
       queryClient.invalidateQueries({ queryKey: ['repair-order', roId] });
       toast({ 
         title: 'Authorization Request Sent!', 
@@ -703,6 +703,16 @@ export default function RepairOrderDetail() {
   });
 
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [sendPhone, setSendPhone] = useState('');
+  const [sendEmail, setSendEmail] = useState('');
+
+  // Initialize send phone/email when customer loads
+  useEffect(() => {
+    if (customer) {
+      setSendPhone(customer.phone || '');
+      setSendEmail(customer.email || '');
+    }
+  }, [customer]);
 
   const deleteInspectionMutation = useMutation({
     mutationFn: async (inspectionId: string) => {
@@ -1437,56 +1447,78 @@ export default function RepairOrderDetail() {
                   <Send className="w-4 h-4" /> Send to Customer
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[400px]">
+              <DialogContent className="sm:max-w-[450px]">
                 <DialogHeader>
                   <DialogTitle>Send Authorization Request</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
+                <div className="space-y-5 py-4">
                   <p className="text-sm text-muted-foreground">
                     Send the service authorization request to the customer so they can review and approve the recommended work.
                   </p>
-                  <div className="space-y-2">
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start gap-3 h-14"
-                      onClick={() => sendAuthorizationMutation.mutate('sms')}
-                      disabled={!customer?.phone || sendAuthorizationMutation.isPending}
-                      data-testid="button-send-sms"
-                    >
-                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-100">
-                        <Send className="w-5 h-5 text-green-600" />
-                      </div>
-                      <div className="text-left">
-                        <div className="font-medium">Text Message (SMS)</div>
-                        <div className="text-xs text-muted-foreground">
-                          {customer?.phone || 'No phone number'}
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-100">
+                          <Send className="w-3 h-3 text-green-600" />
                         </div>
+                        Text Message (SMS)
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="tel"
+                          placeholder="(555) 123-4567"
+                          value={sendPhone}
+                          onChange={(e) => setSendPhone(e.target.value)}
+                          className="flex-1"
+                          data-testid="input-send-phone"
+                        />
+                        <Button
+                          onClick={() => sendAuthorizationMutation.mutate({ method: 'sms', recipient: sendPhone })}
+                          disabled={!sendPhone || sendAuthorizationMutation.isPending}
+                          data-testid="button-send-sms"
+                        >
+                          {sendAuthorizationMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            'Send'
+                          )}
+                        </Button>
                       </div>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start gap-3 h-14"
-                      onClick={() => sendAuthorizationMutation.mutate('email')}
-                      disabled={!customer?.email || sendAuthorizationMutation.isPending}
-                      data-testid="button-send-email"
-                    >
-                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100">
-                        <FileText className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div className="text-left">
-                        <div className="font-medium">Email</div>
-                        <div className="text-xs text-muted-foreground">
-                          {customer?.email || 'No email address'}
-                        </div>
-                      </div>
-                    </Button>
-                  </div>
-                  {sendAuthorizationMutation.isPending && (
-                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Sending...
                     </div>
-                  )}
+
+                    <Separator />
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100">
+                          <FileText className="w-3 h-3 text-blue-600" />
+                        </div>
+                        Email
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="email"
+                          placeholder="customer@email.com"
+                          value={sendEmail}
+                          onChange={(e) => setSendEmail(e.target.value)}
+                          className="flex-1"
+                          data-testid="input-send-email"
+                        />
+                        <Button
+                          onClick={() => sendAuthorizationMutation.mutate({ method: 'email', recipient: sendEmail })}
+                          disabled={!sendEmail || sendAuthorizationMutation.isPending}
+                          data-testid="button-send-email"
+                        >
+                          {sendAuthorizationMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            'Send'
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </DialogContent>
             </Dialog>

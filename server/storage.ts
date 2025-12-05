@@ -136,6 +136,12 @@ import {
   type InsertProtractorImportJob,
   type ServiceQueueEntry,
   type InsertServiceQueueEntry,
+  conversations,
+  messages,
+  type Conversation,
+  type InsertConversation,
+  type Message,
+  type InsertMessage,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray, desc, sql } from "drizzle-orm";
@@ -430,6 +436,20 @@ export interface IStorage {
   updateServiceQueueEntry(id: string, updates: Partial<InsertServiceQueueEntry>): Promise<ServiceQueueEntry | undefined>;
   deleteServiceQueueEntry(id: string): Promise<boolean>;
   getNextQueuePosition(locationId: string): Promise<number>;
+
+  // ==========================================
+  // MESSAGING
+  // ==========================================
+  getConversationsByLocation(locationId: string, orgId: string): Promise<Conversation[]>;
+  getConversationByCustomer(customerId: string, orgId: string): Promise<Conversation | undefined>;
+  getConversation(id: string, orgId: string): Promise<Conversation | undefined>;
+  createConversation(conversation: InsertConversation): Promise<Conversation>;
+  updateConversation(id: string, orgId: string, updates: Partial<InsertConversation>): Promise<Conversation | undefined>;
+  
+  getMessagesByConversation(conversationId: string): Promise<Message[]>;
+  createMessage(message: InsertMessage): Promise<Message>;
+  updateMessage(id: string, updates: Partial<InsertMessage>): Promise<Message | undefined>;
+  markConversationAsRead(conversationId: string, orgId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1851,6 +1871,109 @@ export class DatabaseStorage implements IStorage {
         eq(repairOrders.protractorId, protractorId)
       ));
     return ro || undefined;
+  }
+
+  // ==========================================
+  // MESSAGING
+  // ==========================================
+  
+  async getConversationsByLocation(locationId: string, orgId: string): Promise<Conversation[]> {
+    return db.select().from(conversations)
+      .where(and(
+        eq(conversations.locationId, locationId),
+        eq(conversations.orgId, orgId),
+        eq(conversations.isArchived, false)
+      ))
+      .orderBy(desc(conversations.lastMessageAt));
+  }
+
+  async getConversationByCustomer(customerId: string, orgId: string): Promise<Conversation | undefined> {
+    const [conversation] = await db.select().from(conversations)
+      .where(and(
+        eq(conversations.customerId, customerId),
+        eq(conversations.orgId, orgId)
+      ));
+    return conversation || undefined;
+  }
+
+  async getConversation(id: string, orgId: string): Promise<Conversation | undefined> {
+    const [conversation] = await db.select().from(conversations)
+      .where(and(
+        eq(conversations.id, id),
+        eq(conversations.orgId, orgId)
+      ));
+    return conversation || undefined;
+  }
+
+  async createConversation(conversation: InsertConversation): Promise<Conversation> {
+    const [created] = await db.insert(conversations).values(conversation).returning();
+    return created;
+  }
+
+  async updateConversation(id: string, orgId: string, updates: Partial<InsertConversation>): Promise<Conversation | undefined> {
+    const [updated] = await db.update(conversations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(
+        eq(conversations.id, id),
+        eq(conversations.orgId, orgId)
+      ))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getMessagesByConversation(conversationId: string): Promise<Message[]> {
+    return db.select().from(messages)
+      .where(eq(messages.conversationId, conversationId))
+      .orderBy(messages.createdAt);
+  }
+
+  async createMessage(message: InsertMessage): Promise<Message> {
+    const [created] = await db.insert(messages).values(message).returning();
+    
+    // Update conversation's last message time and unread count
+    if (message.direction === 'INBOUND') {
+      await db.update(conversations)
+        .set({
+          lastMessageAt: new Date(),
+          unreadCount: sql`${conversations.unreadCount} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(eq(conversations.id, message.conversationId));
+    } else {
+      await db.update(conversations)
+        .set({
+          lastMessageAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(conversations.id, message.conversationId));
+    }
+    
+    return created;
+  }
+
+  async updateMessage(id: string, updates: Partial<InsertMessage>): Promise<Message | undefined> {
+    const [updated] = await db.update(messages)
+      .set(updates)
+      .where(eq(messages.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async markConversationAsRead(conversationId: string, orgId: string): Promise<void> {
+    await db.update(conversations)
+      .set({ unreadCount: 0, updatedAt: new Date() })
+      .where(and(
+        eq(conversations.id, conversationId),
+        eq(conversations.orgId, orgId)
+      ));
+    
+    // Mark all unread messages as read
+    await db.update(messages)
+      .set({ readAt: new Date(), status: 'READ' })
+      .where(and(
+        eq(messages.conversationId, conversationId),
+        sql`${messages.readAt} IS NULL`
+      ));
   }
 }
 

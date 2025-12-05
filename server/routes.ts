@@ -3433,7 +3433,7 @@ export async function registerRoutes(
         });
       }
 
-      const { method } = req.body;
+      const { method, recipient } = req.body;
       const baseUrl = `${req.protocol}://${req.get('host')}`;
       const authUrl = `${baseUrl}/authorize/${authToken}`;
       const vehicleInfo = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'your vehicle';
@@ -3441,10 +3441,14 @@ export async function registerRoutes(
 
       let sendResult;
       
-      if (method === 'sms' && customer.phone) {
+      // Use the provided recipient or fall back to customer's default
+      const smsRecipient = recipient || customer.phone;
+      const emailRecipient = recipient || customer.email;
+      
+      if (method === 'sms' && smsRecipient) {
         const message = `Hi ${customer.firstName}! Please review and authorize the recommended services for your ${vehicleInfo}. View here: ${authUrl} - ${shopName}`;
-        sendResult = await sendSMS({ to: customer.phone, message });
-      } else if (method === 'email' && customer.email) {
+        sendResult = await sendSMS({ to: smsRecipient, message });
+      } else if (method === 'email' && emailRecipient) {
         const subject = `Service Authorization Required - ${vehicleInfo}`;
         const html = `
 <!DOCTYPE html>
@@ -3494,7 +3498,7 @@ export async function registerRoutes(
   </table>
 </body>
 </html>`.trim();
-        sendResult = await sendEmail({ to: customer.email, subject, html });
+        sendResult = await sendEmail({ to: emailRecipient, subject, html });
       } else {
         return res.status(400).json({ message: "Invalid method or missing contact info" });
       }
@@ -4234,6 +4238,9 @@ export async function registerRoutes(
     }
   });
 
+  // Register messaging routes
+  setupMessagingRoutes(app);
+
   return httpServer;
 }
 
@@ -4951,4 +4958,179 @@ async function runProtractorImport(
       lastError: error.message,
     });
   }
+}
+
+// ==========================================
+// MESSAGING ROUTES (called from registerRoutes)
+// ==========================================
+
+function setupMessagingRoutes(app: Express) {
+  // Get all conversations for a location
+  app.get("/api/conversations", requireAuth, async (req, res) => {
+    try {
+      const locationId = req.query.locationId as string;
+      if (!locationId) {
+        return res.status(400).json({ message: "Location ID required" });
+      }
+      
+      const conversationsData = await storage.getConversationsByLocation(locationId, req.user!.orgId);
+      
+      // Enrich with customer data
+      const enriched = await Promise.all(conversationsData.map(async (conv) => {
+        const customer = await storage.getCustomerById(conv.customerId);
+        return { ...conv, customer };
+      }));
+      
+      res.json(enriched);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get or create conversation for a customer
+  app.post("/api/conversations", requireAuth, async (req, res) => {
+    try {
+      const { customerId, locationId, phoneNumber, email } = req.body;
+      
+      // Check if conversation exists
+      let conversation = await storage.getConversationByCustomer(customerId, req.user!.orgId);
+      
+      if (!conversation) {
+        conversation = await storage.createConversation({
+          orgId: req.user!.orgId,
+          locationId,
+          customerId,
+          phoneNumber,
+          email,
+        });
+      }
+      
+      // Enrich with customer data
+      const customer = await storage.getCustomerById(conversation.customerId);
+      
+      res.json({ ...conversation, customer });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get conversation with messages
+  app.get("/api/conversations/:id", requireAuth, async (req, res) => {
+    try {
+      const conversation = await storage.getConversation(req.params.id, req.user!.orgId);
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      const messagesData = await storage.getMessagesByConversation(req.params.id);
+      const customer = await storage.getCustomerById(conversation.customerId);
+      
+      res.json({ ...conversation, messages: messagesData, customer });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Mark conversation as read
+  app.post("/api/conversations/:id/read", requireAuth, async (req, res) => {
+    try {
+      await storage.markConversationAsRead(req.params.id, req.user!.orgId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Send a message (SMS or email)
+  app.post("/api/conversations/:id/messages", requireAuth, async (req, res) => {
+    try {
+      const { content, channel, toNumber, toEmail } = req.body;
+      const conversation = await storage.getConversation(req.params.id, req.user!.orgId);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+
+      const customer = await storage.getCustomerById(conversation.customerId);
+      const location = await storage.getLocation(conversation.locationId);
+      
+      // Create the message record
+      const message = await storage.createMessage({
+        conversationId: req.params.id,
+        orgId: req.user!.orgId,
+        direction: 'OUTBOUND',
+        channel,
+        status: 'PENDING',
+        content,
+        toNumber: channel === 'SMS' ? (toNumber || conversation.phoneNumber) : null,
+        toEmail: channel === 'EMAIL' ? (toEmail || conversation.email) : null,
+        fromNumber: channel === 'SMS' ? process.env.TWILIO_PHONE_NUMBER : null,
+        fromEmail: channel === 'EMAIL' ? (location?.email || 'noreply@bayops.com') : null,
+        sentByUserId: req.user!.id,
+      });
+
+      // Send the message
+      let sendResult;
+      if (channel === 'SMS') {
+        const recipient = toNumber || conversation.phoneNumber;
+        if (!recipient) {
+          await storage.updateMessage(message.id, { status: 'FAILED', errorMessage: 'No phone number' });
+          return res.status(400).json({ message: "No phone number available" });
+        }
+        sendResult = await sendSMS({ to: recipient, message: content });
+      } else if (channel === 'EMAIL') {
+        const recipient = toEmail || conversation.email;
+        if (!recipient) {
+          await storage.updateMessage(message.id, { status: 'FAILED', errorMessage: 'No email address' });
+          return res.status(400).json({ message: "No email address available" });
+        }
+        const shopName = location?.name || 'Your Shop';
+        sendResult = await sendEmail({
+          to: recipient,
+          subject: `Message from ${shopName}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background: #1e40af; color: white; padding: 20px;">
+                <h1 style="margin: 0; font-size: 20px;">${shopName}</h1>
+              </div>
+              <div style="padding: 20px; background: #ffffff;">
+                <p style="margin: 0 0 10px;">Hi ${customer?.firstName || 'Valued Customer'},</p>
+                <p style="margin: 0; white-space: pre-wrap;">${content}</p>
+              </div>
+              <div style="padding: 15px; background: #f4f4f5; text-align: center; font-size: 12px; color: #71717a;">
+                This message was sent by ${shopName}
+              </div>
+            </div>
+          `,
+        });
+      }
+
+      if (sendResult?.success) {
+        await storage.updateMessage(message.id, {
+          status: 'SENT',
+          externalId: sendResult.messageId,
+          sentAt: new Date(),
+        });
+        res.json({ success: true, message: { ...message, status: 'SENT' } });
+      } else {
+        await storage.updateMessage(message.id, {
+          status: 'FAILED',
+          errorMessage: sendResult?.error || 'Failed to send',
+        });
+        res.status(500).json({ message: sendResult?.error || 'Failed to send message' });
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Archive a conversation
+  app.post("/api/conversations/:id/archive", requireAuth, async (req, res) => {
+    try {
+      await storage.updateConversation(req.params.id, req.user!.orgId, { isArchived: true });
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 }

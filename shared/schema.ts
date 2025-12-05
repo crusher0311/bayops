@@ -1932,3 +1932,104 @@ export type InsertProtractorConnection = z.infer<typeof insertProtractorConnecti
 
 export type ProtractorImportJob = typeof protractorImportJobs.$inferSelect;
 export type InsertProtractorImportJob = z.infer<typeof insertProtractorImportJobSchema>;
+
+// =======================
+// MESSAGING SYSTEM
+// =======================
+
+export const messageDirectionEnum = pgEnum('message_direction', ['INBOUND', 'OUTBOUND']);
+export const messageStatusEnum = pgEnum('message_status', ['PENDING', 'SENT', 'DELIVERED', 'FAILED', 'READ']);
+export const messageChannelEnum = pgEnum('message_channel', ['SMS', 'EMAIL']);
+
+// Conversations - group messages by customer
+export const conversations = pgTable("conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  customerId: varchar("customer_id").notNull().references(() => customers.id, { onDelete: 'cascade' }),
+  repairOrderId: varchar("repair_order_id").references(() => repairOrders.id),
+  phoneNumber: text("phone_number"),
+  email: text("email"),
+  lastMessageAt: timestamp("last_message_at"),
+  unreadCount: integer("unread_count").notNull().default(0),
+  isArchived: boolean("is_archived").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const conversationsRelations = relations(conversations, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [conversations.orgId],
+    references: [organizations.id],
+  }),
+  location: one(locations, {
+    fields: [conversations.locationId],
+    references: [locations.id],
+  }),
+  customer: one(customers, {
+    fields: [conversations.customerId],
+    references: [customers.id],
+  }),
+  repairOrder: one(repairOrders, {
+    fields: [conversations.repairOrderId],
+    references: [repairOrders.id],
+  }),
+  messages: many(messages),
+}));
+
+// Messages
+export const messages = pgTable("messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id").notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  direction: messageDirectionEnum("direction").notNull(),
+  channel: messageChannelEnum("channel").notNull(),
+  status: messageStatusEnum("status").notNull().default('PENDING'),
+  content: text("content").notNull(),
+  fromNumber: text("from_number"),
+  toNumber: text("to_number"),
+  fromEmail: text("from_email"),
+  toEmail: text("to_email"),
+  externalId: text("external_id"),
+  errorMessage: text("error_message"),
+  sentAt: timestamp("sent_at"),
+  deliveredAt: timestamp("delivered_at"),
+  readAt: timestamp("read_at"),
+  sentByUserId: varchar("sent_by_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+  conversation: one(conversations, {
+    fields: [messages.conversationId],
+    references: [conversations.id],
+  }),
+  organization: one(organizations, {
+    fields: [messages.orgId],
+    references: [organizations.id],
+  }),
+  sentByUser: one(users, {
+    fields: [messages.sentByUserId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas for messaging
+export const insertConversationSchema = createInsertSchema(conversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  unreadCount: true,
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for messaging
+export type Conversation = typeof conversations.$inferSelect;
+export type InsertConversation = z.infer<typeof insertConversationSchema>;
+
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
