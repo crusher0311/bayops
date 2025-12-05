@@ -22,6 +22,27 @@ Key architectural decisions include:
 - **Inventory Management**: Full CRUD for inventory items, stock adjustments (receive, adjust, count, return, transfer), low stock alerts, reorder points, inventory valuation, stock transactions audit trail, vendor part numbers, and bin locations.
 - **Operational Workflows**: Includes dedicated modules for Appointments & Scheduling (service bay management), Parts Ordering (vendor management, order status workflows), Technician Time Tracking (clock in/out, breaks, job assignment), Invoicing (generation from ROs, payment recording), and a Reporting Dashboard (revenue, productivity, parts analytics).
 
+## Database Refactor Status (December 2025)
+The database is undergoing a three-phase refactor for enterprise-grade normalized architecture:
+
+**Phase 0 (COMPLETE)**:
+- Added `legacy_system` and `legacy_id` columns to customers, vehicles, repair_orders, deferred_work tables
+- Added `home_location_id` to customers and vehicles tables
+- Added `org_id` to vehicles table (nullable for backfill compatibility)
+- Added `legacy_invoice_number` to repair_orders
+- Backfilled legacy fields from protractor_id (1387 customers, 1784 vehicles, 1045 repair_orders)
+
+**Phase 1 (COMPLETE - Schema Ready)**:
+- Created normalized `ro_jobs` table (replaces jobs JSONB in repair_orders) with org_id, location_id, chapter/code/title, is_deferred
+- Created normalized `ro_job_lines` table (replaces lineItems in jobs JSONB)
+- Added SUBLET to line_item_type enum
+- Tables include legacy_system and legacy_id for import tracking
+
+**Phase 2 (PENDING)**:
+- Implement dual-write to both JSONB and normalized tables
+- Backfill normalized tables from existing JSONB data
+- Remove JSONB columns after verification
+
 ## External Dependencies
 - **OpenAI**: Integrated via Replit AI for AI Service Writer functionalities (no separate API key required).
 - **Geoapify**: Used for address autocomplete (`GEOAPIFY_API_KEY`).

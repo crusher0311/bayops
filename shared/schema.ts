@@ -18,7 +18,7 @@ import { z } from "zod";
 export const roleEnum = pgEnum('role', ['OWNER', 'MANAGER', 'ADVISOR', 'TECHNICIAN']);
 export const subscriptionStatusEnum = pgEnum('subscription_status', ['ACTIVE', 'PAST_DUE', 'CANCELED']);
 export const subscriptionPlanEnum = pgEnum('subscription_plan', ['STARTER', 'GROWTH', 'ENTERPRISE']);
-export const lineItemTypeEnum = pgEnum('line_item_type', ['LABOR', 'PART', 'TIRE', 'FEE']);
+export const lineItemTypeEnum = pgEnum('line_item_type', ['LABOR', 'PART', 'TIRE', 'FEE', 'SUBLET']);
 export const inventoryTypeEnum = pgEnum('inventory_type', ['TIRE', 'PART', 'OTHER']);
 export const tireCategoryEnum = pgEnum('tire_category', ['ALL_SEASON', 'WINTER', 'PERFORMANCE', 'LT', 'AT']);
 export const inspectionStatusEnum = pgEnum('inspection_status', ['GREEN', 'YELLOW', 'RED']);
@@ -111,6 +111,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
 export const customers = pgTable("customers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  homeLocationId: varchar("home_location_id").references(() => locations.id, { onDelete: 'set null' }),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull(),
@@ -127,6 +128,8 @@ export const customers = pgTable("customers", {
   pricingTierId: varchar("pricing_tier_id"),
   accountNumber: text("account_number"),
   notes: text("notes"),
+  legacySystem: text("legacy_system"),
+  legacyId: text("legacy_id"),
   protractorId: varchar("protractor_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -136,12 +139,18 @@ export const customersRelations = relations(customers, ({ one, many }) => ({
     fields: [customers.orgId],
     references: [organizations.id],
   }),
+  homeLocation: one(locations, {
+    fields: [customers.homeLocationId],
+    references: [locations.id],
+  }),
   vehicles: many(vehicles),
 }));
 
 // Vehicles
 export const vehicles = pgTable("vehicles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: varchar("org_id").references(() => organizations.id, { onDelete: 'cascade' }),
+  homeLocationId: varchar("home_location_id").references(() => locations.id, { onDelete: 'set null' }),
   customerId: varchar("customer_id").notNull().references(() => customers.id, { onDelete: 'cascade' }),
   vin: text("vin").notNull(),
   year: integer("year").notNull(),
@@ -161,11 +170,21 @@ export const vehicles = pgTable("vehicles", {
   tireSizeFront: text("tire_size_front"),
   tireSizeRear: text("tire_size_rear"),
   notes: text("notes"),
+  legacySystem: text("legacy_system"),
+  legacyId: text("legacy_id"),
   protractorId: varchar("protractor_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const vehiclesRelations = relations(vehicles, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [vehicles.orgId],
+    references: [organizations.id],
+  }),
+  homeLocation: one(locations, {
+    fields: [vehicles.homeLocationId],
+    references: [locations.id],
+  }),
   customer: one(customers, {
     fields: [vehicles.customerId],
     references: [customers.id],
@@ -181,7 +200,7 @@ export const deferredWorkStatusEnum = pgEnum('deferred_work_status', ['PENDING',
 export const deferredWork = pgTable("deferred_work", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
-  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  locationId: varchar("location_id").references(() => locations.id, { onDelete: 'cascade' }),
   vehicleId: varchar("vehicle_id").notNull().references(() => vehicles.id, { onDelete: 'cascade' }),
   customerId: varchar("customer_id").notNull().references(() => customers.id, { onDelete: 'cascade' }),
   originalRoId: varchar("original_ro_id").references(() => repairOrders.id, { onDelete: 'set null' }),
@@ -196,6 +215,8 @@ export const deferredWork = pgTable("deferred_work", {
   followUpDate: timestamp("follow_up_date"),
   contactedAt: timestamp("contacted_at"),
   convertedRoId: varchar("converted_ro_id"),
+  legacySystem: text("legacy_system"),
+  legacyId: text("legacy_id"),
   protractorId: varchar("protractor_id"),
   protractorInvoiceId: varchar("protractor_invoice_id"),
   declinedAt: timestamp("declined_at").notNull().defaultNow(),
@@ -293,6 +314,9 @@ export const repairOrders = pgTable("repair_orders", {
   customerSignature: text("customer_signature"),
   authorizationSentAt: timestamp("authorization_sent_at"),
   authorizationSentVia: text("authorization_sent_via"),
+  legacySystem: text("legacy_system"),
+  legacyId: text("legacy_id"),
+  legacyInvoiceNumber: integer("legacy_invoice_number"),
   protractorId: varchar("protractor_id"),
   protractorInvoiceNumber: integer("protractor_invoice_number"),
 });
@@ -329,7 +353,93 @@ export const repairOrdersRelations = relations(repairOrders, ({ one, many }) => 
     references: [workflows.id],
   }),
   inspections: many(inspections),
+  roJobs: many(roJobs),
 }));
+
+// RO Jobs (Normalized replacement for jobs JSONB)
+export const roJobs = pgTable("ro_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  repairOrderId: varchar("repair_order_id").notNull().references(() => repairOrders.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  description: text("description"),
+  chapter: text("chapter"),
+  code: text("code"),
+  title: text("title"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  laborHours: decimal("labor_hours", { precision: 5, scale: 2 }),
+  approved: boolean("approved").notNull().default(false),
+  isDeferred: boolean("is_deferred").notNull().default(false),
+  legacySystem: text("legacy_system"),
+  legacyId: text("legacy_id"),
+  inspectionId: varchar("inspection_id"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const roJobsRelations = relations(roJobs, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [roJobs.orgId],
+    references: [organizations.id],
+  }),
+  location: one(locations, {
+    fields: [roJobs.locationId],
+    references: [locations.id],
+  }),
+  repairOrder: one(repairOrders, {
+    fields: [roJobs.repairOrderId],
+    references: [repairOrders.id],
+  }),
+  lineItems: many(roJobLines),
+}));
+
+// RO Job Lines (Normalized replacement for lineItems in jobs JSONB)
+export const roJobLines = pgTable("ro_job_lines", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull().references(() => roJobs.id, { onDelete: 'cascade' }),
+  type: lineItemTypeEnum("type").notNull(),
+  description: text("description").notNull(),
+  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull().default('1'),
+  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }).notNull().default('0'),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull().default('0'),
+  approved: boolean("approved").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+  inventoryItemId: varchar("inventory_item_id"),
+  technicianId: varchar("technician_id").references(() => users.id, { onDelete: 'set null' }),
+  manufacturer: text("manufacturer"),
+  supplier: text("supplier"),
+  partNumber: text("part_number"),
+  legacySystem: text("legacy_system"),
+  legacyId: text("legacy_id"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const roJobLinesRelations = relations(roJobLines, ({ one }) => ({
+  job: one(roJobs, {
+    fields: [roJobLines.jobId],
+    references: [roJobs.id],
+  }),
+  technician: one(users, {
+    fields: [roJobLines.technicianId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas for new normalized tables
+export const insertRoJobSchema = createInsertSchema(roJobs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRoJobLineSchema = createInsertSchema(roJobLines).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertRoJob = z.infer<typeof insertRoJobSchema>;
+export type RoJob = typeof roJobs.$inferSelect;
+export type InsertRoJobLine = z.infer<typeof insertRoJobLineSchema>;
+export type RoJobLine = typeof roJobLines.$inferSelect;
 
 // Inventory Items
 export const inventoryItems = pgTable("inventory_items", {

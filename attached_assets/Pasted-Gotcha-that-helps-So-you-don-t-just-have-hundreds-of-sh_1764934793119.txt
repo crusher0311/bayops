@@ -1,0 +1,412 @@
+Gotcha—that helps. So you don’t just have “hundreds of shops,” you have:
+
+* Some **single-location** shops
+* Some **enterprises with multiple locations** (2, 5, 20+ stores)
+
+All of them are running Protractor, and you want your platform to handle **enterprise-level data** (rollup across locations) *and* **store-level detail**.
+
+Let’s tune the design to that.
+
+---
+
+## 1. Hierarchy: Enterprise → Locations → Data
+
+Instead of “tenant = single shop,” use:
+
+* **Organization (Enterprise)** = the customer account (could be 1 or many locations)
+* **Location (Shop)** = one physical shop / store
+* All domain objects (customers, vehicles, work orders, jobs, etc.) belong to:
+
+  * An **organization**, and
+  * A **location**
+
+### 1.1 Organizations (enterprise accounts)
+
+```sql
+CREATE TABLE organizations (
+  id              UUID PRIMARY KEY,
+  name            TEXT NOT NULL,
+  billing_email   TEXT,
+  timezone        TEXT NOT NULL DEFAULT 'America/Chicago',
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+> One organization = “Bob’s Tire Group” (could be 1 or 30 locations).
+
+---
+
+### 1.2 Locations (shops under an org)
+
+```sql
+CREATE TABLE locations (
+  id                UUID PRIMARY KEY,
+  organization_id   UUID NOT NULL REFERENCES organizations(id),
+  name              TEXT NOT NULL,      -- 'Yukon', 'OKC North', etc.
+  code              TEXT,               -- store code if they have one
+  address1          TEXT,
+  city              TEXT,
+  state             TEXT,
+  postal_code       TEXT,
+  country           TEXT,
+  timezone          TEXT,
+  is_active         BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_locations_org ON locations(organization_id);
+```
+
+> For a single-location shop: 1 org, 1 location.
+> For a multi-location group: 1 org, N locations.
+
+---
+
+## 2. Attach everything to org + location
+
+We now revise the earlier schema:
+
+* Replace `tenant_id` with `organization_id`
+* Add a `location_id` where it makes sense
+
+### 2.1 Customers
+
+Customers are usually “per location,” but enterprises often want to share across locations. Design for that:
+
+```sql
+CREATE TABLE customers (
+  id                  UUID PRIMARY KEY,
+  organization_id     UUID NOT NULL REFERENCES organizations(id),
+  -- home location where they first appeared or are “owned”
+  home_location_id    UUID REFERENCES locations(id),
+
+  legacy_system       TEXT,             -- 'protractor'
+  legacy_id           TEXT,             -- Contact.ID (Protractor)
+  first_name          TEXT,
+  last_name           TEXT,
+  file_as             TEXT,
+  email               TEXT,
+  phone               TEXT,
+  address1            TEXT,
+  city                TEXT,
+  state               TEXT,
+  postal_code         TEXT,
+  country             TEXT,
+  marketing_source    TEXT,
+  preferred_contact   TEXT,
+  no_sms              BOOLEAN DEFAULT FALSE,
+  no_email            BOOLEAN DEFAULT FALSE,
+  no_postcard         BOOLEAN DEFAULT FALSE,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_customers_org_email ON customers(organization_id, email);
+CREATE INDEX idx_customers_org_phone ON customers(organization_id, phone);
+```
+
+> This lets you:
+>
+> * Share a customer across locations (same `organization_id`, different `home_location_id`).
+> * See that they visited Yukon and Edmond, for example.
+
+---
+
+### 2.2 Vehicles
+
+```sql
+CREATE TABLE vehicles (
+  id                  UUID PRIMARY KEY,
+  organization_id     UUID NOT NULL REFERENCES organizations(id),
+  home_location_id    UUID REFERENCES locations(id),  -- where it first showed up
+  customer_id         UUID NOT NULL REFERENCES customers(id),
+
+  legacy_system       TEXT,
+  legacy_id           TEXT,             -- ServiceItem.ID
+  vin                 TEXT,
+  year                INTEGER,
+  make                TEXT,
+  model               TEXT,
+  submodel            TEXT,
+  engine              TEXT,
+  color               TEXT,
+  plate_number        TEXT,
+  plate_state         TEXT,
+  production_date     DATE,
+  odometer_last       INTEGER,
+  no_email            BOOLEAN DEFAULT FALSE,
+  no_postcard         BOOLEAN DEFAULT FALSE,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_vehicles_org_vin ON vehicles(organization_id, vin);
+CREATE INDEX idx_vehicles_org_plate ON vehicles(organization_id, plate_state, plate_number);
+```
+
+---
+
+### 2.3 Employees
+
+Employees can be:
+
+* Tied to one location, or
+* Float between locations inside the same organization (common in multi-store groups).
+
+```sql
+CREATE TABLE employees (
+  id                UUID PRIMARY KEY,
+  organization_id   UUID NOT NULL REFERENCES organizations(id),
+  home_location_id  UUID REFERENCES locations(id),
+
+  legacy_system     TEXT,
+  legacy_id         TEXT,
+  name              TEXT NOT NULL,
+  role              TEXT,               -- 'ServiceAdvisor', 'Technician', etc.
+  active            BOOLEAN DEFAULT TRUE
+);
+
+CREATE INDEX idx_employees_org ON employees(organization_id);
+```
+
+If you later need “employee can work at multiple locations,” you can add:
+
+```sql
+CREATE TABLE employee_locations (
+  employee_id    UUID NOT NULL REFERENCES employees(id),
+  location_id    UUID NOT NULL REFERENCES locations(id),
+  PRIMARY KEY (employee_id, location_id)
+);
+```
+
+---
+
+### 2.4 Work Orders: location is critical
+
+```sql
+CREATE TABLE work_orders (
+  id                  UUID PRIMARY KEY,
+  organization_id     UUID NOT NULL REFERENCES organizations(id),
+  location_id         UUID NOT NULL REFERENCES locations(id),
+
+  legacy_system       TEXT,
+  legacy_id           TEXT,                 -- WorkOrder.ID
+  wo_number           INTEGER,
+  invoice_number      INTEGER,
+  customer_id         UUID NOT NULL REFERENCES customers(id),
+  vehicle_id          UUID NOT NULL REFERENCES vehicles(id),
+  service_advisor_id  UUID REFERENCES employees(id),
+  technician_id       UUID REFERENCES employees(id),
+
+  scheduled_at        TIMESTAMPTZ,
+  promised_at         TIMESTAMPTZ,
+  invoiced_at         TIMESTAMPTZ,
+  status              TEXT,                 -- 'Open', 'Invoice', 'Closed', etc.
+  is_appointment      BOOLEAN DEFAULT FALSE,
+  odometer_in         INTEGER,
+  odometer_out        INTEGER,
+  internal_note       TEXT,
+  external_flag       TEXT,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_work_orders_org_loc ON work_orders(organization_id, location_id);
+CREATE INDEX idx_work_orders_org_loc_num ON work_orders(organization_id, location_id, wo_number);
+```
+
+> Now you can:
+>
+> * Show “Yukon location” today’s WOs.
+> * Show “Enterprise total sales” across all locations.
+
+---
+
+### 2.5 Jobs, Lines, Inspections, Charges
+
+All of these should carry both **organization_id** and **location_id** for easy filtering and sharding.
+
+#### Jobs (Service Packages)
+
+```sql
+CREATE TABLE jobs (
+  id                      UUID PRIMARY KEY,
+  organization_id         UUID NOT NULL REFERENCES organizations(id),
+  location_id             UUID NOT NULL REFERENCES locations(id),
+  work_order_id           UUID NOT NULL REFERENCES work_orders(id),
+
+  legacy_system           TEXT,
+  legacy_id               TEXT,              -- ServicePackage.ID
+  chapter                 TEXT,
+  code                    TEXT,
+  title                   TEXT,
+  description             TEXT,
+  is_deferred             BOOLEAN DEFAULT FALSE,
+  is_invoicing            BOOLEAN DEFAULT TRUE,
+  service_category_id     TEXT,
+  external_url            TEXT,
+  flag                    TEXT,
+  rank                    INTEGER,
+  status                  TEXT,
+  source_inspection_finding_id UUID NULL,    -- link if created from DVI
+  created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at              TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_jobs_org_loc_wo ON jobs(organization_id, location_id, work_order_id);
+```
+
+#### Job lines
+
+```sql
+CREATE TABLE job_lines (
+  id                      UUID PRIMARY KEY,
+  organization_id         UUID NOT NULL REFERENCES organizations(id),
+  location_id             UUID NOT NULL REFERENCES locations(id),
+  job_id                  UUID NOT NULL REFERENCES jobs(id),
+
+  -- rest the same as before...
+);
+```
+
+#### Inspections
+
+```sql
+CREATE TABLE inspection_sections (
+  id              UUID PRIMARY KEY,
+  organization_id UUID NOT NULL REFERENCES organizations(id),
+  location_id     UUID NOT NULL REFERENCES locations(id),
+  job_id          UUID NOT NULL REFERENCES jobs(id),
+  title           TEXT,
+  rank            INTEGER
+);
+
+CREATE TABLE inspection_findings (
+  id                      UUID PRIMARY KEY,
+  organization_id         UUID NOT NULL REFERENCES organizations(id),
+  location_id             UUID NOT NULL REFERENCES locations(id),
+  job_id                  UUID NOT NULL REFERENCES jobs(id),
+  section_id              UUID REFERENCES inspection_sections(id),
+  title                   TEXT,
+  result                  TEXT,
+  severity                TEXT,
+  measurement             TEXT,
+  notes_customer          TEXT,
+  notes_internal          TEXT,
+  media_keys              TEXT,
+  rank                    INTEGER,
+  source_template_id      TEXT,
+  legacy_id               TEXT,
+  created_at              TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+#### Charges & summaries
+
+Same idea: add `organization_id` and `location_id`, keyed on `work_order_id`.
+
+---
+
+## 3. Enterprise vs location behaviour
+
+With this structure, you get:
+
+### 3.1 Per-location isolation
+
+Every key table (work_orders, jobs, etc.) has `location_id`, so your app can easily:
+
+* Limit data a user can see to their location(s).
+* Drive dashboards: “Today at Yukon,” “This week at OKC.”
+
+Example query:
+
+```sql
+SELECT
+  w.wo_number,
+  c.first_name,
+  c.last_name,
+  v.year, v.make, v.model,
+  s.grand_total
+FROM work_orders w
+JOIN customers c ON w.customer_id = c.id
+JOIN vehicles v ON w.vehicle_id = v.id
+JOIN work_order_summaries s ON w.id = s.work_order_id
+WHERE w.organization_id = :org_id
+  AND w.location_id = :location_id
+  AND w.invoiced_at::date = current_date;
+```
+
+---
+
+### 3.2 Enterprise roll-up
+
+Because everything also has `organization_id`, you can aggregate across locations:
+
+```sql
+SELECT
+  l.name AS location_name,
+  DATE_TRUNC('month', w.invoiced_at) AS month,
+  SUM(s.grand_total) AS revenue
+FROM work_orders w
+JOIN work_order_summaries s ON w.id = s.work_order_id
+JOIN locations l ON w.location_id = l.id
+WHERE w.organization_id = :org_id
+  AND w.invoiced_at >= :start
+  AND w.invoiced_at < :end
+GROUP BY l.name, DATE_TRUNC('month', w.invoiced_at)
+ORDER BY month, location_name;
+```
+
+That’s your **enterprise-type database** behavior:
+One org, many locations, combined history, plus per-store breakdowns.
+
+---
+
+## 4. How this plays with Protractor specifically
+
+In the real world, an enterprise running Protractor often has:
+
+* One **database per location** (or per “instance”)
+* Sometimes a “group/enterprise” concept inside Protractor, sometimes not
+
+Your import/onboarding can work like this:
+
+1. When onboarding a new **enterprise customer**:
+
+   * Create an `organizations` row.
+   * For each Protractor instance (store DB) they have, create a `locations` row.
+   * Store their Protractor instance ID / URL / credentials on the location.
+
+2. During migration:
+
+   * For each location:
+
+     * Use `organization_id` fixed.
+     * Use that location’s `location_id` on all imported rows.
+   * Contacts & vehicles that appear in multiple locations:
+
+     * Detect and merge at the **organization** level by email/phone/VIN if you want shared customers.
+
+This gives you **enterprise visibility** even if Protractor didn’t natively share customers across locations.
+
+---
+
+## 5. Scaling patterns (so hundreds of shops don’t hurt)
+
+With `organization_id` + `location_id` on everything, you have options:
+
+* Start with **one main Postgres cluster**.
+* Add indexes on `(organization_id, location_id, …)` for the hot queries.
+* Later, if a giant enterprise (say 50+ locations) needs more scale, you can:
+
+  * Move them to a dedicated DB or schema, **without changing the logical model**.
+  * Shard by `organization_id` if needed.
+
+Your application logic always filters by `organization_id` (and often `location_id`), which is exactly what you need for multi-tenant, multi-location SaaS.
+
+---
+
+If you’d like, next I can:
+
+* Draft **user/role/permission** tables so you can assign access per organization and per location (e.g., “enterprise owner,” “store manager,” “tech”).
+* Or give you a concrete ETL pseudo-code snippet: “Given this Protractor JSON, here’s the exact order of inserts for org/location/customer/vehicle/work_order/etc.”
