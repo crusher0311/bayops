@@ -4567,6 +4567,11 @@ async function runProtractorImport(
 
             const existing = await storage.getRepairOrderByProtractorId(orgId, invoice.ID);
 
+            // Debug: Log invoice totals if available
+            if (invoice.TotalLabor || invoice.TotalParts || invoice.GrandTotal || (invoice as any).Totals) {
+              console.log(`[Protractor API] Invoice ${invoice.InvoiceNumber || invoice.ID} Totals: Labor=${invoice.TotalLabor}, Parts=${invoice.TotalParts}, Grand=${invoice.GrandTotal}, Totals=${JSON.stringify((invoice as any).Totals)}`);
+            }
+
             // Normalize ServicePackages to always be an array
             // Protractor may return: array, single object, null, undefined, or ItemCollection wrapper
             let servicePackages: any[] = [];
