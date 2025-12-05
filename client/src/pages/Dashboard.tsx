@@ -98,8 +98,14 @@ export default function Dashboard() {
 
   const today = new Date().toDateString();
   
+  // Helper to check if RO is imported (from Protractor)
+  const isImported = (ro: any): boolean => !!ro.legacySystem || !!ro.legacyId;
+
   // Simple stat calculations - exclude imported historical ROs from "active"
-  const activeRos = ros.filter(ro => ro.status !== 'completed' && !ro.originalInvoiceDate);
+  const activeRos = ros.filter(ro => ro.status !== 'completed' && !isImported(ro));
+  
+  // Non-imported ROs for recent activity (real work, not historical imports)
+  const recentNativeRos = ros.filter(ro => !isImported(ro));
   
   // Completed today = only ROs that were actually completed/invoiced TODAY (not historical imports)
   const completedToday = ros.filter(ro => {
@@ -241,10 +247,10 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-8">
-              {ros.length === 0 ? (
+              {recentNativeRos.length === 0 ? (
                 <p className="text-muted-foreground text-sm">No repair orders yet</p>
               ) : (
-                ros.slice(0, 5).map((ro) => {
+                recentNativeRos.slice(0, 5).map((ro) => {
                   const jobs = ro.jobs as Array<{ name: string }>;
                   return (
                     <div key={ro.id} className="flex items-center" data-testid={`row-activity-${ro.id}`}>

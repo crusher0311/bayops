@@ -27,6 +27,9 @@ export default function RepairOrders() {
   const [searchTerm, setSearchTerm] = useState('');
 
   const getCustomer = (id: string) => customers.find(c => c.id === id);
+  
+  // Helper to check if RO is imported (from Protractor)
+  const isImported = (ro: any): boolean => !!(ro.legacySystem || ro.legacyId);
 
   // Filter ROs based on active tab
   const filteredRos = useMemo(() => {
@@ -34,10 +37,10 @@ export default function RepairOrders() {
     
     // Apply tab filter
     if (activeTab === 'active') {
-      // Active = not completed (excludes all invoiced/completed ROs including imports)
-      filtered = ros.filter(ro => ro.status !== 'completed');
+      // Active = not completed AND not imported (excludes historical imports)
+      filtered = ros.filter(ro => ro.status !== 'completed' && !isImported(ro));
     } else if (activeTab === 'invoiced') {
-      // Invoiced = completed status
+      // Invoiced = completed status (includes imports for historical reference)
       filtered = ros.filter(ro => ro.status === 'completed');
     }
     
@@ -89,7 +92,7 @@ export default function RepairOrders() {
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'active' | 'invoiced' | 'all')}>
           <TabsList>
             <TabsTrigger value="active" data-testid="tab-active">
-              Active ({ros.filter(ro => ro.status !== 'completed').length})
+              Active ({ros.filter(ro => ro.status !== 'completed' && !isImported(ro)).length})
             </TabsTrigger>
             <TabsTrigger value="invoiced" data-testid="tab-invoiced">
               Invoiced ({ros.filter(ro => ro.status === 'completed').length})
