@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useDeferredValue } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useCustomers, useCreateCustomer, useUpdateCustomer, useVehiclesByCustomer, useDeferredWorkByVehicle, useUpdateDeferredWork, useRepairOrdersByVehicle } from '@/lib/hooks';
 import { Link } from 'wouter';
@@ -324,75 +324,12 @@ function CustomerVehicles({ customerId }: { customerId: string }) {
 
 export default function Customers() {
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const searchInputRef = useRef<HTMLInputElement>(null);
   
-  // Track if user is actively typing to maintain focus
-  const isTypingRef = useRef(false);
-  const lastSelectionRef = useRef<{ start: number | null; end: number | null }>({ start: null, end: null });
+  // useDeferredValue delays updating the query until UI is idle
+  // This prevents the input from resetting while typing
+  const deferredSearch = useDeferredValue(search);
   
-  // Debounce search to prevent focus loss and excessive API calls
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
-  
-  // Store selection position before focus might be lost
-  const handleSearchFocus = () => {
-    isTypingRef.current = true;
-  };
-  
-  const handleSearchBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    // Check if blur is due to clicking elsewhere in the document (intentional blur)
-    // vs being stolen by a re-render (unintentional)
-    // If relatedTarget exists, user clicked on something else - respect that
-    if (e.relatedTarget) {
-      isTypingRef.current = false;
-    } else if (search.length > 0 && searchInputRef.current) {
-      // Focus was lost without clicking elsewhere - might be a re-render stealing focus
-      lastSelectionRef.current = {
-        start: searchInputRef.current.selectionStart,
-        end: searchInputRef.current.selectionEnd
-      };
-    }
-  };
-  
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    isTypingRef.current = true;
-    if (searchInputRef.current) {
-      lastSelectionRef.current = {
-        start: e.target.selectionStart,
-        end: e.target.selectionEnd
-      };
-    }
-    setSearch(e.target.value);
-  };
-  
-  const { data: customers = [], isLoading, isFetching } = useCustomers(debouncedSearch || undefined);
-  
-  // Restore focus to search input after data refetch - with small delay to ensure DOM is ready
-  useEffect(() => {
-    if (!isFetching && isTypingRef.current && searchInputRef.current && search.length > 0) {
-      // Use requestAnimationFrame to restore focus after DOM updates
-      requestAnimationFrame(() => {
-        if (searchInputRef.current && document.activeElement !== searchInputRef.current) {
-          searchInputRef.current.focus();
-          // Restore cursor position
-          if (lastSelectionRef.current.start !== null && lastSelectionRef.current.end !== null) {
-            searchInputRef.current.setSelectionRange(
-              lastSelectionRef.current.start,
-              lastSelectionRef.current.end
-            );
-          }
-        }
-        // Reset typing flag after focus restoration attempt (don't hijack indefinitely)
-        // User will set it back to true on next keystroke
-        isTypingRef.current = false;
-      });
-    }
-  }, [isFetching, search]);
+  const { data: customers = [], isLoading } = useCustomers(deferredSearch || undefined);
   
   const createCustomer = useCreateCustomer();
   const updateCustomer = useUpdateCustomer();
@@ -566,13 +503,10 @@ export default function Customers() {
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
           <Input 
-            ref={searchInputRef}
             placeholder="Search name, email, phone..." 
             className="pl-9 bg-background"
             value={search}
-            onChange={handleSearchChange}
-            onFocus={handleSearchFocus}
-            onBlur={handleSearchBlur}
+            onChange={(e) => setSearch(e.target.value)}
             data-testid="input-search-customers"
           />
         </div>

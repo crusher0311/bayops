@@ -34,6 +34,7 @@ export function useCustomers(search?: string) {
   return useQuery<Customer[]>({
     queryKey: ['customers', search],
     queryFn: () => api.getCustomers(search),
+    placeholderData: (previousData) => previousData,
   });
 }
 
