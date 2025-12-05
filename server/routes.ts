@@ -4601,6 +4601,10 @@ async function runProtractorImport(
                 // If still no match, fail with informative message
                 if (!vehicle) {
                   failedRecords++;
+                  // Log raw ServiceItem data for debugging (first 5 failures only)
+                  if (failedRecords <= 5) {
+                    console.log(`[Protractor Import ${jobId}] FAILED Invoice ${invoice.InvoiceNumber}: ServiceItem RAW = ${JSON.stringify((invoice as any).ServiceItem, null, 2)}`);
+                  }
                   errors.push({
                     record: `Invoice: ${invoice.InvoiceNumber || invoice.ID}`,
                     error: `Customer has ${customerVehicles.length} vehicles - cannot determine which vehicle was serviced${invoiceVin ? ` (VIN ${invoiceVin} not found)` : ' (no VIN in invoice)'}`,
@@ -4614,6 +4618,10 @@ async function runProtractorImport(
             if (!customer || !vehicle) {
               // Skip if we don't have the customer or vehicle
               failedRecords++;
+              // Log raw ServiceItem data for debugging (first 5 failures only)
+              if (failedRecords <= 5) {
+                console.log(`[Protractor Import ${jobId}] FAILED Invoice ${invoice.InvoiceNumber}: ServiceItem RAW = ${JSON.stringify((invoice as any).ServiceItem, null, 2)}`);
+              }
               errors.push({
                 record: `Invoice: ${invoice.InvoiceNumber || invoice.ID}`,
                 error: `Missing customer (${contactId}) or vehicle (${serviceItemId})${invoiceVin ? ` - VIN ${invoiceVin} not found in system` : ''}`,
