@@ -38,10 +38,11 @@ The database is undergoing a three-phase refactor for enterprise-grade normalize
 - Added SUBLET to line_item_type enum
 - Tables include legacy_system and legacy_id for import tracking
 
-**Phase 2 (PENDING)**:
-- Implement dual-write to both JSONB and normalized tables
-- Backfill normalized tables from existing JSONB data
-- Remove JSONB columns after verification
+**Phase 2 (COMPLETE - Dual-Write Active)**:
+- Backfilled normalized tables from existing JSONB data (3623 jobs, 9 line items)
+- Implemented transactional dual-write in storage.ts for create/update repair orders
+- Both JSONB and normalized tables are kept in sync atomically
+- JSONB columns retained for backwards compatibility (can be removed after full verification period)
 
 ## External Dependencies
 - **OpenAI**: Integrated via Replit AI for AI Service Writer functionalities (no separate API key required).
