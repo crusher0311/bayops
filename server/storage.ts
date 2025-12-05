@@ -7,6 +7,8 @@ import {
   deferredWork,
   workflows,
   repairOrders,
+  roJobs,
+  roJobLines,
   inventoryItems,
   stockTransactions,
   inspectionTemplates,
@@ -691,13 +693,90 @@ export class DatabaseStorage implements IStorage {
 
   async createRepairOrder(insertRO: InsertRepairOrder): Promise<RepairOrder> {
     const [ro] = await db.insert(repairOrders).values(insertRO).returning();
+    
+    // Dual-write: also insert into normalized ro_jobs and ro_job_lines tables
+    if (insertRO.jobs && Array.isArray(insertRO.jobs) && insertRO.jobs.length > 0) {
+      await this.syncJobsToNormalizedTables(ro.id, ro.orgId, ro.locationId, insertRO.jobs);
+    }
+    
     return ro;
+  }
+  
+  private async syncJobsToNormalizedTables(
+    repairOrderId: string, 
+    orgId: string, 
+    locationId: string, 
+    jobs: Array<{
+      id: string;
+      name: string;
+      description?: string;
+      lineItems: Array<{
+        id: string;
+        type: 'LABOR' | 'PART' | 'TIRE' | 'FEE' | 'SUBLET';
+        description: string;
+        quantity: number;
+        unitCost: number;
+        unitPrice: number;
+        approved: boolean;
+        inventoryItemId?: string;
+        technicianId?: string;
+        manufacturer?: string;
+        supplier?: string;
+        partNumber?: string;
+      }>;
+    }>
+  ): Promise<void> {
+    // Delete existing normalized jobs for this RO (for updates)
+    await db.delete(roJobs).where(eq(roJobs.repairOrderId, repairOrderId));
+    
+    // Insert new normalized jobs and line items
+    for (let jobIndex = 0; jobIndex < jobs.length; jobIndex++) {
+      const job = jobs[jobIndex];
+      
+      const [insertedJob] = await db.insert(roJobs).values({
+        orgId,
+        locationId,
+        repairOrderId,
+        name: job.name,
+        description: job.description || null,
+        sortOrder: jobIndex,
+        approved: job.lineItems?.every(li => li.approved) || false,
+      }).returning({ id: roJobs.id });
+      
+      if (job.lineItems && job.lineItems.length > 0) {
+        for (let lineIndex = 0; lineIndex < job.lineItems.length; lineIndex++) {
+          const lineItem = job.lineItems[lineIndex];
+          
+          await db.insert(roJobLines).values({
+            jobId: insertedJob.id,
+            type: lineItem.type,
+            description: lineItem.description,
+            quantity: String(lineItem.quantity),
+            unitCost: String(lineItem.unitCost),
+            unitPrice: String(lineItem.unitPrice),
+            approved: lineItem.approved,
+            sortOrder: lineIndex,
+            inventoryItemId: lineItem.inventoryItemId || null,
+            technicianId: lineItem.technicianId || null,
+            manufacturer: lineItem.manufacturer || null,
+            supplier: lineItem.supplier || null,
+            partNumber: lineItem.partNumber || null,
+          });
+        }
+      }
+    }
   }
 
   async updateRepairOrder(id: string, orgId: string, updates: Partial<InsertRepairOrder>): Promise<RepairOrder | undefined> {
     const [ro] = await db.update(repairOrders).set(updates).where(
       and(eq(repairOrders.id, id), eq(repairOrders.orgId, orgId))
     ).returning();
+    
+    // Dual-write: sync jobs to normalized tables if jobs were updated
+    if (ro && updates.jobs && Array.isArray(updates.jobs)) {
+      await this.syncJobsToNormalizedTables(ro.id, ro.orgId, ro.locationId, updates.jobs);
+    }
+    
     return ro || undefined;
   }
 
