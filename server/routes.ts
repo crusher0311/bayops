@@ -4443,7 +4443,7 @@ async function runProtractorImport(
           } catch (err: any) {
             failedRecords++;
             errors.push({
-              record: `Invoice: ${invoice.Number || invoice.ID}`,
+              record: `Invoice: ${listInvoice.Number || listInvoice.ID}`,
               error: err.message,
               timestamp: new Date().toISOString(),
             });
