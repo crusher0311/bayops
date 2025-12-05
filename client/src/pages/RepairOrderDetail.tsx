@@ -15,6 +15,8 @@ import {
   useImproveJobDescription,
   usePartstechStatus,
   usePartstechSearch,
+  useDeferredWorkByVehicle,
+  useUpdateDeferredWork,
   type LaborGuideRepair,
   type PartstechPart
 } from '@/lib/hooks';
@@ -554,6 +556,10 @@ export default function RepairOrderDetail() {
   const { data: vehicle } = useVehicle(ro?.vehicleId || '');
   const { data: workflows = [] } = useWorkflows();
   const updateRO = useUpdateRepairOrder();
+  
+  const { data: deferredWork = [] } = useDeferredWorkByVehicle(ro?.vehicleId || '');
+  const updateDeferredWork = useUpdateDeferredWork();
+  const pendingDeferredWork = deferredWork.filter((dw: any) => dw.status === 'PENDING');
   
   const { data: settings } = useQuery({
     queryKey: ['settings', ro?.locationId],
@@ -1112,6 +1118,107 @@ export default function RepairOrderDetail() {
     });
     setNewJobName('');
     setIsAddJobDialogOpen(false);
+  };
+
+  const handleAddDeferredToRO = (deferredItem: any) => {
+    const normalizeType = (type: string): 'LABOR' | 'PART' | 'TIRE' | 'FEE' => {
+      const normalized = type?.toUpperCase() || '';
+      if (normalized === 'LABOR') return 'LABOR';
+      if (normalized === 'PART' || normalized === 'PARTS') return 'PART';
+      if (normalized === 'TIRE' || normalized === 'TIRES') return 'TIRE';
+      return 'FEE';
+    };
+    
+    const lineItems: LineItem[] = [];
+    
+    if (deferredItem.laborHours && parseFloat(deferredItem.laborHours) > 0) {
+      lineItems.push({
+        id: `li-${Date.now()}-labor`,
+        type: 'LABOR',
+        description: deferredItem.serviceName,
+        quantity: parseFloat(deferredItem.laborHours),
+        unitCost: 0,
+        unitPrice: parseFloat(deferredItem.estimatedPrice || 0) / parseFloat(deferredItem.laborHours || 1),
+        approved: false,
+      });
+    } else if (deferredItem.estimatedPrice) {
+      lineItems.push({
+        id: `li-${Date.now()}-labor`,
+        type: 'LABOR',
+        description: deferredItem.serviceName,
+        quantity: 1,
+        unitCost: 0,
+        unitPrice: parseFloat(deferredItem.estimatedPrice || 0),
+        approved: false,
+      });
+    }
+    
+    const lineItemsFromNotes: LineItem[] = deferredItem.notes ? (() => {
+      try {
+        const parsed = JSON.parse(deferredItem.notes);
+        if (Array.isArray(parsed)) {
+          return parsed.map((item: any, idx: number): LineItem => ({
+            id: `li-${Date.now()}-${idx}`,
+            type: normalizeType(item.type),
+            description: item.description || item.name || '',
+            quantity: parseFloat(item.quantity) || 1,
+            unitCost: parseFloat(item.unitCost) || 0,
+            unitPrice: parseFloat(item.unitPrice) || parseFloat(item.total) || 0,
+            approved: false,
+            partNumber: item.partNumber || '',
+          }));
+        }
+        return [];
+      } catch {
+        return [];
+      }
+    })() : [];
+    
+    const allLineItems: LineItem[] = lineItemsFromNotes.length > 0 ? lineItemsFromNotes : lineItems;
+    
+    if (allLineItems.length === 0) {
+      lineItems.push({
+        id: `li-${Date.now()}-labor`,
+        type: 'LABOR',
+        description: deferredItem.serviceName,
+        quantity: 1,
+        unitCost: 0,
+        unitPrice: 0,
+        approved: false,
+      });
+    }
+    
+    const finalLineItems = allLineItems.length > 0 ? allLineItems : lineItems;
+    
+    const newJob: ServiceJob = {
+      id: `job-${Date.now()}`,
+      name: deferredItem.serviceName,
+      description: deferredItem.serviceDescription || deferredItem.reason || '',
+      lineItems: finalLineItems,
+    };
+    
+    updateRO.mutate({
+      id: ro.id,
+      updates: { jobs: [...jobs, newJob] as any },
+    }, {
+      onSuccess: () => {
+        updateDeferredWork.mutate({
+          id: deferredItem.id,
+          updates: { status: 'CONVERTED', convertedRoId: ro.id },
+        });
+        toast({
+          title: 'Deferred service added',
+          description: `"${deferredItem.serviceName}" has been added to this repair order.`,
+        });
+      },
+      onError: () => {
+        toast({
+          title: 'Error',
+          description: 'Failed to add deferred service to repair order.',
+          variant: 'destructive',
+        });
+      },
+    });
   };
 
   const handleAddLabor = (jobId: string) => {
@@ -1845,6 +1952,50 @@ export default function RepairOrderDetail() {
                       <p className="text-xs text-muted-foreground">{ro.notes}</p>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {pendingDeferredWork.length > 0 && (
+              <Card className="bg-orange-50/50 border-orange-200">
+                <CardHeader className="pb-2 pt-4 px-4">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2 text-orange-700">
+                    <AlertCircle className="w-4 h-4" />
+                    Pending Deferred Work ({pendingDeferredWork.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-0 space-y-2">
+                  {pendingDeferredWork.map((dw: any) => (
+                    <div 
+                      key={dw.id} 
+                      className="flex items-center justify-between bg-background rounded-md border border-orange-200 p-3"
+                      data-testid={`deferred-item-${dw.id}`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{dw.serviceName}</p>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                          {dw.estimatedPrice && (
+                            <span className="flex items-center gap-1">
+                              <DollarSign className="w-3 h-3" />
+                              ${parseFloat(dw.estimatedPrice).toFixed(2)}
+                            </span>
+                          )}
+                          {dw.laborHours && (
+                            <span>{dw.laborHours} hrs</span>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => handleAddDeferredToRO(dw)}
+                        className="ml-2 gap-1"
+                        data-testid={`btn-add-deferred-${dw.id}`}
+                      >
+                        <Plus className="w-3 h-3" />
+                        Add to RO
+                      </Button>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             )}
