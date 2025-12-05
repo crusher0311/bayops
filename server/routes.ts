@@ -4831,6 +4831,8 @@ async function runProtractorImport(
                   notes: lineItems.length > 0 ? JSON.stringify(lineItems) : null,
                   declinedAt: new Date(deferredPkg.Header?.CreationTime || invoice.InvoiceTime || Date.now()),
                   protractorId: protractorDeferredId,
+                  legacySystem: 'protractor',
+                  legacyId: protractorDeferredId,
                 });
                 
                 console.log(`[Protractor Import ${jobId}] Imported deferred work: ${jobTitle} ($${estimatedTotal.toFixed(2)})`);
