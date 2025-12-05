@@ -1,8 +1,8 @@
-import twilio from 'twilio';
+import Telnyx from 'telnyx';
 import { Resend } from 'resend';
 
-const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
-  ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+const telnyxClient = process.env.TELNYX_API_KEY
+  ? new Telnyx(process.env.TELNYX_API_KEY)
   : null;
 
 const resend = process.env.RESEND_API_KEY
@@ -40,24 +40,24 @@ export function formatPhoneNumber(phone: string): string {
 }
 
 export async function sendSMS({ to, message }: SendSMSParams): Promise<{ success: boolean; error?: string; messageId?: string }> {
-  if (!twilioClient) {
-    return { success: false, error: 'Twilio is not configured. Please add TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN.' };
+  if (!telnyxClient) {
+    return { success: false, error: 'Telnyx is not configured. Please add TELNYX_API_KEY.' };
   }
   
-  if (!process.env.TWILIO_PHONE_NUMBER) {
-    return { success: false, error: 'Twilio phone number not configured. Please add TWILIO_PHONE_NUMBER.' };
+  if (!process.env.TELNYX_PHONE_NUMBER) {
+    return { success: false, error: 'Telnyx phone number not configured. Please add TELNYX_PHONE_NUMBER.' };
   }
   
   try {
     const formattedTo = formatPhoneNumber(to);
-    const result = await twilioClient.messages.create({
-      body: message,
-      from: process.env.TWILIO_PHONE_NUMBER,
+    const result = await telnyxClient.messages.create({
+      from: process.env.TELNYX_PHONE_NUMBER,
       to: formattedTo,
+      text: message,
     });
-    return { success: true, messageId: result.sid };
+    return { success: true, messageId: result.data?.id };
   } catch (error: any) {
-    console.error('Twilio SMS error:', error);
+    console.error('Telnyx SMS error:', error);
     return { success: false, error: error.message || 'Failed to send SMS' };
   }
 }
@@ -152,7 +152,65 @@ export function generateInspectionEmail({ customerName, vehicleInfo, shareUrl, s
 
 export function isMessagingConfigured(): { sms: boolean; email: boolean } {
   return {
-    sms: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER),
+    sms: !!(process.env.TELNYX_API_KEY && process.env.TELNYX_PHONE_NUMBER),
     email: !!process.env.RESEND_API_KEY,
   };
+}
+
+export interface TelnyxInboundMessage {
+  data: {
+    event_type: string;
+    id: string;
+    occurred_at: string;
+    payload: {
+      completed_at: string;
+      cost: { amount: string; currency: string } | null;
+      direction: string;
+      encoding: string;
+      from: { carrier: string; line_type: string; phone_number: string };
+      id: string;
+      media: any[];
+      messaging_profile_id: string;
+      organization_id: string;
+      parts: number;
+      received_at: string;
+      record_type: string;
+      sent_at: string | null;
+      text: string;
+      to: { carrier: string; line_type: string; phone_number: string; status: string }[];
+      type: string;
+      valid_until: string | null;
+      webhook_failover_url: string;
+      webhook_url: string;
+    };
+    record_type: string;
+  };
+  meta: {
+    attempt: number;
+    delivered_to: string;
+  };
+}
+
+export function parseTelnyxInboundMessage(body: TelnyxInboundMessage): {
+  from: string;
+  to: string;
+  text: string;
+  messageId: string;
+  receivedAt: Date;
+} | null {
+  try {
+    const payload = body.data?.payload;
+    if (!payload) return null;
+    
+    return {
+      from: payload.from?.phone_number || '',
+      to: payload.to?.[0]?.phone_number || '',
+      text: payload.text || '',
+      messageId: payload.id || '',
+      receivedAt: new Date(payload.received_at || payload.completed_at),
+    };
+  } catch (error) {
+    console.error('Error parsing Telnyx inbound message:', error);
+    return null;
+  }
 }
