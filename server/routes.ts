@@ -540,7 +540,14 @@ export async function registerRoutes(
 
   app.patch("/api/repair-orders/:id", requireAuth, async (req, res) => {
     try {
-      const ro = await storage.updateRepairOrder(req.params.id, req.user!.orgId, req.body);
+      const updates = { ...req.body };
+      
+      // Auto-set completedAt when status changes to 'completed'
+      if (updates.status === 'completed' && !updates.completedAt) {
+        updates.completedAt = new Date();
+      }
+      
+      const ro = await storage.updateRepairOrder(req.params.id, req.user!.orgId, updates);
       if (!ro) {
         return res.status(404).json({ message: "Repair order not found" });
       }
