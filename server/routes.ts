@@ -4218,6 +4218,7 @@ export async function registerRoutes(
       res.json({ 
         invoice,
         fieldNames: Object.keys(invoice),
+        allFields: JSON.stringify(invoice, null, 2),
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
