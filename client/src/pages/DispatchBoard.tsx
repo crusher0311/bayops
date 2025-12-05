@@ -16,7 +16,8 @@ import {
   CheckCircle2,
   Wrench,
   Timer,
-  LayoutGrid
+  LayoutGrid,
+  Home
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/lib/authStore';
@@ -381,6 +382,11 @@ export default function DispatchBoard() {
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700 bg-slate-800/50">
         <div className="flex items-center gap-4">
+          <Link href="/">
+            <Button variant="ghost" size="icon" className="hover:bg-slate-700" data-testid="button-back-home">
+              <Home className="w-5 h-5" />
+            </Button>
+          </Link>
           <h1 className="text-2xl font-bold">Dispatch Board</h1>
           
           <Select value={selectedWorkflowId} onValueChange={setSelectedWorkflowId}>
