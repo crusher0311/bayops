@@ -225,51 +225,30 @@ export default function PrintInvoice() {
           </div>
         </div>
 
-        {/* Services Table */}
+        {/* Services Table - Simple job-level pricing */}
         <div className="mb-6">
           <table className="border w-full">
             <thead>
               <tr className="bg-green-600 text-white">
-                <th className="text-left py-2 px-3">Description</th>
-                <th className="w-20 text-center">Qty</th>
-                <th className="w-24 text-right">Rate</th>
-                <th className="w-24 text-right">Amount</th>
+                <th className="text-left py-2 px-3">Service</th>
+                <th className="w-28 text-right pr-4">Amount</th>
               </tr>
             </thead>
             <tbody>
-              {jobs.map((job) => (
-                <>
-                  <tr key={`job-${job.id}`} className="bg-gray-100 border-b">
-                    <td colSpan={4} className="py-2 px-3 font-semibold text-gray-800">
-                      {job.name}
+              {jobs.map((job) => {
+                const jobTotal = job.lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+                return (
+                  <tr key={job.id} className="border-b hover:bg-gray-50">
+                    <td className="py-3 px-3">
+                      <span className="font-medium">{job.name}</span>
                       {job.description && (
-                        <span className="font-normal text-gray-500 ml-2 text-sm">- {job.description}</span>
+                        <p className="text-sm text-gray-500 mt-0.5">{job.description}</p>
                       )}
                     </td>
+                    <td className="text-right font-medium pr-4">${jobTotal.toFixed(2)}</td>
                   </tr>
-                  {job.lineItems.map((item) => (
-                    <tr key={item.id} className="border-b hover:bg-gray-50">
-                      <td className="py-2 px-3 pl-6">
-                        <span className={`inline-block w-14 text-xs px-1.5 py-0.5 rounded mr-2 text-center font-medium ${
-                          item.type === 'LABOR' ? 'bg-blue-100 text-blue-700' :
-                          item.type === 'PART' ? 'bg-green-100 text-green-700' :
-                          item.type === 'TIRE' ? 'bg-orange-100 text-orange-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
-                          {item.type}
-                        </span>
-                        {item.description}
-                        {item.partNumber && (
-                          <span className="text-xs text-gray-400 ml-1">({item.partNumber})</span>
-                        )}
-                      </td>
-                      <td className="text-center">{item.quantity}</td>
-                      <td className="text-right">${item.unitPrice.toFixed(2)}</td>
-                      <td className="text-right font-medium">${(item.quantity * item.unitPrice).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

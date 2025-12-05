@@ -136,24 +136,6 @@ export default function PrintRO() {
   }
 
   const jobs = (ro.jobs || []) as Job[];
-  
-  const calculateJobTotal = (job: Job) => {
-    return job.lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-  };
-
-  const laborTotal = jobs.reduce((sum, job) => 
-    sum + job.lineItems.filter(i => i.type === 'LABOR').reduce((s, i) => s + (i.quantity * i.unitPrice), 0), 0);
-  
-  const partsTotal = jobs.reduce((sum, job) => 
-    sum + job.lineItems.filter(i => i.type === 'PART' || i.type === 'TIRE').reduce((s, i) => s + (i.quantity * i.unitPrice), 0), 0);
-  
-  const feesTotal = jobs.reduce((sum, job) => 
-    sum + job.lineItems.filter(i => i.type === 'FEE' || i.type === 'SUBLET').reduce((s, i) => s + (i.quantity * i.unitPrice), 0), 0);
-
-  const calculatedSubtotal = laborTotal + partsTotal + feesTotal;
-  const taxAmount = ro.totalTax || 0;
-  const subtotal = ro.grandTotal ? (ro.grandTotal - taxAmount) : calculatedSubtotal;
-  const total = ro.grandTotal || (calculatedSubtotal + taxAmount);
 
   return (
     <div className="print-document bg-white min-h-screen">
@@ -227,7 +209,7 @@ export default function PrintRO() {
         {/* Services */}
         <div className="mb-6">
           <h3 className="font-bold text-gray-800 bg-gray-100 px-4 py-2 border-b-2 border-gray-800">
-            SERVICES PERFORMED
+            SERVICES TO BE PERFORMED
           </h3>
           
           {jobs.map((job, jobIndex) => (
@@ -243,9 +225,8 @@ export default function PrintRO() {
                   <tr className="bg-gray-100">
                     <th className="w-16">Type</th>
                     <th>Description</th>
-                    <th className="w-16 text-center">Qty</th>
-                    <th className="w-24 text-right">Price</th>
-                    <th className="w-24 text-right">Amount</th>
+                    <th className="w-24">Part #</th>
+                    <th className="w-20 text-center">Hours/Qty</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -261,24 +242,17 @@ export default function PrintRO() {
                           {item.type}
                         </span>
                       </td>
-                      <td>
-                        {item.description}
-                        {item.partNumber && (
-                          <span className="text-xs text-gray-500 ml-2">({item.partNumber})</span>
-                        )}
+                      <td>{item.description}</td>
+                      <td className="text-xs font-mono">{item.partNumber || '-'}</td>
+                      <td className="text-center">
+                        {item.type === 'LABOR' 
+                          ? `${item.quantity} hr${item.quantity !== 1 ? 's' : ''}`
+                          : item.quantity
+                        }
                       </td>
-                      <td className="text-center">{item.quantity}</td>
-                      <td className="text-right">${item.unitPrice.toFixed(2)}</td>
-                      <td className="text-right font-medium">${(item.quantity * item.unitPrice).toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
-                <tfoot>
-                  <tr className="bg-gray-50 font-semibold">
-                    <td colSpan={4} className="text-right">Job Total:</td>
-                    <td className="text-right">${calculateJobTotal(job).toFixed(2)}</td>
-                  </tr>
-                </tfoot>
               </table>
             </div>
           ))}
@@ -291,40 +265,6 @@ export default function PrintRO() {
             <p className="text-sm whitespace-pre-wrap">{ro.notes}</p>
           </div>
         )}
-
-        {/* Totals */}
-        <div className="flex justify-end mb-8">
-          <div className="w-72 border rounded overflow-hidden">
-            <div className="flex justify-between px-4 py-2 border-b">
-              <span>Labor:</span>
-              <span className="font-medium">${laborTotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between px-4 py-2 border-b">
-              <span>Parts & Tires:</span>
-              <span className="font-medium">${partsTotal.toFixed(2)}</span>
-            </div>
-            {feesTotal > 0 && (
-              <div className="flex justify-between px-4 py-2 border-b">
-                <span>Fees & Sublet:</span>
-                <span className="font-medium">${feesTotal.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex justify-between px-4 py-2 border-b">
-              <span>Subtotal:</span>
-              <span className="font-medium">${subtotal.toFixed(2)}</span>
-            </div>
-            {taxAmount > 0 && (
-              <div className="flex justify-between px-4 py-2 border-b">
-                <span>Tax:</span>
-                <span className="font-medium">${taxAmount.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex justify-between px-4 py-3 bg-gray-800 text-white font-bold text-lg">
-              <span>TOTAL:</span>
-              <span>${total.toFixed(2)}</span>
-            </div>
-          </div>
-        </div>
 
         {/* Authorization Line */}
         <div className="border-t-2 border-gray-800 pt-6">
