@@ -1830,6 +1830,19 @@ export class DatabaseStorage implements IStorage {
     return vehicle || undefined;
   }
 
+  // Vehicle lookup by VIN
+  async getVehicleByVin(vin: string, orgId?: string): Promise<Vehicle | undefined> {
+    if (!vin) return undefined;
+    const normalizedVin = vin.toUpperCase().trim();
+    const conditions = [eq(vehicles.vin, normalizedVin)];
+    if (orgId) {
+      conditions.push(eq(vehicles.orgId, orgId));
+    }
+    const [vehicle] = await db.select().from(vehicles)
+      .where(and(...conditions));
+    return vehicle || undefined;
+  }
+
   // Repair order lookup by protractorId
   async getRepairOrderByProtractorId(orgId: string, protractorId: string): Promise<RepairOrder | undefined> {
     const [ro] = await db.select().from(repairOrders)

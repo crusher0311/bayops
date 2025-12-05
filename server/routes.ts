@@ -4551,9 +4551,17 @@ async function runProtractorImport(
                                   (invoice as any).VehicleID ||
                                   (invoice as any).vehicleId;
             
+            // Extract VIN from Protractor invoice for fallback matching
+            const invoiceVin = (invoice as any).ServiceItem?.VIN ||
+                              (invoice as any).ServiceItem?.Vin ||
+                              (invoice as any).VIN ||
+                              (invoice as any).Vin ||
+                              (invoice as any).Vehicle?.VIN ||
+                              (invoice as any).Vehicle?.Vin;
+            
             // Log what we found for first invoice
             if (processedRecords === 0 && failedRecords === 0) {
-              console.log(`[Protractor Import ${jobId}] Extracted contactId: ${contactId}, serviceItemId: ${serviceItemId}`);
+              console.log(`[Protractor Import ${jobId}] Extracted contactId: ${contactId}, serviceItemId: ${serviceItemId}, VIN: ${invoiceVin}`);
             }
             
             // Find customer by protractor contact ID
@@ -4564,22 +4572,42 @@ async function runProtractorImport(
             let vehicle = serviceItemId ?
               await storage.getVehicleByProtractorId(serviceItemId) : null;
 
-            // If no vehicle found by serviceItemId, try to find through customer relationship
+            // If no vehicle found by serviceItemId, try VIN matching first
+            if (!vehicle && invoiceVin) {
+              vehicle = await storage.getVehicleByVin(invoiceVin, orgId);
+              if (vehicle) {
+                console.log(`[Protractor Import ${jobId}] Invoice ${invoice.InvoiceNumber || invoice.ID}: Matched vehicle by VIN ${invoiceVin}`);
+              }
+            }
+
+            // If still no vehicle, try to find through customer relationship
             if (!vehicle && customer) {
               const customerVehicles = await storage.getVehiclesByCustomer(customer.id);
               if (customerVehicles.length === 1) {
                 // Customer has exactly one vehicle - use it
                 vehicle = customerVehicles[0];
               } else if (customerVehicles.length > 1) {
-                // Customer has multiple vehicles - we can't determine which one
-                // Log with specific message for manual review
-                failedRecords++;
-                errors.push({
-                  record: `Invoice: ${invoice.InvoiceNumber || invoice.ID}`,
-                  error: `Customer has ${customerVehicles.length} vehicles - cannot determine which vehicle was serviced`,
-                  timestamp: new Date().toISOString(),
-                });
-                continue;
+                // Customer has multiple vehicles - try VIN match within their vehicles
+                if (invoiceVin) {
+                  const vinMatch = customerVehicles.find(v => 
+                    v.vin?.toUpperCase().trim() === invoiceVin.toUpperCase().trim()
+                  );
+                  if (vinMatch) {
+                    vehicle = vinMatch;
+                    console.log(`[Protractor Import ${jobId}] Invoice ${invoice.InvoiceNumber || invoice.ID}: Matched vehicle by VIN within customer's ${customerVehicles.length} vehicles`);
+                  }
+                }
+                
+                // If still no match, fail with informative message
+                if (!vehicle) {
+                  failedRecords++;
+                  errors.push({
+                    record: `Invoice: ${invoice.InvoiceNumber || invoice.ID}`,
+                    error: `Customer has ${customerVehicles.length} vehicles - cannot determine which vehicle was serviced${invoiceVin ? ` (VIN ${invoiceVin} not found)` : ' (no VIN in invoice)'}`,
+                    timestamp: new Date().toISOString(),
+                  });
+                  continue;
+                }
               }
             }
 
@@ -4588,7 +4616,7 @@ async function runProtractorImport(
               failedRecords++;
               errors.push({
                 record: `Invoice: ${invoice.InvoiceNumber || invoice.ID}`,
-                error: `Missing customer (${contactId}) or vehicle (${serviceItemId})`,
+                error: `Missing customer (${contactId}) or vehicle (${serviceItemId})${invoiceVin ? ` - VIN ${invoiceVin} not found in system` : ''}`,
                 timestamp: new Date().toISOString(),
               });
               continue;
