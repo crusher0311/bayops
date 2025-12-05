@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useCustomers, useCreateCustomer, useUpdateCustomer, useVehiclesByCustomer, useDeferredWorkByVehicle, useUpdateDeferredWork, useRepairOrdersByVehicle } from '@/lib/hooks';
+import { Link } from 'wouter';
 import { 
   Table, 
   TableBody, 
@@ -12,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, Phone, Mail, MapPin, Loader2, Pencil, ChevronDown, ChevronRight, Car, AlertTriangle, Wrench, DollarSign, Calendar, CheckCircle, X, Clock, FileText, History } from 'lucide-react';
+import { Plus, Search, Phone, Mail, MapPin, Loader2, Pencil, ChevronDown, ChevronRight, Car, AlertTriangle, Wrench, DollarSign, Calendar, CheckCircle, X, Clock, FileText, History, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   Dialog,
@@ -207,10 +208,12 @@ function VehicleServiceHistory({ vehicleId }: { vehicleId: string }) {
       </div>
       <div className="space-y-2">
         {repairOrders.map((ro: RepairOrder) => (
-          <div
+          <Link
             key={ro.id}
-            className="bg-muted/50 border rounded-md p-3"
+            href={`/repair-orders/${ro.id}`}
+            className="block bg-muted/50 border rounded-md p-3 hover:bg-muted/80 hover:border-primary/30 transition-colors cursor-pointer"
             data-testid={`service-history-${ro.id}`}
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
@@ -243,8 +246,9 @@ function VehicleServiceHistory({ vehicleId }: { vehicleId: string }) {
                   </div>
                 )}
               </div>
+              <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>
@@ -318,6 +322,7 @@ function CustomerVehicles({ customerId }: { customerId: string }) {
 export default function Customers() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
   
   // Debounce search to prevent focus loss and excessive API calls
   useEffect(() => {
@@ -327,7 +332,15 @@ export default function Customers() {
     return () => clearTimeout(timer);
   }, [search]);
   
-  const { data: customers = [], isLoading } = useCustomers(debouncedSearch || undefined);
+  // Restore focus to search input after data refetch
+  const { data: customers = [], isLoading, isFetching } = useCustomers(debouncedSearch || undefined);
+  
+  useEffect(() => {
+    if (!isFetching && searchInputRef.current && document.activeElement !== searchInputRef.current && search.length > 0) {
+      searchInputRef.current.focus();
+    }
+  }, [isFetching, search]);
+  
   const createCustomer = useCreateCustomer();
   const updateCustomer = useUpdateCustomer();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -500,6 +513,7 @@ export default function Customers() {
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
           <Input 
+            ref={searchInputRef}
             placeholder="Search name, email, phone..." 
             className="pl-9 bg-background"
             value={search}
