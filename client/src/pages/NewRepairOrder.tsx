@@ -197,7 +197,7 @@ export default function NewRepairOrder() {
         advisorId: user.id,
         workflowId: roDetails.workflowId || workflows[0]?.id,
         status: 'check-in',
-        odometerIn: roDetails.odometerIn ? parseInt(roDetails.odometerIn) : null,
+        odometerIn: roDetails.odometerIn ? parseInt(roDetails.odometerIn) : 0,
         notes: roDetails.notes || null,
         jobs: [],
       } as any);
