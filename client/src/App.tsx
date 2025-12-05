@@ -33,6 +33,7 @@ import ServiceQueue from "@/pages/ServiceQueue";
 import DispatchBoard from "@/pages/DispatchBoard";
 import PrintRO from "@/pages/PrintRO";
 import PrintInvoice from "@/pages/PrintInvoice";
+import Messages from "@/pages/Messages";
 
 function ProtectedRouter() {
   const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
@@ -86,6 +87,7 @@ function ProtectedRouter() {
       <Route path="/invoices" component={Invoices} />
       <Route path="/reports" component={Reports} />
       <Route path="/inspections" component={Inspections} />
+      <Route path="/messages" component={Messages} />
       <Route path="/service-queue" component={ServiceQueue} />
       <Route path="/settings" component={Settings} />
       <Route path="/org-settings" component={OrganizationSettings} />

@@ -20,7 +20,8 @@ import {
   Truck,
   Clock,
   Receipt,
-  UsersRound
+  UsersRound,
+  MessageSquare
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -42,6 +43,7 @@ export function Sidebar() {
     { icon: Kanban, label: 'Dispatch Board', href: '/dispatch' },
     { icon: FileText, label: 'Repair Orders', href: '/ros' },
     { icon: ClipboardCheck, label: 'Inspections', href: '/inspections' },
+    { icon: MessageSquare, label: 'Messages', href: '/messages' },
     { icon: Calendar, label: 'Appointments', href: '/appointments' },
     { icon: UsersRound, label: 'Service Queue', href: '/service-queue' },
     { icon: Users, label: 'Customers', href: '/customers' },

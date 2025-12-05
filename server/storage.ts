@@ -1930,11 +1930,17 @@ export class DatabaseStorage implements IStorage {
   async createMessage(message: InsertMessage): Promise<Message> {
     const [created] = await db.insert(messages).values(message).returning();
     
-    // Update conversation's last message time and unread count
+    // Create a preview of the message (first 100 chars)
+    const preview = message.content.length > 100 
+      ? message.content.substring(0, 100) + '...' 
+      : message.content;
+    
+    // Update conversation's last message time, preview, and unread count
     if (message.direction === 'INBOUND') {
       await db.update(conversations)
         .set({
           lastMessageAt: new Date(),
+          lastMessagePreview: preview,
           unreadCount: sql`${conversations.unreadCount} + 1`,
           updatedAt: new Date(),
         })
@@ -1943,6 +1949,7 @@ export class DatabaseStorage implements IStorage {
       await db.update(conversations)
         .set({
           lastMessageAt: new Date(),
+          lastMessagePreview: preview,
           updatedAt: new Date(),
         })
         .where(eq(conversations.id, message.conversationId));

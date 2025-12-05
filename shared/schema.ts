@@ -1951,6 +1951,7 @@ export const conversations = pgTable("conversations", {
   phoneNumber: text("phone_number"),
   email: text("email"),
   lastMessageAt: timestamp("last_message_at"),
+  lastMessagePreview: text("last_message_preview"),
   unreadCount: integer("unread_count").notNull().default(0),
   isArchived: boolean("is_archived").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
