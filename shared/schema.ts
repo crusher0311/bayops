@@ -9,7 +9,8 @@ import {
   decimal,
   jsonb,
   serial,
-  pgEnum
+  pgEnum,
+  real
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -319,6 +320,11 @@ export const repairOrders = pgTable("repair_orders", {
   legacyInvoiceNumber: integer("legacy_invoice_number"),
   protractorId: varchar("protractor_id"),
   protractorInvoiceNumber: integer("protractor_invoice_number"),
+  totalLabor: real("total_labor"),
+  totalParts: real("total_parts"),
+  totalSublet: real("total_sublet"),
+  totalTax: real("total_tax"),
+  grandTotal: real("grand_total"),
 });
 
 export const repairOrdersRelations = relations(repairOrders, ({ one, many }) => ({

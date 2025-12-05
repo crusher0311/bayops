@@ -4645,6 +4645,11 @@ async function runProtractorImport(
               completedAt: invoice.CompletedDate ? new Date(invoice.CompletedDate) : null,
               protractorId: invoice.ID,
               protractorInvoiceNumber: invoice.InvoiceNumber || invoice.Number,
+              totalLabor: invoice.TotalLabor || null,
+              totalParts: invoice.TotalParts || null,
+              totalSublet: invoice.TotalSublet || null,
+              totalTax: invoice.TotalTax || null,
+              grandTotal: invoice.GrandTotal || null,
             };
 
             if (existing) {

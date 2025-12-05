@@ -191,6 +191,9 @@ function VehicleServiceHistory({ vehicleId }: { vehicleId: string }) {
   };
 
   const calculateTotal = (ro: RepairOrder): number => {
+    if ((ro as any).grandTotal) {
+      return (ro as any).grandTotal;
+    }
     if (!ro.jobs || !Array.isArray(ro.jobs)) return 0;
     return ro.jobs.reduce((total: number, job: any) => {
       if (!job.lineItems || !Array.isArray(job.lineItems)) return total;
