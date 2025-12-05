@@ -353,13 +353,16 @@ export class ProtractorClient {
     // Extract ContactID and ServiceItemID from embedded objects if not directly available
     // Protractor returns full Contact and ServiceItem objects embedded in the invoice
     if (!invoice?.ContactID && invoice?.Contact) {
-      // Try Contact.ID, Contact.Header.ID, or Contact.Header?.ID
       invoice.ContactID = invoice.Contact.ID || invoice.Contact.Header?.ID;
     }
     
     if (!invoice?.ServiceItemID && invoice?.ServiceItem) {
-      // Try ServiceItem.ID, ServiceItem.Header.ID, or ServiceItem.Header?.ID
       invoice.ServiceItemID = invoice.ServiceItem.ID || invoice.ServiceItem.Header?.ID;
+    }
+    
+    // Log full ServicePackages structure for debugging
+    if (invoice?.ServicePackages) {
+      console.log(`[Protractor API] Invoice ${id} ServicePackages RAW:`, JSON.stringify(invoice.ServicePackages, null, 2).substring(0, 5000));
     }
     
     console.log(`[Protractor API] Invoice ${id} resolved ContactID=${invoice?.ContactID}, ServiceItemID=${invoice?.ServiceItemID}`);
