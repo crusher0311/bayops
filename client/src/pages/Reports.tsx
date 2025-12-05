@@ -5,9 +5,17 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   DollarSign, 
   TrendingUp, 
+  TrendingDown,
   Clock, 
   Package,
   FileText,
@@ -16,13 +24,26 @@ import {
   AlertCircle,
   Loader2,
   BarChart3,
-  PieChart
+  PieChart,
+  Car,
+  Download,
+  ArrowUpRight,
+  ArrowDownRight,
+  Calendar,
+  Target,
+  Zap,
+  CircleDollarSign,
+  Timer
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
 import {
   BarChart,
   Bar,
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -34,42 +55,102 @@ import {
   Legend
 } from 'recharts';
 
-interface ReportSummary {
-  revenue: {
-    total: number;
-    labor: number;
-    parts: number;
-    other: number;
-    avgRoValue: number;
-  };
-  repairOrders: {
-    total: number;
-    active: number;
-    completed: number;
-  };
-  invoices: {
-    total: number;
-    paid: number;
-    outstanding: number;
-    totalPaid: number;
-    totalOutstanding: number;
-  };
-  productivity: {
-    totalHoursWorked: number;
-    activeTechnicians: number;
-  };
-  parts: {
-    pendingOrders: number;
-    totalCost: number;
-  };
+interface KPI {
+  value: number;
+  change?: number;
 }
 
-const COLORS = ['#2563eb', '#7c3aed', '#059669', '#f59e0b'];
+interface AnalyticsData {
+  dateRange: { start: string; end: string };
+  kpis: {
+    totalRevenue: KPI;
+    carCount: KPI;
+    avgRO: KPI;
+    completedROs: KPI;
+    laborRevenue: KPI;
+    partsRevenue: KPI;
+    otherRevenue: KPI;
+    laborMargin: KPI;
+    partsMargin: KPI;
+    grossProfit: KPI;
+  };
+  trends: { date: string; revenue: number; carCount: number; ros: number }[];
+  technicians: { id: string; name: string; hoursWorked: number; revenue: number; jobsCompleted: number; efficiency: number }[];
+  topServices: { name: string; count: number; revenue: number }[];
+  deferredWork: { pending: number; converted: number; value: number; conversionRate: number };
+  aging: { current: number; days30: number; days60: number; days90: number };
+  invoices: { total: number; paid: number; outstanding: number; totalPaid: number; totalOutstanding: number };
+}
+
+const COLORS = ['#2563eb', '#7c3aed', '#059669', '#f59e0b', '#ef4444', '#06b6d4'];
+
+const DATE_RANGES = [
+  { value: 'today', label: 'Today' },
+  { value: 'week', label: 'This Week' },
+  { value: 'month', label: 'This Month' },
+  { value: 'quarter', label: 'This Quarter' },
+  { value: 'year', label: 'This Year' },
+  { value: 'last30', label: 'Last 30 Days' },
+  { value: 'last90', label: 'Last 90 Days' },
+];
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+}
+
+function formatNumber(value: number): string {
+  return new Intl.NumberFormat('en-US').format(Math.round(value * 100) / 100);
+}
+
+function ChangeIndicator({ change, suffix = '%' }: { change?: number; suffix?: string }) {
+  if (change === undefined || change === 0) return null;
+  const isPositive = change > 0;
+  return (
+    <span className={`inline-flex items-center text-xs font-medium ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+      {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+      {Math.abs(change).toFixed(1)}{suffix}
+    </span>
+  );
+}
+
+function KPICard({ title, value, subtitle, icon: Icon, change, format: formatType = 'currency' }: {
+  title: string;
+  value: number;
+  subtitle?: string;
+  icon: any;
+  change?: number;
+  format?: 'currency' | 'number' | 'percent';
+}) {
+  const formattedValue = formatType === 'currency' 
+    ? formatCurrency(value) 
+    : formatType === 'percent' 
+      ? `${value.toFixed(1)}%` 
+      : formatNumber(value);
+  
+  return (
+    <Card className="hover:shadow-md transition-shadow">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-baseline gap-2">
+          <div className="text-2xl font-bold">{formattedValue}</div>
+          <ChangeIndicator change={change} />
+        </div>
+        {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function Reports() {
   const { currentLocationId, setCurrentLocation } = useShopStore();
   const { data: locations = [], isLoading: locationsLoading } = useLocations();
-  const [dateRange, setDateRange] = useState('all');
+  const [dateRange, setDateRange] = useState('month');
+  const [compareEnabled, setCompareEnabled] = useState(true);
+  const [drillDownType, setDrillDownType] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
     if (!currentLocationId && locations.length > 0) {
@@ -77,29 +158,40 @@ export default function Reports() {
     }
   }, [locations, currentLocationId, setCurrentLocation]);
 
-  const { data: summary, isLoading } = useQuery<ReportSummary>({
-    queryKey: ['report-summary', currentLocationId, dateRange],
+  const { data: analytics, isLoading, refetch } = useQuery<AnalyticsData>({
+    queryKey: ['analytics', currentLocationId, dateRange, compareEnabled],
     queryFn: async () => {
       if (!currentLocationId) return null;
-      const res = await fetch(`/api/reports/summary/${currentLocationId}?range=${dateRange}`, { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch report');
+      const res = await fetch(
+        `/api/reports/analytics/${currentLocationId}?range=${dateRange}&compare=${compareEnabled}`, 
+        { credentials: 'include' }
+      );
+      if (!res.ok) throw new Error('Failed to fetch analytics');
       return res.json();
     },
     enabled: !!currentLocationId,
+    refetchInterval: 60000,
   });
+
+  const handleExport = async (type: string) => {
+    if (!currentLocationId) return;
+    window.open(`/api/reports/export/${currentLocationId}?type=${type}&range=${dateRange}`, '_blank');
+  };
 
   const currentLocation = locations.find(l => l.id === currentLocationId);
 
-  const revenueChartData = summary ? [
-    { name: 'Labor', value: summary.revenue.labor },
-    { name: 'Parts', value: summary.revenue.parts },
-    { name: 'Other', value: summary.revenue.other },
+  const revenueBreakdown = analytics ? [
+    { name: 'Labor', value: analytics.kpis.laborRevenue.value, color: COLORS[0] },
+    { name: 'Parts', value: analytics.kpis.partsRevenue.value, color: COLORS[1] },
+    { name: 'Other', value: analytics.kpis.otherRevenue.value, color: COLORS[2] },
   ].filter(d => d.value > 0) : [];
 
-  const invoiceChartData = summary ? [
-    { name: 'Paid', value: summary.invoices.totalPaid, count: summary.invoices.paid },
-    { name: 'Outstanding', value: summary.invoices.totalOutstanding, count: summary.invoices.outstanding },
-  ] : [];
+  const agingData = analytics ? [
+    { name: 'Current', value: analytics.aging.current, color: '#22c55e' },
+    { name: '31-60 Days', value: analytics.aging.days30, color: '#f59e0b' },
+    { name: '61-90 Days', value: analytics.aging.days60, color: '#f97316' },
+    { name: '90+ Days', value: analytics.aging.days90, color: '#ef4444' },
+  ].filter(d => d.value > 0) : [];
 
   if (locationsLoading) {
     return (
@@ -115,22 +207,41 @@ export default function Reports() {
     <AppLayout>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Analytics & Reports</h1>
           <p className="text-muted-foreground mt-1">
-            Analytics for {currentLocation?.name || 'All Locations'} &bull; {format(new Date(), 'MMMM d, yyyy')}
+            {currentLocation?.name || 'All Locations'} &bull; {format(new Date(), 'MMMM d, yyyy')}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Switch 
+              id="compare" 
+              checked={compareEnabled} 
+              onCheckedChange={setCompareEnabled}
+              data-testid="switch-compare"
+            />
+            <Label htmlFor="compare" className="text-sm">Compare</Label>
+          </div>
           <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-[180px]" data-testid="select-date-range">
+            <SelectTrigger className="w-[160px]" data-testid="select-date-range">
+              <Calendar className="w-4 h-4 mr-2" />
               <SelectValue placeholder="Date Range" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Time</SelectItem>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="week">This Week</SelectItem>
-              <SelectItem value="month">This Month</SelectItem>
-              <SelectItem value="year">This Year</SelectItem>
+              {DATE_RANGES.map(range => (
+                <SelectItem key={range.value} value={range.value}>{range.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value="" onValueChange={handleExport}>
+            <SelectTrigger className="w-[130px]" data-testid="button-export">
+              <Download className="w-4 h-4 mr-2" />
+              <span>Export</span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="invoices">Invoices CSV</SelectItem>
+              <SelectItem value="ros">Repair Orders CSV</SelectItem>
+              <SelectItem value="technicians">Technicians CSV</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -140,7 +251,7 @@ export default function Reports() {
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         </div>
-      ) : !summary ? (
+      ) : !analytics ? (
         <Card>
           <CardContent className="py-10 text-center">
             <AlertCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -148,8 +259,8 @@ export default function Reports() {
           </CardContent>
         </Card>
       ) : (
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
             <TabsTrigger value="overview" data-testid="tab-overview">
               <BarChart3 className="w-4 h-4 mr-2" />
               Overview
@@ -158,105 +269,119 @@ export default function Reports() {
               <DollarSign className="w-4 h-4 mr-2" />
               Revenue
             </TabsTrigger>
-            <TabsTrigger value="productivity" data-testid="tab-productivity">
-              <Clock className="w-4 h-4 mr-2" />
-              Productivity
+            <TabsTrigger value="technicians" data-testid="tab-technicians">
+              <Users className="w-4 h-4 mr-2" />
+              Technicians
             </TabsTrigger>
-            <TabsTrigger value="parts" data-testid="tab-parts">
-              <Package className="w-4 h-4 mr-2" />
-              Parts
+            <TabsTrigger value="services" data-testid="tab-services">
+              <Wrench className="w-4 h-4 mr-2" />
+              Services
+            </TabsTrigger>
+            <TabsTrigger value="ar" data-testid="tab-ar">
+              <FileText className="w-4 h-4 mr-2" />
+              A/R & Aging
             </TabsTrigger>
           </TabsList>
 
+          {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-total-revenue">
-                    ${summary.revenue.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    From {summary.repairOrders.completed} completed ROs
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Avg RO Value</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-avg-ro">
-                    ${summary.revenue.avgRoValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Average repair order value
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Hours Worked</CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-hours-worked">
-                    {summary.productivity.totalHoursWorked.toFixed(1)}h
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {summary.productivity.activeTechnicians} active technicians
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Outstanding</CardTitle>
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-outstanding">
-                    ${summary.invoices.totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {summary.invoices.outstanding} unpaid invoices
-                  </p>
-                </CardContent>
-              </Card>
+              <KPICard 
+                title="Total Revenue" 
+                value={analytics.kpis.totalRevenue.value} 
+                icon={DollarSign}
+                change={compareEnabled ? analytics.kpis.totalRevenue.change : undefined}
+                subtitle={`${analytics.invoices.paid} paid invoices`}
+              />
+              <KPICard 
+                title="Average RO" 
+                value={analytics.kpis.avgRO.value} 
+                icon={TrendingUp}
+                change={compareEnabled ? analytics.kpis.avgRO.change : undefined}
+                subtitle="Average repair order value"
+              />
+              <KPICard 
+                title="Car Count" 
+                value={analytics.kpis.carCount.value} 
+                icon={Car}
+                change={compareEnabled ? analytics.kpis.carCount.change : undefined}
+                format="number"
+                subtitle="Unique vehicles serviced"
+              />
+              <KPICard 
+                title="Completed ROs" 
+                value={analytics.kpis.completedROs.value} 
+                icon={Target}
+                change={compareEnabled ? analytics.kpis.completedROs.change : undefined}
+                format="number"
+                subtitle="Repair orders completed"
+              />
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Revenue Trend</CardTitle>
+                  <CardDescription>Daily revenue over selected period</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={analytics.trends}>
+                        <defs>
+                          <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis 
+                          dataKey="date" 
+                          tickFormatter={(val) => format(new Date(val), 'MMM d')}
+                          className="text-xs"
+                        />
+                        <YAxis tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`} className="text-xs" />
+                        <Tooltip 
+                          formatter={(value: number) => [formatCurrency(value), 'Revenue']}
+                          labelFormatter={(label) => format(new Date(label), 'MMM d, yyyy')}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="revenue" 
+                          stroke="#2563eb" 
+                          fillOpacity={1} 
+                          fill="url(#colorRevenue)" 
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle>Revenue Breakdown</CardTitle>
                   <CardDescription>Revenue by category</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {revenueChartData.length > 0 ? (
+                  {revenueBreakdown.length > 0 ? (
                     <div className="h-[300px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <RechartsPie>
                           <Pie
-                            data={revenueChartData}
+                            data={revenueBreakdown}
                             cx="50%"
                             cy="50%"
-                            labelLine={false}
-                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                            outerRadius={80}
-                            fill="#8884d8"
+                            innerRadius={60}
+                            outerRadius={100}
+                            paddingAngle={2}
                             dataKey="value"
                           >
-                            {revenueChartData.map((_, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            {revenueBreakdown.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                          <Tooltip formatter={(value: number) => formatCurrency(value)} />
                           <Legend />
                         </RechartsPie>
                       </ResponsiveContainer>
@@ -268,301 +393,429 @@ export default function Reports() {
                   )}
                 </CardContent>
               </Card>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-3">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Gross Profit</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-green-600">
+                    {formatCurrency(analytics.kpis.grossProfit.value)}
+                  </div>
+                  <div className="flex gap-4 mt-4">
+                    <div>
+                      <div className="text-sm text-muted-foreground">Labor Margin</div>
+                      <div className="font-semibold">{analytics.kpis.laborMargin.value.toFixed(1)}%</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Parts Margin</div>
+                      <div className="font-semibold">{analytics.kpis.partsMargin.value.toFixed(1)}%</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Deferred Work</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-amber-600">
+                    {formatCurrency(analytics.deferredWork.value)}
+                  </div>
+                  <div className="flex gap-4 mt-4">
+                    <div>
+                      <div className="text-sm text-muted-foreground">Pending</div>
+                      <div className="font-semibold">{analytics.deferredWork.pending} items</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Conversion</div>
+                      <div className="font-semibold">{analytics.deferredWork.conversionRate.toFixed(1)}%</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Outstanding A/R</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-red-600">
+                    {formatCurrency(analytics.invoices.totalOutstanding)}
+                  </div>
+                  <div className="flex gap-4 mt-4">
+                    <div>
+                      <div className="text-sm text-muted-foreground">Invoices</div>
+                      <div className="font-semibold">{analytics.invoices.outstanding} unpaid</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">90+ Days</div>
+                      <div className="font-semibold text-red-600">{formatCurrency(analytics.aging.days90)}</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Revenue Tab */}
+          <TabsContent value="revenue" className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-3">
+              <KPICard 
+                title="Labor Revenue" 
+                value={analytics.kpis.laborRevenue.value} 
+                icon={Wrench}
+                subtitle={`${analytics.kpis.laborMargin.value.toFixed(1)}% margin`}
+              />
+              <KPICard 
+                title="Parts Revenue" 
+                value={analytics.kpis.partsRevenue.value} 
+                icon={Package}
+                subtitle={`${analytics.kpis.partsMargin.value.toFixed(1)}% margin`}
+              />
+              <KPICard 
+                title="Other Revenue" 
+                value={analytics.kpis.otherRevenue.value} 
+                icon={DollarSign}
+                subtitle="Fees, shop supplies, etc."
+              />
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Revenue Over Time</CardTitle>
+                <CardDescription>Daily revenue and car count</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[400px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={analytics.trends}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis 
+                        dataKey="date" 
+                        tickFormatter={(val) => format(new Date(val), 'MMM d')}
+                      />
+                      <YAxis yAxisId="left" tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`} />
+                      <YAxis yAxisId="right" orientation="right" />
+                      <Tooltip 
+                        formatter={(value: number, name: string) => [
+                          name === 'revenue' ? formatCurrency(value) : value,
+                          name === 'revenue' ? 'Revenue' : name === 'carCount' ? 'Cars' : 'ROs'
+                        ]}
+                        labelFormatter={(label) => format(new Date(label), 'MMM d, yyyy')}
+                      />
+                      <Legend />
+                      <Line yAxisId="left" type="monotone" dataKey="revenue" stroke="#2563eb" strokeWidth={2} dot={false} />
+                      <Line yAxisId="right" type="monotone" dataKey="carCount" stroke="#7c3aed" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Revenue Mix</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[
+                      { label: 'Labor', value: analytics.kpis.laborRevenue.value, total: analytics.kpis.totalRevenue.value, color: 'bg-blue-500' },
+                      { label: 'Parts', value: analytics.kpis.partsRevenue.value, total: analytics.kpis.totalRevenue.value, color: 'bg-purple-500' },
+                      { label: 'Other', value: analytics.kpis.otherRevenue.value, total: analytics.kpis.totalRevenue.value, color: 'bg-green-500' },
+                    ].map(item => (
+                      <div key={item.label}>
+                        <div className="flex justify-between mb-1">
+                          <span className="text-sm font-medium">{item.label}</span>
+                          <span className="text-sm text-muted-foreground">
+                            {formatCurrency(item.value)} ({item.total > 0 ? ((item.value / item.total) * 100).toFixed(0) : 0}%)
+                          </span>
+                        </div>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full ${item.color} rounded-full`} 
+                            style={{ width: `${item.total > 0 ? (item.value / item.total) * 100 : 0}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Repair Orders</CardTitle>
-                  <CardDescription>RO status breakdown</CardDescription>
+                  <CardTitle>Profitability</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between p-4 border rounded-lg bg-green-50 dark:bg-green-950">
+                      <div>
+                        <div className="font-medium text-green-700 dark:text-green-300">Gross Profit</div>
+                        <div className="text-sm text-muted-foreground">Revenue minus direct costs</div>
+                      </div>
+                      <div className="text-2xl font-bold text-green-600">
+                        {formatCurrency(analytics.kpis.grossProfit.value)}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 border rounded-lg">
+                        <div className="text-sm text-muted-foreground">Labor Margin</div>
+                        <div className="text-xl font-bold">{analytics.kpis.laborMargin.value.toFixed(1)}%</div>
+                      </div>
+                      <div className="p-4 border rounded-lg">
+                        <div className="text-sm text-muted-foreground">Parts Margin</div>
+                        <div className="text-xl font-bold">{analytics.kpis.partsMargin.value.toFixed(1)}%</div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Technicians Tab */}
+          <TabsContent value="technicians" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Technician Performance</CardTitle>
+                <CardDescription>Revenue and productivity by technician</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {analytics.technicians.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Technician</TableHead>
+                        <TableHead className="text-right">Revenue</TableHead>
+                        <TableHead className="text-right">Hours Worked</TableHead>
+                        <TableHead className="text-right">Jobs Completed</TableHead>
+                        <TableHead className="text-right">$/Hour</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {analytics.technicians.map((tech, idx) => (
+                        <TableRow key={tech.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {idx === 0 && <Badge className="bg-amber-500">Top</Badge>}
+                              <span className="font-medium">{tech.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">{formatCurrency(tech.revenue)}</TableCell>
+                          <TableCell className="text-right">{tech.hoursWorked}h</TableCell>
+                          <TableCell className="text-right">{tech.jobsCompleted}</TableCell>
+                          <TableCell className="text-right">
+                            <span className={tech.efficiency > 100 ? 'text-green-600 font-medium' : ''}>
+                              {formatCurrency(tech.efficiency)}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="py-10 text-center text-muted-foreground">
+                    No technician data available for this period
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {analytics.technicians.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Revenue by Technician</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={[
-                          { name: 'Active', value: summary.repairOrders.active },
-                          { name: 'Completed', value: summary.repairOrders.completed },
-                        ]}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="value" fill="#2563eb" />
+                      <BarChart data={analytics.technicians} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis type="number" tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`} />
+                        <YAxis type="category" dataKey="name" width={100} />
+                        <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                        <Bar dataKey="revenue" fill="#2563eb" radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </CardContent>
               </Card>
-            </div>
+            )}
           </TabsContent>
 
-          <TabsContent value="revenue" className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-3">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Labor Revenue</CardTitle>
-                  <Wrench className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-labor-revenue">
-                    ${summary.revenue.labor.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {summary.revenue.total > 0 ? ((summary.revenue.labor / summary.revenue.total) * 100).toFixed(1) : 0}% of total
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Parts Revenue</CardTitle>
-                  <Package className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-parts-revenue">
-                    ${summary.revenue.parts.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {summary.revenue.total > 0 ? ((summary.revenue.parts / summary.revenue.total) * 100).toFixed(1) : 0}% of total
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Other Revenue</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-other-revenue">
-                    ${summary.revenue.other.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Fees, tires, and other services
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
+          {/* Services Tab */}
+          <TabsContent value="services" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Invoice Status</CardTitle>
-                <CardDescription>Payment collection overview</CardDescription>
+                <CardTitle>Top Services</CardTitle>
+                <CardDescription>Most profitable services performed</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={invoiceChartData}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis tickFormatter={(value) => `$${value.toLocaleString()}`} />
-                      <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
-                      <Bar dataKey="value" fill="#2563eb" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div className="text-center p-4 bg-green-50 dark:bg-green-950 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">
-                      ${summary.invoices.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </div>
-                    <div className="text-sm text-muted-foreground">{summary.invoices.paid} Paid Invoices</div>
+                {analytics.topServices.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[50px]">#</TableHead>
+                        <TableHead>Service</TableHead>
+                        <TableHead className="text-right">Count</TableHead>
+                        <TableHead className="text-right">Revenue</TableHead>
+                        <TableHead className="text-right">Avg Value</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {analytics.topServices.map((service, idx) => (
+                        <TableRow key={service.name}>
+                          <TableCell className="font-medium text-muted-foreground">{idx + 1}</TableCell>
+                          <TableCell className="font-medium">{service.name}</TableCell>
+                          <TableCell className="text-right">{service.count}</TableCell>
+                          <TableCell className="text-right font-medium">{formatCurrency(service.revenue)}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(service.revenue / service.count)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="py-10 text-center text-muted-foreground">
+                    No service data available for this period
                   </div>
-                  <div className="text-center p-4 bg-amber-50 dark:bg-amber-950 rounded-lg">
-                    <div className="text-2xl font-bold text-amber-600">
-                      ${summary.invoices.totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </div>
-                    <div className="text-sm text-muted-foreground">{summary.invoices.outstanding} Outstanding</div>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
+
+            {analytics.topServices.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Service Revenue Distribution</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[400px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={analytics.topServices}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} interval={0} />
+                        <YAxis tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`} />
+                        <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                        <Bar dataKey="revenue" fill="#7c3aed" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
-          <TabsContent value="productivity" className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-3">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Hours</CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
+          {/* A/R & Aging Tab */}
+          <TabsContent value="ar" className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-4">
+              <Card className="border-l-4 border-l-green-500">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-muted-foreground">Current (0-30 days)</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-total-hours">
-                    {summary.productivity.totalHoursWorked.toFixed(1)}h
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Total technician hours logged
-                  </p>
+                  <div className="text-2xl font-bold text-green-600">{formatCurrency(analytics.aging.current)}</div>
                 </CardContent>
               </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Active Technicians</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
+              <Card className="border-l-4 border-l-amber-500">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-muted-foreground">31-60 Days</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-active-techs">
-                    {summary.productivity.activeTechnicians}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Technicians with logged time
-                  </p>
+                  <div className="text-2xl font-bold text-amber-600">{formatCurrency(analytics.aging.days30)}</div>
                 </CardContent>
               </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Revenue/Hour</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <Card className="border-l-4 border-l-orange-500">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-muted-foreground">61-90 Days</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-revenue-per-hour">
-                    ${summary.productivity.totalHoursWorked > 0 
-                      ? (summary.revenue.total / summary.productivity.totalHoursWorked).toFixed(2) 
-                      : '0.00'}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Average revenue per hour
-                  </p>
+                  <div className="text-2xl font-bold text-orange-600">{formatCurrency(analytics.aging.days60)}</div>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-l-red-500">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-muted-foreground">90+ Days</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-600">{formatCurrency(analytics.aging.days90)}</div>
                 </CardContent>
               </Card>
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Productivity Metrics</CardTitle>
-                <CardDescription>Time and efficiency analysis</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Aging Breakdown</CardTitle>
+                  <CardDescription>Outstanding invoices by age</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {agingData.length > 0 ? (
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RechartsPie>
+                          <Pie
+                            data={agingData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={100}
+                            paddingAngle={2}
+                            dataKey="value"
+                          >
+                            {agingData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                          <Legend />
+                        </RechartsPie>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                      No outstanding invoices
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Invoice Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between p-4 border rounded-lg">
                       <div>
-                        <div className="font-medium">Completed Repair Orders</div>
-                        <div className="text-sm text-muted-foreground">Total jobs finished</div>
+                        <div className="font-medium">Total Invoiced</div>
+                        <div className="text-sm text-muted-foreground">{analytics.invoices.total} invoices</div>
                       </div>
-                      <div className="text-2xl font-bold">{summary.repairOrders.completed}</div>
+                      <div className="text-xl font-bold">
+                        {formatCurrency(analytics.invoices.totalPaid + analytics.invoices.totalOutstanding)}
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center justify-between p-4 border rounded-lg bg-green-50 dark:bg-green-950">
                       <div>
-                        <div className="font-medium">ROs per Hour</div>
-                        <div className="text-sm text-muted-foreground">Efficiency rate</div>
+                        <div className="font-medium text-green-700 dark:text-green-300">Collected</div>
+                        <div className="text-sm text-muted-foreground">{analytics.invoices.paid} paid</div>
                       </div>
-                      <div className="text-2xl font-bold">
-                        {summary.productivity.totalHoursWorked > 0 
-                          ? (summary.repairOrders.completed / summary.productivity.totalHoursWorked).toFixed(2) 
-                          : '0'}
-                      </div>
+                      <div className="text-xl font-bold text-green-600">{formatCurrency(analytics.invoices.totalPaid)}</div>
                     </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center justify-between p-4 border rounded-lg bg-red-50 dark:bg-red-950">
                       <div>
-                        <div className="font-medium">Avg Hours per RO</div>
-                        <div className="text-sm text-muted-foreground">Time per job</div>
+                        <div className="font-medium text-red-700 dark:text-red-300">Outstanding</div>
+                        <div className="text-sm text-muted-foreground">{analytics.invoices.outstanding} unpaid</div>
                       </div>
-                      <div className="text-2xl font-bold">
-                        {summary.repairOrders.completed > 0 
-                          ? (summary.productivity.totalHoursWorked / summary.repairOrders.completed).toFixed(1) 
-                          : '0'}h
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <div className="font-medium">Active ROs</div>
-                        <div className="text-sm text-muted-foreground">Work in progress</div>
-                      </div>
-                      <div className="text-2xl font-bold">{summary.repairOrders.active}</div>
+                      <div className="text-xl font-bold text-red-600">{formatCurrency(analytics.invoices.totalOutstanding)}</div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="parts" className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-3">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Parts Cost</CardTitle>
-                  <Package className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-parts-cost">
-                    ${summary.parts.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Total parts ordered (received)
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Parts Revenue</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-parts-revenue-margin">
-                    ${summary.revenue.parts.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Revenue from parts
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Parts Margin</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-parts-margin">
-                    ${(summary.revenue.parts - summary.parts.totalCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {summary.revenue.parts > 0 
-                      ? ((1 - summary.parts.totalCost / summary.revenue.parts) * 100).toFixed(1) 
-                      : 0}% margin
-                  </p>
                 </CardContent>
               </Card>
             </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Parts Orders</CardTitle>
-                <CardDescription>Current order status</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="flex items-center justify-between p-4 border rounded-lg bg-amber-50 dark:bg-amber-950">
-                    <div>
-                      <div className="font-medium">Pending Orders</div>
-                      <div className="text-sm text-muted-foreground">Awaiting processing</div>
-                    </div>
-                    <div className="text-2xl font-bold text-amber-600">{summary.parts.pendingOrders}</div>
-                  </div>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <div className="font-medium">Parts Cost Ratio</div>
-                      <div className="text-sm text-muted-foreground">Cost vs Revenue</div>
-                    </div>
-                    <div className="text-2xl font-bold">
-                      {summary.revenue.parts > 0 
-                        ? ((summary.parts.totalCost / summary.revenue.parts) * 100).toFixed(1) 
-                        : 0}%
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       )}

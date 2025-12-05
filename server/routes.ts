@@ -2913,6 +2913,369 @@ export async function registerRoutes(
     }
   });
 
+  // Comprehensive Analytics API
+  app.get("/api/reports/analytics/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const dateRange = req.query.range as string || 'month';
+      const compareEnabled = req.query.compare === 'true';
+      const now = new Date();
+      
+      // Calculate date ranges
+      let startDate: Date;
+      let endDate: Date = now;
+      let prevStartDate: Date | null = null;
+      let prevEndDate: Date | null = null;
+      
+      if (dateRange === 'today') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        if (compareEnabled) {
+          prevStartDate = new Date(startDate);
+          prevStartDate.setDate(prevStartDate.getDate() - 1);
+          prevEndDate = new Date(startDate);
+        }
+      } else if (dateRange === 'week') {
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        if (compareEnabled) {
+          prevStartDate = new Date(startDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+          prevEndDate = new Date(startDate);
+        }
+      } else if (dateRange === 'month') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        if (compareEnabled) {
+          prevStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          prevEndDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        }
+      } else if (dateRange === 'quarter') {
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        startDate = new Date(now.getFullYear(), currentQuarter * 3, 1);
+        if (compareEnabled) {
+          prevStartDate = new Date(now.getFullYear(), (currentQuarter - 1) * 3, 1);
+          prevEndDate = new Date(now.getFullYear(), currentQuarter * 3, 0);
+        }
+      } else if (dateRange === 'year') {
+        startDate = new Date(now.getFullYear(), 0, 1);
+        if (compareEnabled) {
+          prevStartDate = new Date(now.getFullYear() - 1, 0, 1);
+          prevEndDate = new Date(now.getFullYear() - 1, 11, 31);
+        }
+      } else if (dateRange === 'last30') {
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        if (compareEnabled) {
+          prevStartDate = new Date(startDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+          prevEndDate = new Date(startDate);
+        }
+      } else if (dateRange === 'last90') {
+        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        if (compareEnabled) {
+          prevStartDate = new Date(startDate.getTime() - 90 * 24 * 60 * 60 * 1000);
+          prevEndDate = new Date(startDate);
+        }
+      } else {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      }
+
+      // Fetch all data
+      const ros = await storage.getRepairOrdersByLocation(req.params.locationId);
+      const invoices = await storage.getInvoicesByLocation(req.params.locationId);
+      const timeLogs = await storage.getTimeLogsByLocation(req.params.locationId);
+      const customers = await storage.getCustomersByOrg(req.user!.orgId);
+      const users = await storage.getUsersByOrg(req.user!.orgId);
+      const deferredWork = await storage.getDeferredWorkByOrg(req.user!.orgId);
+
+      // Filter by date range
+      const filterByDateRange = <T extends { createdAt: Date | string }>(items: T[], start: Date, end: Date) => 
+        items.filter(i => {
+          const d = new Date(i.createdAt);
+          return d >= start && d <= end;
+        });
+
+      const currentInvoices = filterByDateRange(invoices, startDate, endDate);
+      const paidInvoices = currentInvoices.filter(i => i.status === 'PAID');
+      const currentRos = ros.filter(ro => {
+        const d = ro.completedAt ? new Date(ro.completedAt) : new Date(ro.createdAt);
+        return d >= startDate && d <= endDate;
+      });
+
+      // Previous period data for comparison
+      let prevPaidInvoices: typeof paidInvoices = [];
+      let prevRos: typeof currentRos = [];
+      if (compareEnabled && prevStartDate && prevEndDate) {
+        const prevInvoices = filterByDateRange(invoices, prevStartDate, prevEndDate);
+        prevPaidInvoices = prevInvoices.filter(i => i.status === 'PAID');
+        prevRos = ros.filter(ro => {
+          const d = ro.completedAt ? new Date(ro.completedAt) : new Date(ro.createdAt);
+          return d >= prevStartDate! && d <= prevEndDate!;
+        });
+      }
+
+      // Calculate current period metrics
+      const totalRevenue = paidInvoices.reduce((sum, i) => sum + parseFloat(i.total), 0);
+      const carCount = new Set(currentRos.map(r => r.vehicleId)).size;
+      const avgRO = paidInvoices.length > 0 ? totalRevenue / paidInvoices.length : 0;
+      const completedROs = currentRos.filter(r => r.completedAt).length;
+
+      // Previous period metrics
+      const prevTotalRevenue = prevPaidInvoices.reduce((sum, i) => sum + parseFloat(i.total), 0);
+      const prevCarCount = new Set(prevRos.map(r => r.vehicleId)).size;
+      const prevAvgRO = prevPaidInvoices.length > 0 ? prevTotalRevenue / prevPaidInvoices.length : 0;
+
+      // Revenue breakdown
+      let laborRevenue = 0, partsRevenue = 0, otherRevenue = 0;
+      let laborCost = 0, partsCost = 0;
+      
+      for (const invoice of paidInvoices) {
+        const ro = ros.find(r => r.id === invoice.repairOrderId);
+        if (ro) {
+          const jobs = (ro.jobs as any[]) || [];
+          for (const job of jobs) {
+            for (const item of job.lineItems || []) {
+              const amount = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
+              const cost = (Number(item.quantity) || 0) * (Number(item.unitCost) || 0);
+              if (item.type === 'LABOR') {
+                laborRevenue += amount;
+                laborCost += cost;
+              } else if (item.type === 'PART') {
+                partsRevenue += amount;
+                partsCost += cost;
+              } else {
+                otherRevenue += amount;
+              }
+            }
+          }
+        }
+      }
+
+      // Daily trend data
+      const dailyData: { date: string; revenue: number; carCount: number; ros: number }[] = [];
+      const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      for (let i = 0; i <= Math.min(daysDiff, 90); i++) {
+        const day = new Date(startDate);
+        day.setDate(day.getDate() + i);
+        const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+        const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+        
+        const dayInvoices = paidInvoices.filter(inv => {
+          const d = new Date(inv.paidAt || inv.createdAt);
+          return d >= dayStart && d <= dayEnd;
+        });
+        const dayRos = currentRos.filter(ro => {
+          const d = ro.completedAt ? new Date(ro.completedAt) : new Date(ro.createdAt);
+          return d >= dayStart && d <= dayEnd;
+        });
+        
+        dailyData.push({
+          date: dayStart.toISOString().split('T')[0],
+          revenue: dayInvoices.reduce((sum, i) => sum + parseFloat(i.total), 0),
+          carCount: new Set(dayRos.map(r => r.vehicleId)).size,
+          ros: dayRos.length,
+        });
+      }
+
+      // Technician productivity
+      const techData: { id: string; name: string; hoursWorked: number; revenue: number; jobsCompleted: number; efficiency: number }[] = [];
+      const technicians = users.filter(u => u.role === 'TECH' || u.role === 'SERVICE_ADVISOR');
+      
+      for (const tech of technicians) {
+        const techTimeLogs = timeLogs.filter(t => t.technicianId === tech.id && new Date(t.clockIn) >= startDate);
+        let hoursWorked = 0;
+        for (const log of techTimeLogs) {
+          if (log.clockOut) {
+            const hours = (new Date(log.clockOut).getTime() - new Date(log.clockIn).getTime()) / (1000 * 60 * 60);
+            hoursWorked += Math.max(0, hours - (Number(log.breakMinutes) || 0) / 60);
+          }
+        }
+
+        const techRos = currentRos.filter(r => r.technicianId === tech.id);
+        let techRevenue = 0;
+        for (const ro of techRos) {
+          const inv = paidInvoices.find(i => i.repairOrderId === ro.id);
+          if (inv) techRevenue += parseFloat(inv.total);
+        }
+
+        if (hoursWorked > 0 || techRevenue > 0 || techRos.length > 0) {
+          techData.push({
+            id: tech.id,
+            name: tech.name || tech.username,
+            hoursWorked: Math.round(hoursWorked * 10) / 10,
+            revenue: techRevenue,
+            jobsCompleted: techRos.filter(r => r.completedAt).length,
+            efficiency: hoursWorked > 0 ? Math.round((techRevenue / hoursWorked) * 100) / 100 : 0,
+          });
+        }
+      }
+
+      // Top services
+      const serviceMap = new Map<string, { name: string; count: number; revenue: number }>();
+      for (const invoice of paidInvoices) {
+        const ro = ros.find(r => r.id === invoice.repairOrderId);
+        if (ro) {
+          const jobs = (ro.jobs as any[]) || [];
+          for (const job of jobs) {
+            const existing = serviceMap.get(job.name) || { name: job.name, count: 0, revenue: 0 };
+            existing.count++;
+            for (const item of job.lineItems || []) {
+              existing.revenue += (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
+            }
+            serviceMap.set(job.name, existing);
+          }
+        }
+      }
+      const topServices = Array.from(serviceMap.values())
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 10);
+
+      // Deferred work metrics
+      const locationDeferredWork = deferredWork.filter(d => d.locationId === req.params.locationId);
+      const pendingDeferred = locationDeferredWork.filter(d => d.status === 'PENDING' || d.status === 'QUOTED');
+      const convertedDeferred = locationDeferredWork.filter(d => 
+        d.status === 'CONVERTED' && d.createdAt && new Date(d.createdAt) >= startDate
+      );
+      const deferredValue = pendingDeferred.reduce((sum, d) => sum + parseFloat(d.estimatedAmount || '0'), 0);
+
+      // Invoice aging
+      const outstandingInvoices = currentInvoices.filter(i => i.status !== 'PAID' && i.status !== 'VOID');
+      const aging = {
+        current: 0, // 0-30 days
+        days30: 0,  // 31-60 days
+        days60: 0,  // 61-90 days
+        days90: 0,  // 90+ days
+      };
+      
+      for (const inv of outstandingInvoices) {
+        const daysPast = Math.floor((now.getTime() - new Date(inv.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+        const amount = parseFloat(inv.amountDue);
+        if (daysPast <= 30) aging.current += amount;
+        else if (daysPast <= 60) aging.days30 += amount;
+        else if (daysPast <= 90) aging.days60 += amount;
+        else aging.days90 += amount;
+      }
+
+      // Calculate percentage changes
+      const calcChange = (current: number, prev: number) => 
+        prev > 0 ? Math.round(((current - prev) / prev) * 1000) / 10 : current > 0 ? 100 : 0;
+
+      res.json({
+        dateRange: { start: startDate.toISOString(), end: endDate.toISOString() },
+        kpis: {
+          totalRevenue: { value: totalRevenue, change: calcChange(totalRevenue, prevTotalRevenue) },
+          carCount: { value: carCount, change: calcChange(carCount, prevCarCount) },
+          avgRO: { value: avgRO, change: calcChange(avgRO, prevAvgRO) },
+          completedROs: { value: completedROs, change: calcChange(completedROs, prevRos.filter(r => r.completedAt).length) },
+          laborRevenue: { value: laborRevenue },
+          partsRevenue: { value: partsRevenue },
+          otherRevenue: { value: otherRevenue },
+          laborMargin: { value: laborRevenue > 0 ? ((laborRevenue - laborCost) / laborRevenue) * 100 : 0 },
+          partsMargin: { value: partsRevenue > 0 ? ((partsRevenue - partsCost) / partsRevenue) * 100 : 0 },
+          grossProfit: { value: totalRevenue - laborCost - partsCost },
+        },
+        trends: dailyData,
+        technicians: techData.sort((a, b) => b.revenue - a.revenue),
+        topServices,
+        deferredWork: {
+          pending: pendingDeferred.length,
+          converted: convertedDeferred.length,
+          value: deferredValue,
+          conversionRate: locationDeferredWork.length > 0 
+            ? (convertedDeferred.length / locationDeferredWork.length) * 100 
+            : 0,
+        },
+        aging,
+        invoices: {
+          total: currentInvoices.length,
+          paid: paidInvoices.length,
+          outstanding: outstandingInvoices.length,
+          totalPaid: totalRevenue,
+          totalOutstanding: outstandingInvoices.reduce((sum, i) => sum + parseFloat(i.amountDue), 0),
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Export report data as CSV
+  app.get("/api/reports/export/:locationId", requireAuth, async (req, res) => {
+    try {
+      const location = await storage.getLocation(req.params.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const type = req.query.type as string || 'invoices';
+      const dateRange = req.query.range as string || 'month';
+      const now = new Date();
+      
+      let startDate: Date;
+      if (dateRange === 'today') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      } else if (dateRange === 'week') {
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      } else if (dateRange === 'month') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      } else if (dateRange === 'year') {
+        startDate = new Date(now.getFullYear(), 0, 1);
+      } else {
+        startDate = new Date(0);
+      }
+
+      let csvData = '';
+      
+      if (type === 'invoices') {
+        const invoices = await storage.getInvoicesByLocation(req.params.locationId);
+        const customers = await storage.getCustomersByOrg(req.user!.orgId);
+        const filtered = invoices.filter(i => new Date(i.createdAt) >= startDate);
+        
+        csvData = 'Invoice Number,Customer,Status,Total,Amount Paid,Amount Due,Created Date,Paid Date\n';
+        for (const inv of filtered) {
+          const customer = customers.find(c => c.id === inv.customerId);
+          csvData += `"${inv.invoiceNumber}","${customer?.firstName || ''} ${customer?.lastName || ''}","${inv.status}",${inv.total},${inv.amountPaid},${inv.amountDue},"${new Date(inv.createdAt).toLocaleDateString()}","${inv.paidAt ? new Date(inv.paidAt).toLocaleDateString() : ''}"\n`;
+        }
+      } else if (type === 'ros') {
+        const ros = await storage.getRepairOrdersByLocation(req.params.locationId);
+        const customers = await storage.getCustomersByOrg(req.user!.orgId);
+        const vehicles = await storage.getVehiclesByOrg(req.user!.orgId);
+        const filtered = ros.filter(r => new Date(r.createdAt) >= startDate);
+        
+        csvData = 'RO Number,Customer,Vehicle,Status,Created Date,Completed Date\n';
+        for (const ro of filtered) {
+          const customer = customers.find(c => c.id === ro.customerId);
+          const vehicle = vehicles.find(v => v.id === ro.vehicleId);
+          csvData += `${ro.roNumber},"${customer?.firstName || ''} ${customer?.lastName || ''}","${vehicle?.year || ''} ${vehicle?.make || ''} ${vehicle?.model || ''}","${ro.status}","${new Date(ro.createdAt).toLocaleDateString()}","${ro.completedAt ? new Date(ro.completedAt).toLocaleDateString() : ''}"\n`;
+        }
+      } else if (type === 'technicians') {
+        const users = await storage.getUsersByOrg(req.user!.orgId);
+        const timeLogs = await storage.getTimeLogsByLocation(req.params.locationId);
+        const technicians = users.filter(u => u.role === 'TECH');
+        
+        csvData = 'Technician,Hours Worked,Jobs Completed\n';
+        for (const tech of technicians) {
+          const techLogs = timeLogs.filter(t => t.technicianId === tech.id && new Date(t.clockIn) >= startDate);
+          let hours = 0;
+          for (const log of techLogs) {
+            if (log.clockOut) {
+              hours += (new Date(log.clockOut).getTime() - new Date(log.clockIn).getTime()) / (1000 * 60 * 60);
+            }
+          }
+          const ros = await storage.getRepairOrdersByLocation(req.params.locationId);
+          const techRos = ros.filter(r => r.technicianId === tech.id && r.completedAt && new Date(r.completedAt) >= startDate);
+          csvData += `"${tech.name || tech.username}",${hours.toFixed(1)},${techRos.length}\n`;
+        }
+      }
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${type}-report-${dateRange}.csv"`);
+      res.send(csvData);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ============================================
   // VIN Decode (NHTSA - Free, no API key required)
   // ============================================
