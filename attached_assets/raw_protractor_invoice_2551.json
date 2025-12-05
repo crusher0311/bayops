@@ -1,0 +1,3015 @@
+{
+  "Header": {
+    "ID": "0748f473-d211-43a9-b01d-07d3cb799085",
+    "CreationTime": "2024-10-07T07:47:05.673-04:00",
+    "DeletionTime": "0001-01-01T00:00:00",
+    "DeletionTimeSpecified": true,
+    "LastModifiedTime": "2025-11-19T10:12:12.05-05:00",
+    "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+  },
+  "ID": "0748f473-d211-43a9-b01d-07d3cb799085",
+  "Type": "WorkOrder",
+  "ScheduledTime": "2024-10-07T07:46:47-04:00",
+  "PromisedTime": "2025-04-30T11:00:00-04:00",
+  "InvoiceTime": "2025-11-19T10:12:12.22-05:00",
+  "WorkOrderNumber": 1773,
+  "InvoiceNumber": 2551,
+  "PurchaseOrderNumber": "",
+  "Contact": {
+    "Header": {
+      "ID": "b1df810b-2f62-4172-abc1-12aa4f49de48",
+      "CreationTime": "2023-08-31T10:25:35.903-04:00",
+      "DeletionTime": "0001-01-01T00:00:00",
+      "DeletionTimeSpecified": true,
+      "LastModifiedTime": "2024-09-30T18:40:27.97-04:00",
+      "LastModifiedBy": "Pro_AB1369.AACE\\Mason Banta"
+    },
+    "ID": "b1df810b-2f62-4172-abc1-12aa4f49de48",
+    "FileAs": "Lodes, Tara",
+    "Name": {
+      "Title": "Name",
+      "Prefix": "",
+      "FirstName": "Tara",
+      "MiddleName": "",
+      "LastName": "Lodes",
+      "Suffix": ""
+    },
+    "Address": {
+      "Title": "Home",
+      "ID": "a9781b63-7fe1-4ac5-99e4-68b66343391c",
+      "Street": "11648 NW 114th St",
+      "City": "Yukon",
+      "Province": "OK",
+      "PostalCode": "73099",
+      "Country": "USA"
+    },
+    "Company": "",
+    "Phone1Title": "Phone",
+    "Phone1": "(405) 534-9909",
+    "Phone2Title": "",
+    "Phone2": "",
+    "EmailTitle": "Email",
+    "Email": "tara_lodes@yahoo.com",
+    "AdditionalNames": {
+      "ItemCollection": [
+        {
+          "Header": {
+            "ID": "1d8cf637-bb90-4f8d-8bb3-99df2d89a05f",
+            "CreationTime": "2023-08-31T10:25:52.09-04:00",
+            "DeletionTime": "0001-01-01T00:00:00",
+            "DeletionTimeSpecified": true,
+            "LastModifiedTime": "2023-08-31T10:25:52.09-04:00",
+            "LastModifiedBy": "Pro_AB1369.AACE\\Mason Banta"
+          },
+          "ID": "1d8cf637-bb90-4f8d-8bb3-99df2d89a05f",
+          "OwnerID": "b1df810b-2f62-4172-abc1-12aa4f49de48",
+          "Title": "Name",
+          "BaseFullName": {
+            "Prefix": "",
+            "FirstName": "Tara",
+            "MiddleName": "",
+            "LastName": "Lodes",
+            "Suffix": ""
+          }
+        }
+      ]
+    },
+    "AdditionalPhones": {
+      "ItemCollection": [
+        {
+          "Header": {
+            "ID": "c30e8d1d-7cd2-4954-9361-ca02b454ee3d",
+            "CreationTime": "2023-08-31T10:25:52.09-04:00",
+            "DeletionTime": "0001-01-01T00:00:00",
+            "DeletionTimeSpecified": true,
+            "LastModifiedTime": "2023-08-31T10:25:52.09-04:00",
+            "LastModifiedBy": "Pro_AB1369.AACE\\Mason Banta"
+          },
+          "ID": "c30e8d1d-7cd2-4954-9361-ca02b454ee3d",
+          "OwnerID": "b1df810b-2f62-4172-abc1-12aa4f49de48",
+          "Title": "Phone",
+          "BasePhoneNumber": {
+            "IsEmpty": false,
+            "Region": "",
+            "AreaCode": "405",
+            "PhoneNumber": "534-9909",
+            "Extension": ""
+          }
+        }
+      ]
+    },
+    "AdditionalURIs": {
+      "ItemCollection": [
+        {
+          "Header": {
+            "ID": "d076f915-62ec-4e64-9020-31ff2b81f38c",
+            "CreationTime": "2023-08-31T10:25:58.403-04:00",
+            "DeletionTime": "0001-01-01T00:00:00",
+            "DeletionTimeSpecified": true,
+            "LastModifiedTime": "2023-08-31T10:25:58.403-04:00",
+            "LastModifiedBy": "Pro_AB1369.AACE\\Mason Banta"
+          },
+          "ID": "d076f915-62ec-4e64-9020-31ff2b81f38c",
+          "OwnerID": "b1df810b-2f62-4172-abc1-12aa4f49de48",
+          "Title": "Email",
+          "Type": "Email",
+          "Address": "tara_lodes@yahoo.com"
+        }
+      ]
+    },
+    "PreferredContactMethod": "Email",
+    "MarketingSource": "Referral",
+    "Note": "",
+    "NoMessaging": false,
+    "NoEmail": false,
+    "NoPostCard": false
+  },
+  "ServiceItem": {
+    "IsComplete": true,
+    "PlateRegistration": "OK",
+    "VIN": "F34BF6V097822",
+    "Unit": "",
+    "Color": "White",
+    "Year": 1976,
+    "Make": "Dodge",
+    "Model": "CB300",
+    "Submodel": "Base",
+    "Engine": "V8 6.6L 6556CC 400CID VIN J",
+    "Header": {
+      "ID": "b1132d5f-de6e-4a49-b5ac-fe62a25581c5",
+      "CreationTime": "2023-08-31T11:44:46.063-04:00",
+      "DeletionTime": "0001-01-01T00:00:00",
+      "DeletionTimeSpecified": true,
+      "LastModifiedTime": "2025-11-19T10:12:12.973-05:00",
+      "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+    },
+    "ID": "b1132d5f-de6e-4a49-b5ac-fe62a25581c5",
+    "Type": "Vehicle",
+    "Lookup": "097822",
+    "Description": "1976 Dodge CB300 Base",
+    "Usage": 85301,
+    "ProductionDate": "1976-03-01T01:00:00-05:00",
+    "Note": "",
+    "NoEmail": false,
+    "NoPostCard": false,
+    "OwnerID": "b1df810b-2f62-4172-abc1-12aa4f49de48"
+  },
+  "ServiceAdvisor": {
+    "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+    "Type": "",
+    "Name": "Mason Banta"
+  },
+  "Technician": {
+    "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+    "Type": "",
+    "Name": "Ryan Christian"
+  },
+  "Duration": 0,
+  "InUsage": 85301,
+  "OutUsage": 85301,
+  "WorkflowStage": "Invoice",
+  "SearchString": "Lodes, Tara 097822 1976 Dodge CB300 Base",
+  "Note": "",
+  "ServicePackages": {
+    "ItemCollection": [
+      {
+        "Header": {
+          "ID": "1b9a349b-7121-4368-944c-aab87451e10c",
+          "CreationTime": "2024-10-07T07:47:05.69-04:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-03-18T10:56:18.067-04:00",
+          "LastModifiedBy": "ATME"
+        },
+        "ID": "1b9a349b-7121-4368-944c-aab87451e10c",
+        "Chapter": "Inspection",
+        "Rank": 1,
+        "Code": "C31",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "Courtesy 31 Point Inspection",
+          "Description": "Courtesy Inspection Results"
+        },
+        "ServicePackageLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": [
+            {
+              "Header": {
+                "ID": "75682121-b0a3-42a1-900b-aca125bde69c",
+                "CreationTime": "2024-10-07T07:47:05.69-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-07T07:47:05.69-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "75682121-b0a3-42a1-900b-aca125bde69c",
+              "Rank": 1,
+              "Type": "Header",
+              "InputType": "",
+              "Title": "Inspection Results",
+              "Result": "",
+              "Comment": "",
+              "Notes": "",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "9580d04d-a7e1-4b3c-a6cd-90b25e11b9f2",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-14T09:21:59.087-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "9580d04d-a7e1-4b3c-a6cd-90b25e11b9f2",
+              "Rank": 2,
+              "Type": "Header",
+              "InputType": "",
+              "Title": "Customer DVI Link",
+              "Result": "",
+              "Comment": "",
+              "Notes": "https://carexpertsok.autotext.me/Admin/microsite/index.php?id=akZ0clhDODFqcStZWnFieTh2ZnVYMXBPa25VamhKcjR5RHZUdkhDUWVCbz0=",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "7be6feb4-ac31-4c9f-bbee-51199a23956f",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-14T09:21:59.087-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "7be6feb4-ac31-4c9f-bbee-51199a23956f",
+              "Rank": 3,
+              "Type": "Header",
+              "InputType": "",
+              "Title": "Interior",
+              "Result": "",
+              "Comment": "",
+              "Notes": "",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "aca1e7ed-e31f-49ef-a244-91429fe98da4",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-14T09:21:59.087-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "aca1e7ed-e31f-49ef-a244-91429fe98da4",
+              "Rank": 4,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Dash Lights",
+              "Result": "OK",
+              "Comment": "",
+              "Notes": "No dash lights to note. (1 image on DVI)",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "11c9994b-decf-4b20-978c-c4a253a9a531",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-14T09:21:59.087-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "11c9994b-decf-4b20-978c-c4a253a9a531",
+              "Rank": 5,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Cabin Air Filter",
+              "Result": "Required",
+              "Comment": "",
+              "Notes": "",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "d0846083-9e9d-4bd2-b6e3-3a06c1bc2621",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-14T09:21:59.087-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "d0846083-9e9d-4bd2-b6e3-3a06c1bc2621",
+              "Rank": 6,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Oil Change Sticker",
+              "Result": "Required",
+              "Comment": "",
+              "Notes": "",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "f9ef9c91-a947-40ee-8c09-7e4a606bccbc",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-14T09:21:59.087-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "f9ef9c91-a947-40ee-8c09-7e4a606bccbc",
+              "Rank": 7,
+              "Type": "Header",
+              "InputType": "",
+              "Title": "Exterior",
+              "Result": "",
+              "Comment": "",
+              "Notes": "",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "37f7ce56-ed49-4d3a-bdc7-f9f7fae6c060",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-14T09:21:59.087-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "37f7ce56-ed49-4d3a-bdc7-f9f7fae6c060",
+              "Rank": 8,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Headlights",
+              "Result": "OK",
+              "Comment": "",
+              "Notes": "",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "de4c3d67-3744-42fc-b498-5fe8d571d5cb",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-14T09:21:59.087-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "de4c3d67-3744-42fc-b498-5fe8d571d5cb",
+              "Rank": 9,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Front Turn Signals",
+              "Result": "OK",
+              "Comment": "",
+              "Notes": "",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "6cc04eac-e187-4acc-bcb3-0b3d12583528",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-14T09:21:59.087-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "6cc04eac-e187-4acc-bcb3-0b3d12583528",
+              "Rank": 10,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Front Marker Lamps",
+              "Result": "OK",
+              "Comment": "",
+              "Notes": "",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "cd0ebb54-9be4-4681-9745-17d7d9093b6e",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-14T09:21:59.087-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "cd0ebb54-9be4-4681-9745-17d7d9093b6e",
+              "Rank": 11,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Brake/Tail Lights",
+              "Result": "Suggested",
+              "Comment": "",
+              "Notes": "Right rear brake light not functioning properly",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "dc68e31f-d8eb-4ee0-a95d-353c12e2f2ce",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-14T09:21:59.087-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "dc68e31f-d8eb-4ee0-a95d-353c12e2f2ce",
+              "Rank": 12,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Rear Turn Signals",
+              "Result": "OK",
+              "Comment": "",
+              "Notes": "",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "94430be6-4f93-44e7-92e5-ed6cb17b7ad4",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-14T09:21:59.087-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "94430be6-4f93-44e7-92e5-ed6cb17b7ad4",
+              "Rank": 13,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Rear Marker Lights",
+              "Result": "OK",
+              "Comment": "",
+              "Notes": "",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "b2083870-4862-4055-89b6-9531cac5b3f6",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-14T09:21:59.087-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "b2083870-4862-4055-89b6-9531cac5b3f6",
+              "Rank": 14,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Windshield Wipers",
+              "Result": "Required",
+              "Comment": "",
+              "Notes": "Not functioning",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "f153eb09-5f75-4a50-a8ee-c9174ca78f10",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-14T09:21:59.087-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "f153eb09-5f75-4a50-a8ee-c9174ca78f10",
+              "Rank": 15,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Windshield",
+              "Result": "OK",
+              "Comment": "",
+              "Notes": "",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "fcdba88f-4fec-434c-85b2-9519c0852b21",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-14T09:21:59.087-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "fcdba88f-4fec-434c-85b2-9519c0852b21",
+              "Rank": 16,
+              "Type": "Header",
+              "InputType": "",
+              "Title": "Engine/Drivetrain",
+              "Result": "",
+              "Comment": "",
+              "Notes": "",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "8088a5c0-a1cc-47d4-bed6-dfe0caf2b2d2",
+                "CreationTime": "2024-10-16T14:15:27.473-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-16T16:18:12.1-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "8088a5c0-a1cc-47d4-bed6-dfe0caf2b2d2",
+              "Rank": 16,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Engine/Drivetrain video",
+              "Result": "Required",
+              "Comment": "",
+              "Notes": "Driver's side upper ball joint has play, recommend replacing. https://autotextme.s3.us-west-2.amazonaws.com/inspec_datastore/509/clh4eHI5RWEwT21uWnV2QUh4MW9qSXUrQjlDcklXZk5MVXZ1QXBCdEdjeVg2KzBFbUJVSUpzNFNPRGFJbkhNUg_s.mp4",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "33ed96a3-e9b0-4333-a15a-1ed7113f13fa",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-14T09:21:59.087-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "33ed96a3-e9b0-4333-a15a-1ed7113f13fa",
+              "Rank": 17,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Oil Change",
+              "Result": "Required",
+              "Comment": "",
+              "Notes": "",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "fdc431cb-16bc-4fbc-8eb5-232a9bd4aa84",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-16T16:18:12.1-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "fdc431cb-16bc-4fbc-8eb5-232a9bd4aa84",
+              "Rank": 18,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Upper Fluid Leaks",
+              "Result": "Required",
+              "Comment": "",
+              "Notes": "Valve covers leaking recommend replacing both valve cover gaskets. (2 images on DVI)",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "5ced08d1-343e-4553-8619-79dcdf24a06d",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-14T09:21:59.087-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "5ced08d1-343e-4553-8619-79dcdf24a06d",
+              "Rank": 19,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Transmission Fluid",
+              "Result": "Suggested",
+              "Comment": "",
+              "Notes": "Recommend transmission conditioner due to mileage",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "cbb7f44b-5cd6-4717-9836-9f010114c6b2",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-16T16:18:12.1-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "cbb7f44b-5cd6-4717-9836-9f010114c6b2",
+              "Rank": 20,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Drive Belts",
+              "Result": "Suggested",
+              "Comment": "",
+              "Notes": "Belts appear in good condition but appear to be old. (2 images on DVI)",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "c39d0fa8-c03e-4693-aa27-de7001dfa929",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-16T16:18:12.1-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "c39d0fa8-c03e-4693-aa27-de7001dfa929",
+              "Rank": 21,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Lower Fluid Leaks",
+              "Result": "Required",
+              "Comment": "",
+              "Notes": "Rear differential leaking recommend resealing (1 image on DVI)",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "3971f822-2aae-46c2-b778-628396674dde",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-16T16:18:12.1-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "3971f822-2aae-46c2-b778-628396674dde",
+              "Rank": 22,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Front Shocks/Struts",
+              "Result": "Suggested",
+              "Comment": "",
+              "Notes": "Front shocks appear original recommend replacing both front shocks. (1 image on DVI)",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "b4c783e9-db8e-41d7-b9e4-14d9f966f04c",
+                "CreationTime": "2024-10-14T09:21:59.087-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-10-14T09:21:59.087-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "b4c783e9-db8e-41d7-b9e4-14d9f966f04c",
+              "Rank": 23,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Rear Shocks/Struts",
+              "Result": "Suggested",
+              "Comment": "",
+              "Notes": "Rear shocks appear original recommend replacing (1 image on DVI)",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            }
+          ]
+        },
+        "ServicePackageFooter": {
+          "Title": "Tech Notes",
+          "Description": "Auto added by Initial DVI signoff"
+        },
+        "URL": "https://carexpertsok.autotext.me/Admin/dvi_v3/index.php?status_id=21858594",
+        "Flag": "External",
+        "InspectionReferenceID": "00000000-0000-0000-0000-000000000000",
+        "ServicePackageTemplateID": "fcd70b1b-3335-4a8a-a7b1-3433c5ce8a3e",
+        "ServiceCategoryID": "9c58d73e-4325-48bb-9a8e-e51039a8eff2",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": true
+      },
+      {
+        "Header": {
+          "ID": "1914da37-d14b-464a-996a-461603df7aa1",
+          "CreationTime": "2025-11-19T10:11:47.083-05:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-11-19T10:11:47.083-05:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+        },
+        "ID": "1914da37-d14b-464a-996a-461603df7aa1",
+        "Chapter": "Service",
+        "Rank": 15,
+        "Code": "",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "Deposit",
+          "Description": "Deopsit"
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "Completed": false,
+              "TechnicianHour": 0.1,
+              "Header": {
+                "ID": "b029d8b9-0fce-4528-9271-6b11ec504e5d",
+                "CreationTime": "2025-11-19T10:11:47.083-05:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-11-19T10:11:47.083-05:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "b029d8b9-0fce-4528-9271-6b11ec504e5d",
+              "Rank": 1,
+              "Type": "Labor",
+              "Description": "Deposit",
+              "Quantity": 44.44,
+              "Unit": "",
+              "RateCode": "FixedTotal",
+              "Price": 63.01,
+              "PriceUnit": "",
+              "MinimumCharge": 0,
+              "Total": 2800,
+              "Discount": 0,
+              "ExtendedTotal": 2800,
+              "TotalCost": 7,
+              "OtherChargeCode": "",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "6f3f08ae-7475-4463-a8b1-4cbf4a578731",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "",
+        "Flag": "",
+        "InspectionReferenceID": "00000000-0000-0000-0000-000000000000",
+        "ServicePackageTemplateID": "3307178f-d862-4559-8214-9cd435d38b57",
+        "ServiceCategoryID": "4e1cc456-9643-4128-ba80-b52d3191844c",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": true
+      }
+    ]
+  },
+  "DeferredServicePackages": {
+    "ItemCollection": [
+      {
+        "Header": {
+          "ID": "b098dbe2-1ef6-44e0-ae55-6f55670f971f",
+          "CreationTime": "2024-10-16T16:16:22.23-04:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-11-19T10:11:47.083-05:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+        },
+        "ID": "b098dbe2-1ef6-44e0-ae55-6f55670f971f",
+        "Chapter": "DeferredService",
+        "Rank": 2,
+        "Code": "",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "Suspension Ball Joint, Upper and Lower",
+          "Description": "Remove and Replace components as required to access and install materials, and/or perform needed service.  Retest and verify repair as required.  Perform final road test where applicable."
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "Completed": false,
+              "TechnicianHour": 5,
+              "Header": {
+                "ID": "86b53d61-d361-4005-a498-de2ce4d88034",
+                "CreationTime": "2024-10-16T16:18:12.117-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-03-18T10:56:18.08-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "86b53d61-d361-4005-a498-de2ce4d88034",
+              "Rank": 1,
+              "Type": "Labor",
+              "Description": "Labor",
+              "Quantity": 5,
+              "Unit": "",
+              "RateCode": "1",
+              "Price": 155,
+              "PriceUnit": "",
+              "MinimumCharge": 0,
+              "Total": 775,
+              "Discount": 0,
+              "ExtendedTotal": 775,
+              "TotalCost": 350,
+              "OtherChargeCode": "*",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "1f8f8155-b539-45c2-9a03-98032171c6c2",
+              "Warranty": ""
+            },
+            {
+              "PartTerminology": {
+                "IsValid": true,
+                "ID": "10070",
+                "Text": "Suspension Ball Joint"
+              },
+              "LineCode": "_NXC",
+              "PartNumber": "2601048",
+              "Manufacturer": "NAPA Chassis Parts",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "2020c89b-182a-4abb-9e64-0515fd109b36",
+                "CreationTime": "2024-10-16T16:16:22.23-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-03-18T10:56:18.08-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "2020c89b-182a-4abb-9e64-0515fd109b36",
+              "Rank": 2,
+              "Type": "Material",
+              "Description": "Suspension Ball Joint",
+              "Quantity": 2,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 197.72,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 395.44,
+              "Discount": 0,
+              "ExtendedTotal": 395.44,
+              "TotalCost": 129.98,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "74d8b463-7c70-4a37-8bf7-45a6ab432ea6",
+              "Warranty": ""
+            },
+            {
+              "LineCode": "_PCQ",
+              "PartNumber": "10171N",
+              "Manufacturer": "NAPA Proformer",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "60298d25-91b3-4303-af63-7e938234606b",
+                "CreationTime": "2024-10-16T16:18:12.117-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-03-18T10:56:18.08-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "60298d25-91b3-4303-af63-7e938234606b",
+              "Rank": 3,
+              "Type": "Material",
+              "Description": "Suspension Ball Joint",
+              "Quantity": 2,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 161.83,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 323.66,
+              "Discount": 0,
+              "ExtendedTotal": 323.66,
+              "TotalCost": 99.98,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "00000000-0000-0000-0000-000000000000",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "",
+        "Flag": "External",
+        "InspectionReferenceID": "8088a5c0-a1cc-47d4-bed6-dfe0caf2b2d2",
+        "ServicePackageTemplateID": "24300231-c540-42ed-8f6f-6521cda27336",
+        "ServiceCategoryID": "56a4cd74-48d4-438f-89b9-8ec77128bc41",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": false
+      },
+      {
+        "Header": {
+          "ID": "fd511655-ba6d-48f2-9ddd-61c74cc7ab84",
+          "CreationTime": "2024-10-16T16:18:12.117-04:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-11-19T10:11:47.083-05:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+        },
+        "ID": "fd511655-ba6d-48f2-9ddd-61c74cc7ab84",
+        "Chapter": "DeferredService",
+        "Rank": 3,
+        "Code": "SERP",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "Serpentine Belt(s)",
+          "Description": "Remove and Replace components as required to access and install materials, and/or perform needed service, adjustments as required.  Retest and verify repair as required.  Perform final road test where applicable."
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "Completed": false,
+              "TechnicianHour": 1.5,
+              "Header": {
+                "ID": "cf8bec72-d9d5-4ff8-b87e-5c053ccfd62f",
+                "CreationTime": "2024-10-16T16:18:12.117-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-07-30T13:53:03.68-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "cf8bec72-d9d5-4ff8-b87e-5c053ccfd62f",
+              "Rank": 1,
+              "Type": "Labor",
+              "Description": "Labor",
+              "Quantity": 1.5,
+              "Unit": "",
+              "RateCode": "1",
+              "Price": 155,
+              "PriceUnit": "",
+              "MinimumCharge": 0,
+              "Total": 232.5,
+              "Discount": 0,
+              "ExtendedTotal": 232.5,
+              "TotalCost": 105,
+              "OtherChargeCode": "*",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "ae81be68-02b0-401e-a6cd-124fe0f8d18c",
+              "Warranty": ""
+            },
+            {
+              "PartTerminology": {
+                "IsValid": true,
+                "ID": "8905",
+                "Text": "Serpentine Belt"
+              },
+              "LineCode": "CFHH",
+              "PartNumber": "15445",
+              "Manufacturer": "Duralast",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "2f032b16-bc94-4494-8e29-0d723f2cbe71",
+                "CreationTime": "2024-10-16T16:18:12.117-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-03-18T10:56:18.08-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "2f032b16-bc94-4494-8e29-0d723f2cbe71",
+              "Rank": 2,
+              "Type": "Material",
+              "Description": "Belt",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 68.86,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 68.86,
+              "Discount": 0,
+              "ExtendedTotal": 68.86,
+              "TotalCost": 11.39,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "249d86c9-8247-457e-8a91-e090fa07ee18",
+              "Warranty": ""
+            },
+            {
+              "LineCode": "CFHH",
+              "PartNumber": "15460",
+              "Manufacturer": "Duralast",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "befdb0cf-74bd-43ec-ba85-f5ea3704c5b8",
+                "CreationTime": "2024-10-16T16:18:12.117-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-03-18T10:56:18.08-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "befdb0cf-74bd-43ec-ba85-f5ea3704c5b8",
+              "Rank": 3,
+              "Type": "Material",
+              "Description": "Belt",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 68.86,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 68.86,
+              "Discount": 0,
+              "ExtendedTotal": 68.86,
+              "TotalCost": 11.39,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "00000000-0000-0000-0000-000000000000",
+              "Warranty": ""
+            },
+            {
+              "LineCode": "CFHH",
+              "PartNumber": "15500",
+              "Manufacturer": "Duralast",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "0a47f4fd-5769-4bd0-9f50-9d3d106f5a71",
+                "CreationTime": "2024-10-16T16:18:12.117-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-03-18T10:56:18.08-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "0a47f4fd-5769-4bd0-9f50-9d3d106f5a71",
+              "Rank": 4,
+              "Type": "Material",
+              "Description": "Belt",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 68.86,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 68.86,
+              "Discount": 0,
+              "ExtendedTotal": 68.86,
+              "TotalCost": 11.39,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "00000000-0000-0000-0000-000000000000",
+              "Warranty": ""
+            },
+            {
+              "LineCode": "CFHH",
+              "PartNumber": "15580",
+              "Manufacturer": "Duralast",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "270617d7-6814-4212-8b35-d4154e7c9a42",
+                "CreationTime": "2024-10-16T16:18:12.117-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-03-18T10:56:18.08-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "270617d7-6814-4212-8b35-d4154e7c9a42",
+              "Rank": 5,
+              "Type": "Material",
+              "Description": "Belt",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 68.86,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 68.86,
+              "Discount": 0,
+              "ExtendedTotal": 68.86,
+              "TotalCost": 11.39,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "00000000-0000-0000-0000-000000000000",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "",
+        "Flag": "",
+        "InspectionReferenceID": "cbb7f44b-5cd6-4717-9836-9f010114c6b2",
+        "ServicePackageTemplateID": "63c16bec-6176-47a4-8b31-4472f2b39d09",
+        "ServiceCategoryID": "43b24abd-d9b6-420b-a350-e8e812112fd2",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": false
+      },
+      {
+        "Header": {
+          "ID": "f66d2587-eb8e-49ed-91fa-3253b3a90d93",
+          "CreationTime": "2024-10-16T16:18:12.117-04:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-11-19T10:11:47.083-05:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+        },
+        "ID": "f66d2587-eb8e-49ed-91fa-3253b3a90d93",
+        "Chapter": "DeferredService",
+        "Rank": 4,
+        "Code": "4SHOCK",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "Shock Absorber, Front & Rear",
+          "Description": "Remove and Replace components as required to access and install materials, and/or perform needed service.  Retest and verify repair as required.  Perform final road test where applicable."
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "Completed": false,
+              "TechnicianHour": 2.5,
+              "Header": {
+                "ID": "23ba3a0e-17c5-49ce-856c-edb678cb7d57",
+                "CreationTime": "2024-10-16T16:18:12.117-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-03-18T10:56:18.097-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "23ba3a0e-17c5-49ce-856c-edb678cb7d57",
+              "Rank": 1,
+              "Type": "Labor",
+              "Description": "Labor",
+              "Quantity": 2.5,
+              "Unit": "",
+              "RateCode": "1",
+              "Price": 155,
+              "PriceUnit": "",
+              "MinimumCharge": 0,
+              "Total": 387.5,
+              "Discount": 0,
+              "ExtendedTotal": 387.5,
+              "TotalCost": 175,
+              "OtherChargeCode": "*",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "7d285ad9-8e08-40d4-8b64-47e8ac50b957",
+              "Warranty": ""
+            },
+            {
+              "PartTerminology": {
+                "IsValid": true,
+                "ID": "7556",
+                "Text": "Shock Absorber"
+              },
+              "LineCode": "CFHH",
+              "PartNumber": "TS34-32671B",
+              "Manufacturer": "Duralast",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "4c7654d7-d917-463f-b416-33bda11aef9e",
+                "CreationTime": "2024-10-16T16:18:12.117-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-03-18T10:56:18.097-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "4c7654d7-d917-463f-b416-33bda11aef9e",
+              "Rank": 2,
+              "Type": "Material",
+              "Description": "Shock/Strut - Front",
+              "Quantity": 2,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 75.98,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 151.96,
+              "Discount": 0,
+              "ExtendedTotal": 151.96,
+              "TotalCost": 75.98,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "553e12ed-e55d-458c-b1cd-a428daafd8c1",
+              "Warranty": ""
+            },
+            {
+              "LineCode": "_PSS",
+              "PartNumber": "SH81496",
+              "Manufacturer": "NAPA Proformer",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "9fe7cac8-5111-4fc3-8a9a-7bb1290dcac9",
+                "CreationTime": "2024-10-16T16:18:12.117-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-03-18T10:56:18.097-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "9fe7cac8-5111-4fc3-8a9a-7bb1290dcac9",
+              "Rank": 3,
+              "Type": "Material",
+              "Description": "Suspension Shock Absorber",
+              "Quantity": 2,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 87.38,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 174.76,
+              "Discount": 0,
+              "ExtendedTotal": 174.76,
+              "TotalCost": 81.98,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "00000000-0000-0000-0000-000000000000",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "",
+        "Flag": "",
+        "InspectionReferenceID": "3971f822-2aae-46c2-b778-628396674dde",
+        "ServicePackageTemplateID": "10558251-3bb7-43fd-b6ef-31d58b0b66d5",
+        "ServiceCategoryID": "56a4cd74-48d4-438f-89b9-8ec77128bc41",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": false
+      },
+      {
+        "Header": {
+          "ID": "416b375a-3dde-4f0e-87f4-e8f44ccf46f2",
+          "CreationTime": "2024-10-16T16:14:16.703-04:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-11-19T10:11:47.083-05:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+        },
+        "ID": "416b375a-3dde-4f0e-87f4-e8f44ccf46f2",
+        "Chapter": "DeferredService",
+        "Rank": 5,
+        "Code": "",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "Valve Cover Gasket(s)",
+          "Description": "Remove and Replace components as required to access and install materials, and/or perform needed service, adjustments as required.  Additional fluids may be required to complete this service.  Retest and verify repair as required.  Perform final road test where applicable."
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "Completed": false,
+              "TechnicianHour": 1.5,
+              "Header": {
+                "ID": "4f469df7-220e-4e1f-869e-1959afcce667",
+                "CreationTime": "2024-10-16T16:18:12.117-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-08-07T12:48:50.017-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "4f469df7-220e-4e1f-869e-1959afcce667",
+              "Rank": 1,
+              "Type": "Labor",
+              "Description": "Labor",
+              "Quantity": 1.5,
+              "Unit": "",
+              "RateCode": "1",
+              "Price": 155,
+              "PriceUnit": "",
+              "MinimumCharge": 0,
+              "Total": 232.5,
+              "Discount": 0,
+              "ExtendedTotal": 232.5,
+              "TotalCost": 105,
+              "OtherChargeCode": "*",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "9c7e666b-f85e-4589-a775-a0025b3f7595",
+              "Warranty": ""
+            },
+            {
+              "LineCode": "BCWV",
+              "PartNumber": "VS50184R",
+              "Manufacturer": "Fel-Pro",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "6533d326-cf52-486b-af64-b4377d875b00",
+                "CreationTime": "2025-01-15T17:20:23.297-05:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-03-18T10:56:18.113-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "6533d326-cf52-486b-af64-b4377d875b00",
+              "Rank": 2,
+              "Type": "Material",
+              "Description": "Engine Valve Cover Gasket Set",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 115.64,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 115.64,
+              "Discount": 0,
+              "ExtendedTotal": 115.64,
+              "TotalCost": 21.99,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "00000000-0000-0000-0000-000000000000",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "",
+        "Flag": "",
+        "InspectionReferenceID": "fdc431cb-16bc-4fbc-8eb5-232a9bd4aa84",
+        "ServicePackageTemplateID": "cf46fe59-2c53-457a-beec-341f9b9526f6",
+        "ServiceCategoryID": "60c26a13-4635-46be-afd2-c404cb2f1744",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": false
+      },
+      {
+        "Header": {
+          "ID": "c6e2e39a-21f4-4135-bc75-d35c6fc937fd",
+          "CreationTime": "2025-01-02T13:44:51.307-05:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-11-19T10:11:47.083-05:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+        },
+        "ID": "c6e2e39a-21f4-4135-bc75-d35c6fc937fd",
+        "Chapter": "DeferredService",
+        "Rank": 6,
+        "Code": "",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "Master Cylinder",
+          "Description": "Remove and Replace components as required to access and install materials, and/or perform needed service, adjustments as required.  Additional fluids may be required to complete this service.  Retest and verify repair as required.  Perform final road test where applicable."
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "Completed": false,
+              "TechnicianHour": 4,
+              "Header": {
+                "ID": "a11a421d-d50f-4756-b559-b428d83e5246",
+                "CreationTime": "2025-01-02T14:38:07.003-05:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-08-07T12:48:56.267-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "a11a421d-d50f-4756-b559-b428d83e5246",
+              "Rank": 1,
+              "Type": "Labor",
+              "Description": "Labor",
+              "Quantity": 4,
+              "Unit": "",
+              "RateCode": "1",
+              "Price": 160,
+              "PriceUnit": "",
+              "MinimumCharge": 0,
+              "Total": 640,
+              "Discount": 0,
+              "ExtendedTotal": 640,
+              "TotalCost": 280,
+              "OtherChargeCode": "*",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "427f05ff-35f2-4bb8-bbba-9dcd222d256e",
+              "Warranty": ""
+            },
+            {
+              "PartTerminology": {
+                "IsValid": true,
+                "ID": "1836",
+                "Text": "Brake Master Cylinder"
+              },
+              "LineCode": "FQTW",
+              "PartNumber": "NM1372",
+              "Manufacturer": "Quality-Built",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "117cf56e-0f7c-4032-8f77-b2340bf48b9d",
+                "CreationTime": "2025-01-02T13:44:51.32-05:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-03-18T10:56:18.113-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "117cf56e-0f7c-4032-8f77-b2340bf48b9d",
+              "Rank": 2,
+              "Type": "Material",
+              "Description": "Brake Master Cylinder",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 194.43,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 194.43,
+              "Discount": 0,
+              "ExtendedTotal": 194.43,
+              "TotalCost": 63.52,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "cb28d82b-1dfa-4025-bb14-4b649cb16b14",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "",
+        "Flag": "",
+        "InspectionReferenceID": "00000000-0000-0000-0000-000000000000",
+        "ServicePackageTemplateID": "44960fdb-ac07-4baf-84e1-423e1afe9dae",
+        "ServiceCategoryID": "34d55ba0-8fbc-4f30-9636-e5cdf40e6c1a",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": false
+      },
+      {
+        "Header": {
+          "ID": "5defc558-9059-4786-bafc-f1f82ac98e8b",
+          "CreationTime": "2024-12-10T18:12:21.053-05:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-11-19T10:11:47.083-05:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+        },
+        "ID": "5defc558-9059-4786-bafc-f1f82ac98e8b",
+        "Chapter": "DeferredService",
+        "Rank": 7,
+        "Code": "",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "Roof Sunlights",
+          "Description": "Remove and Replace components as required to access and install materials, and/or perform needed service.  Retest and verify repair as required.  Perform final road test where applicable."
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "LineCode": "",
+              "PartNumber": "520061",
+              "Manufacturer": "",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "4339f5ba-879b-4b9d-aff7-642190849007",
+                "CreationTime": "2024-12-10T18:12:21.07-05:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-08-07T12:42:29.59-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "4339f5ba-879b-4b9d-aff7-642190849007",
+              "Rank": 1,
+              "Type": "Material",
+              "Description": "Sunlights",
+              "Quantity": 2,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 219.3,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 438.6,
+              "Discount": 0,
+              "ExtendedTotal": 438.6,
+              "TotalCost": 195.29,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "6a720e8f-ba38-467c-93d9-186622727a20",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "",
+        "Flag": "",
+        "InspectionReferenceID": "00000000-0000-0000-0000-000000000000",
+        "ServicePackageTemplateID": "605937c0-8fe3-4fdc-be04-25c05d05a957",
+        "ServiceCategoryID": "9c58d73e-4325-48bb-9a8e-e51039a8eff2",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": false
+      },
+      {
+        "Header": {
+          "ID": "e2c0e5a8-de11-44a6-8129-a863cc0eb727",
+          "CreationTime": "2024-10-16T16:12:26.817-04:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-11-19T10:11:47.083-05:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+        },
+        "ID": "e2c0e5a8-de11-44a6-8129-a863cc0eb727",
+        "Chapter": "DeferredService",
+        "Rank": 8,
+        "Code": "",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": " Differential General Service",
+          "Description": "Remove and Replace components as required to access and install materials, and/or perform needed service, adjustments as required.  Additional fluids may be required to complete this service.  Retest and verify repair as required.  Perform final road test where applicable."
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "Completed": false,
+              "TechnicianHour": 1.5,
+              "Header": {
+                "ID": "6b0983c8-af7b-404d-940f-855c4afa325c",
+                "CreationTime": "2024-10-16T16:18:12.117-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-08-07T12:49:13.25-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "6b0983c8-af7b-404d-940f-855c4afa325c",
+              "Rank": 1,
+              "Type": "Labor",
+              "Description": "Labor",
+              "Quantity": 1.5,
+              "Unit": "",
+              "RateCode": "1",
+              "Price": 170,
+              "PriceUnit": "",
+              "MinimumCharge": 0,
+              "Total": 255,
+              "Discount": 0,
+              "ExtendedTotal": 255,
+              "TotalCost": 105,
+              "OtherChargeCode": "*",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "0aeee68a-6a74-4abf-9c27-2b6adadea620",
+              "Warranty": ""
+            },
+            {
+              "LineCode": "BCWV",
+              "PartNumber": "RDS6014",
+              "Manufacturer": "Fel-Pro",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "e126319e-82b5-4f82-8df3-5132490ec0c8",
+                "CreationTime": "2024-10-16T16:12:26.817-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-12-09T11:14:12.727-05:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "e126319e-82b5-4f82-8df3-5132490ec0c8",
+              "Rank": 2,
+              "Type": "Material",
+              "Description": "Axle Housing Cover Gasket",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 60.82,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 60.82,
+              "Discount": 0,
+              "ExtendedTotal": 60.82,
+              "TotalCost": 9.78,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "c1a8a1a3-4eba-4a6c-affb-9d03e53d1294",
+              "Warranty": ""
+            },
+            {
+              "PartTerminology": {
+                "IsValid": true,
+                "ID": "11394",
+                "Text": "Gear Oil"
+              },
+              "LineCode": "",
+              "PartNumber": "753",
+              "Manufacturer": "BG Products",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "3f3e5781-1c9b-4d13-8332-9c7f872fea77",
+              "InventoryServiceCategoryID": "c9320644-cad4-4d30-99ec-897ea4661274",
+              "Header": {
+                "ID": "acd33c8b-5eca-4532-ae39-e9efb376faf9",
+                "CreationTime": "2024-10-16T16:13:51.52-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2024-12-09T11:14:12.727-05:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "acd33c8b-5eca-4532-ae39-e9efb376faf9",
+              "Rank": 3,
+              "Type": "Material",
+              "Description": "75w-140 Ultra Guard LS Heavy Duty",
+              "Quantity": 3,
+              "Unit": "Quart",
+              "RateCode": "1",
+              "Price": 33.33,
+              "PriceUnit": "Quart",
+              "MinimumCharge": 0,
+              "Total": 99.99,
+              "Discount": 0,
+              "ExtendedTotal": 99.99,
+              "TotalCost": 71.25,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "00000000-0000-0000-0000-000000000000",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "",
+        "Flag": "",
+        "InspectionReferenceID": "c39d0fa8-c03e-4693-aa27-de7001dfa929",
+        "ServicePackageTemplateID": "b521abf4-bd6a-45e2-925a-6465472574e9",
+        "ServiceCategoryID": "c9320644-cad4-4d30-99ec-897ea4661274",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": false
+      },
+      {
+        "Header": {
+          "ID": "267ee7fd-1f12-4769-9dc9-5fcea3385b4d",
+          "CreationTime": "2025-01-02T13:46:01.7-05:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-08-07T12:49:13.25-04:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Mason Banta"
+        },
+        "ID": "267ee7fd-1f12-4769-9dc9-5fcea3385b4d",
+        "Chapter": "DeferredService",
+        "Rank": 9,
+        "Code": "",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "Water Pump",
+          "Description": "Remove and Replace components as required to access and install materials, and/or perform needed service.  Additional fluids may be required to complete this service.  Retest and verify repair as required.  Perform final road test where applicable."
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "Completed": false,
+              "TechnicianHour": 2,
+              "Header": {
+                "ID": "b09f5203-7216-4a38-8a04-6e74e836ebdf",
+                "CreationTime": "2025-01-02T14:38:07.02-05:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-08-07T12:49:13.263-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "b09f5203-7216-4a38-8a04-6e74e836ebdf",
+              "Rank": 1,
+              "Type": "Labor",
+              "Description": "Labor",
+              "Quantity": 2,
+              "Unit": "",
+              "RateCode": "1",
+              "Price": 170,
+              "PriceUnit": "",
+              "MinimumCharge": 0,
+              "Total": 340,
+              "Discount": 0,
+              "ExtendedTotal": 340,
+              "TotalCost": 140,
+              "OtherChargeCode": "*",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "48f67282-2845-4b20-8cee-911109d076bd",
+              "Warranty": ""
+            },
+            {
+              "PartTerminology": {
+                "IsValid": true,
+                "ID": "2208",
+                "Text": "Engine Water Pump"
+              },
+              "LineCode": "CFHH",
+              "PartNumber": "BWP-466",
+              "Manufacturer": "Duralast",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "8e93be22-1822-4fe4-943d-165589a24eb8",
+                "CreationTime": "2025-01-02T13:46:01.717-05:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-01-02T14:54:24.103-05:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "8e93be22-1822-4fe4-943d-165589a24eb8",
+              "Rank": 2,
+              "Type": "Material",
+              "Description": "Water Pump",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 145.1,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 145.1,
+              "Discount": 0,
+              "ExtendedTotal": 145.1,
+              "TotalCost": 43.85,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "33bc9464-bded-41d0-bd10-b938ed6220c9",
+              "Warranty": ""
+            },
+            {
+              "LineCode": "BCWV",
+              "PartNumber": "11730",
+              "Manufacturer": "Fel-Pro",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "67f364da-ac4c-40b8-8a2c-d8fb96a613fe",
+                "CreationTime": "2025-01-02T13:47:27.903-05:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-01-02T14:54:24.103-05:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "67f364da-ac4c-40b8-8a2c-d8fb96a613fe",
+              "Rank": 3,
+              "Type": "Material",
+              "Description": "Engine Water Pump Backing Plate Gasket",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 17.28,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 17.28,
+              "Discount": 0,
+              "ExtendedTotal": 17.28,
+              "TotalCost": 2.27,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "00000000-0000-0000-0000-000000000000",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "",
+        "Flag": "",
+        "InspectionReferenceID": "00000000-0000-0000-0000-000000000000",
+        "ServicePackageTemplateID": "1039b5bb-c674-4b63-ac1c-88dbb60db7b5",
+        "ServiceCategoryID": "0e1ab5f1-f5d8-4bb6-861d-2d897ffc9825",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": false
+      },
+      {
+        "Header": {
+          "ID": "31829878-2464-46d1-bb1f-1c5841ab25b2",
+          "CreationTime": "2025-01-02T14:38:07.02-05:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-08-07T12:49:13.263-04:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Mason Banta"
+        },
+        "ID": "31829878-2464-46d1-bb1f-1c5841ab25b2",
+        "Chapter": "DeferredService",
+        "Rank": 10,
+        "Code": "",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "Carburetor",
+          "Description": "Remove and Replace components as required to access and install materials, and/or perform needed service, adjustments as required.  Additional fluids may be required to complete this service.  Retest and verify repair as required.  Perform final road test where applicable."
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "Completed": false,
+              "TechnicianHour": 1.5,
+              "Header": {
+                "ID": "61f76507-ae46-417a-becf-3e541254864c",
+                "CreationTime": "2025-01-02T14:38:07.033-05:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-08-07T12:49:13.28-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "61f76507-ae46-417a-becf-3e541254864c",
+              "Rank": 1,
+              "Type": "Labor",
+              "Description": "Labor",
+              "Quantity": 1.5,
+              "Unit": "",
+              "RateCode": "1",
+              "Price": 170,
+              "PriceUnit": "",
+              "MinimumCharge": 0,
+              "Total": 255,
+              "Discount": 0,
+              "ExtendedTotal": 255,
+              "TotalCost": 105,
+              "OtherChargeCode": "*",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "dcf688d3-c760-48ab-9c76-587cee531a83",
+              "Warranty": ""
+            },
+            {
+              "PartTerminology": {
+                "IsValid": true,
+                "ID": "5904",
+                "Text": "Carburetor"
+              },
+              "LineCode": "BCWV",
+              "PartNumber": "60171",
+              "Manufacturer": "Fel-Pro",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "0e4183b0-8d26-4730-a8b6-d7380acf78e0",
+                "CreationTime": "2025-01-02T14:38:07.033-05:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-01-02T14:54:24.12-05:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "0e4183b0-8d26-4730-a8b6-d7380acf78e0",
+              "Rank": 2,
+              "Type": "Material",
+              "Description": "Carburetor Mounting Gasket",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 59.83,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 59.83,
+              "Discount": 0,
+              "ExtendedTotal": 59.83,
+              "TotalCost": 9.59,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "a1821f3c-ef07-443b-a46f-98f0edc83fd8",
+              "Warranty": ""
+            },
+            {
+              "LineCode": "BCRL",
+              "PartNumber": "6-6243R",
+              "Manufacturer": "United Carburetor",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "6e1402ac-70ca-4d40-a4f8-12758b72990e",
+                "CreationTime": "2025-01-02T14:38:07.033-05:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-01-02T14:54:24.137-05:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "6e1402ac-70ca-4d40-a4f8-12758b72990e",
+              "Rank": 3,
+              "Type": "Material",
+              "Description": "Carburetor",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 471.59,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 471.59,
+              "Discount": 0,
+              "ExtendedTotal": 471.59,
+              "TotalCost": 215.99,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "00000000-0000-0000-0000-000000000000",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "",
+        "Flag": "",
+        "InspectionReferenceID": "00000000-0000-0000-0000-000000000000",
+        "ServicePackageTemplateID": "6b755cdf-b8ea-4c70-98a5-589e8e795ddf",
+        "ServiceCategoryID": "9858a0bb-be9b-432c-bcae-4ccc47d39483",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": false
+      },
+      {
+        "Header": {
+          "ID": "6e84f4f9-4774-4ca5-883b-cd724ef10f6d",
+          "CreationTime": "2025-01-02T14:38:07.033-05:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-08-07T12:49:13.28-04:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Mason Banta"
+        },
+        "ID": "6e84f4f9-4774-4ca5-883b-cd724ef10f6d",
+        "Chapter": "DeferredService",
+        "Rank": 11,
+        "Code": "",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "Power Steering Pump",
+          "Description": "Remove and Replace components as required to access and install materials, and/or perform needed service.  Additional fluids may be required to complete this service.  Retest and verify repair as required.  Perform final road test where applicable."
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "Completed": false,
+              "TechnicianHour": 2.5,
+              "Header": {
+                "ID": "7857dfe6-37f4-495e-ac03-d25274ae3b87",
+                "CreationTime": "2025-01-02T14:38:07.033-05:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-08-07T12:49:13.297-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "7857dfe6-37f4-495e-ac03-d25274ae3b87",
+              "Rank": 1,
+              "Type": "Labor",
+              "Description": "Labor",
+              "Quantity": 2.5,
+              "Unit": "",
+              "RateCode": "1",
+              "Price": 170,
+              "PriceUnit": "",
+              "MinimumCharge": 0,
+              "Total": 425,
+              "Discount": 0,
+              "ExtendedTotal": 425,
+              "TotalCost": 175,
+              "OtherChargeCode": "*",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "eb2351e9-fe36-49ef-b7d6-2ca608455568",
+              "Warranty": ""
+            },
+            {
+              "PartTerminology": {
+                "IsValid": true,
+                "ID": "7380",
+                "Text": "Power Steering Pump"
+              },
+              "LineCode": "",
+              "PartNumber": "",
+              "Manufacturer": "",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "3d979874-a3ab-4d8f-ad26-ac443c8b554a",
+                "CreationTime": "2025-01-02T14:38:07.033-05:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-01-02T14:54:24.15-05:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "3d979874-a3ab-4d8f-ad26-ac443c8b554a",
+              "Rank": 2,
+              "Type": "Material",
+              "Description": "Power Steering Pump",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "",
+              "Price": 526.32,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 526.32,
+              "Discount": 0,
+              "ExtendedTotal": 526.32,
+              "TotalCost": 250,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "LookupRequired",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "fd6860f7-886a-48c6-bd96-825f096c02c0",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "",
+        "Flag": "",
+        "InspectionReferenceID": "00000000-0000-0000-0000-000000000000",
+        "ServicePackageTemplateID": "b789066a-a710-43fe-99c5-ab3eff1a5d03",
+        "ServiceCategoryID": "56a4cd74-48d4-438f-89b9-8ec77128bc41",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": false
+      },
+      {
+        "Header": {
+          "ID": "e0c0acee-fce4-4191-9dfd-aa5ac7d44a4e",
+          "CreationTime": "2025-01-02T14:38:07.033-05:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-01-02T14:54:24.15-05:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Mason Banta"
+        },
+        "ID": "e0c0acee-fce4-4191-9dfd-aa5ac7d44a4e",
+        "Chapter": "DeferredService",
+        "Rank": 12,
+        "Code": "BG P/S Flush",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "BG Power Steering Fluid Flush",
+          "Description": "Connect flush equipment to remove existing fluid.  Additional flush and cleaning chemicals may be added to assist in cleaning system contamination.  Fill system fluid(s) to proper capacity with new fluid.  Fluid additives and/or conditioners may be added to system.  Leak test vehicle system.  Perform final road test where applicable."
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "Completed": false,
+              "TechnicianHour": 0.7,
+              "Header": {
+                "ID": "bde40ddc-619b-453b-9167-0566d89645d0",
+                "CreationTime": "2025-01-02T14:38:07.033-05:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-01-02T14:54:24.15-05:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "bde40ddc-619b-453b-9167-0566d89645d0",
+              "Rank": 1,
+              "Type": "Labor",
+              "Description": "Labor",
+              "Quantity": 0.7,
+              "Unit": "",
+              "RateCode": "1",
+              "Price": 160,
+              "PriceUnit": "",
+              "MinimumCharge": 0,
+              "Total": 112,
+              "Discount": 0,
+              "ExtendedTotal": 112,
+              "TotalCost": 49,
+              "OtherChargeCode": "*",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "d430ce76-79cb-48e1-bb74-b24824b2850b",
+              "Warranty": ""
+            },
+            {
+              "PartTerminology": {
+                "IsValid": true,
+                "ID": "11395",
+                "Text": "Power Steering Fluid"
+              },
+              "LineCode": "",
+              "PartNumber": "6700",
+              "Manufacturer": "BG Products",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "b916e01e-192c-4d23-9cf8-2f51412bf7df",
+              "InventoryServiceCategoryID": "56a4cd74-48d4-438f-89b9-8ec77128bc41",
+              "Header": {
+                "ID": "e7fb9ca0-34d0-4ad0-8137-59a4fd374600",
+                "CreationTime": "2025-01-02T14:38:07.033-05:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-01-02T14:54:24.15-05:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "e7fb9ca0-34d0-4ad0-8137-59a4fd374600",
+              "Rank": 2,
+              "Type": "Material",
+              "Description": "Power Steering Flush Kit",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "1",
+              "Price": 69.95,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 69.95,
+              "Discount": 0,
+              "ExtendedTotal": 69.95,
+              "TotalCost": 37,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "16741950-b09f-417d-914e-935d2d228c2e",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "",
+        "Flag": "",
+        "InspectionReferenceID": "00000000-0000-0000-0000-000000000000",
+        "ServicePackageTemplateID": "24606cfe-ed08-4128-a1d7-c9396467eb21",
+        "ServiceCategoryID": "56a4cd74-48d4-438f-89b9-8ec77128bc41",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": false
+      },
+      {
+        "Header": {
+          "ID": "76ab26af-240e-4f9d-b5c2-c9b30dc90027",
+          "CreationTime": "2025-01-02T14:38:07.033-05:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-01-02T14:54:24.167-05:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Mason Banta"
+        },
+        "ID": "76ab26af-240e-4f9d-b5c2-c9b30dc90027",
+        "Chapter": "DeferredService",
+        "Rank": 13,
+        "Code": "",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "Power Steering Hose",
+          "Description": "Remove and Replace components as required to access and install materials, and/or perform needed service.  Additional fluids may be required to complete this service.  Retest and verify repair as required.  Perform final road test where applicable."
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "Completed": false,
+              "TechnicianHour": 3,
+              "Header": {
+                "ID": "baf89e54-337d-4984-8a8d-4d781f65a1a1",
+                "CreationTime": "2025-01-02T14:38:07.033-05:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-01-02T14:54:24.167-05:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "baf89e54-337d-4984-8a8d-4d781f65a1a1",
+              "Rank": 1,
+              "Type": "Labor",
+              "Description": "Labor",
+              "Quantity": 3,
+              "Unit": "",
+              "RateCode": "1",
+              "Price": 160,
+              "PriceUnit": "",
+              "MinimumCharge": 0,
+              "Total": 480,
+              "Discount": 0,
+              "ExtendedTotal": 480,
+              "TotalCost": 210,
+              "OtherChargeCode": "*",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "a7975aad-892f-477e-a434-87cf9068d8e0",
+              "Warranty": ""
+            },
+            {
+              "PartTerminology": {
+                "IsValid": true,
+                "ID": "15735",
+                "Text": "Power Steering Hose"
+              },
+              "LineCode": "CFHH",
+              "PartNumber": "70934",
+              "Manufacturer": "Duralast",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "8b19dcaa-ac4c-454b-b3ac-a74b5cde2d86",
+                "CreationTime": "2025-01-02T14:38:07.033-05:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-01-02T14:54:24.167-05:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "8b19dcaa-ac4c-454b-b3ac-a74b5cde2d86",
+              "Rank": 2,
+              "Type": "Material",
+              "Description": "Power Steering Pressure Line Hose",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 112.66,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 112.66,
+              "Discount": 0,
+              "ExtendedTotal": 112.66,
+              "TotalCost": 32.66,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "83ea7bf1-7179-40b4-81fc-9e0e1ef9f06a",
+              "Warranty": ""
+            },
+            {
+              "LineCode": "CFHH",
+              "PartNumber": "71206",
+              "Manufacturer": "Duralast",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "13a73544-c5cd-4987-b9cb-74009bfb0ee0",
+                "CreationTime": "2025-01-02T14:54:24.167-05:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-01-02T14:54:24.167-05:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "13a73544-c5cd-4987-b9cb-74009bfb0ee0",
+              "Rank": 3,
+              "Type": "Material",
+              "Description": "Power Steering Return Hose",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 71.57,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 71.57,
+              "Discount": 0,
+              "ExtendedTotal": 71.57,
+              "TotalCost": 16.31,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "00000000-0000-0000-0000-000000000000",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "",
+        "Flag": "",
+        "InspectionReferenceID": "00000000-0000-0000-0000-000000000000",
+        "ServicePackageTemplateID": "4d1ce21d-df0b-45bb-b355-2ee49e752f01",
+        "ServiceCategoryID": "56a4cd74-48d4-438f-89b9-8ec77128bc41",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": false
+      },
+      {
+        "Header": {
+          "ID": "f2ea9193-45a0-48d1-8a54-eaf5006dfc8b",
+          "CreationTime": "2025-08-07T12:42:29.607-04:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-08-07T12:42:29.607-04:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Mason Banta"
+        },
+        "ID": "f2ea9193-45a0-48d1-8a54-eaf5006dfc8b",
+        "Chapter": "DeferredService",
+        "Rank": 14,
+        "Code": "",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "Gut Interior",
+          "Description": "Remove and Replace components as required to access and install materials, and/or perform needed service.  Retest and verify repair as required.  Perform final road test where applicable."
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "Completed": false,
+              "TechnicianHour": 6,
+              "Header": {
+                "ID": "b9f8e365-0182-436d-bccf-18aadc134525",
+                "CreationTime": "2025-08-07T12:42:29.607-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-08-07T12:42:29.607-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "b9f8e365-0182-436d-bccf-18aadc134525",
+              "Rank": 1,
+              "Type": "Labor",
+              "Description": "Labor",
+              "Quantity": 6,
+              "Unit": "",
+              "RateCode": "1",
+              "Price": 170,
+              "PriceUnit": "",
+              "MinimumCharge": 0,
+              "Total": 1020,
+              "Discount": 0,
+              "ExtendedTotal": 1020,
+              "TotalCost": 420,
+              "OtherChargeCode": "*",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "621fd370-b891-4008-9521-1b80f6a1e535",
+              "Warranty": ""
+            },
+            {
+              "LineCode": "",
+              "PartNumber": "",
+              "Manufacturer": "",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "ed5dfcef-fb63-46d8-b740-0db27fcb454e",
+                "CreationTime": "2025-08-07T12:42:29.607-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-08-07T12:42:29.607-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "ed5dfcef-fb63-46d8-b740-0db27fcb454e",
+              "Rank": 2,
+              "Type": "Material",
+              "Description": "General Service Material Item(s)",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "",
+              "Price": 0,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 0,
+              "Discount": 0,
+              "ExtendedTotal": 0,
+              "TotalCost": 0,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "6a720e8f-ba38-467c-93d9-186622727a20",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "",
+        "Flag": "",
+        "InspectionReferenceID": "00000000-0000-0000-0000-000000000000",
+        "ServicePackageTemplateID": "605937c0-8fe3-4fdc-be04-25c05d05a957",
+        "ServiceCategoryID": "9c58d73e-4325-48bb-9a8e-e51039a8eff2",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": false
+      }
+    ]
+  },
+  "Summary": {
+    "PartsTotal": 0,
+    "LaborTotal": 2800,
+    "SubletTotal": 0,
+    "NetTotal": 2800,
+    "OtherCharges": {
+      "ItemCollection": []
+    },
+    "OtherChargeTotal": 0,
+    "TaxTotal": 0,
+    "GrandTotal": 2800,
+    "TotalOutstanding": 0
+  },
+  "OtherChargeCode": "",
+  "Flag": "",
+  "WorkOrderFlags": "",
+  "Tags": "",
+  "Completed": false,
+  "ContactID": "b1df810b-2f62-4172-abc1-12aa4f49de48",
+  "ServiceItemID": "b1132d5f-de6e-4a49-b5ac-fe62a25581c5"
+}
