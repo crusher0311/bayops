@@ -4186,7 +4186,7 @@ async function runProtractorImport(
           };
 
           if (existing) {
-            await storage.updateCustomer(existing.id, customerData);
+            await storage.updateCustomer(existing.id, orgId, customerData);
           } else {
             await storage.createCustomer(customerData);
           }
