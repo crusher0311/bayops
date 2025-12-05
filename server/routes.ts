@@ -4413,23 +4413,64 @@ async function runProtractorImport(
 
             const existing = await storage.getRepairOrderByProtractorId(orgId, invoice.ID);
 
+            // Normalize ServicePackages to always be an array
+            // Protractor may return: array, single object, null, undefined, or ItemCollection wrapper
+            let servicePackages: any[] = [];
+            const rawPackages = invoice.ServicePackages || invoice.servicePackages;
+            
+            if (Array.isArray(rawPackages)) {
+              servicePackages = rawPackages;
+            } else if (rawPackages && typeof rawPackages === 'object') {
+              // Handle ItemCollection wrapper or single object
+              if (rawPackages.ItemCollection && Array.isArray(rawPackages.ItemCollection)) {
+                servicePackages = rawPackages.ItemCollection;
+              } else if (rawPackages.ServicePackage) {
+                // Single ServicePackage wrapper
+                servicePackages = Array.isArray(rawPackages.ServicePackage) 
+                  ? rawPackages.ServicePackage 
+                  : [rawPackages.ServicePackage];
+              } else {
+                // It's a single service package object
+                servicePackages = [rawPackages];
+              }
+            }
+            
             // Map service packages to jobs
-            const jobs = (invoice.ServicePackages || []).map((pkg: any, idx: number) => ({
-              id: `job-${idx}`,
-              name: pkg.Title || 'Service',
-              description: pkg.Description || '',
-              lineItems: (pkg.Lines || []).map((line: any, lineIdx: number) => ({
-                id: `line-${idx}-${lineIdx}`,
-                type: line.Type === 'Labor' ? 'LABOR' : line.Type === 'Material' ? 'PART' : 'FEE',
-                description: line.Description || '',
-                quantity: line.Quantity || 1,
-                unitCost: line.Cost || 0,
-                unitPrice: line.SellPrice || 0,
-                approved: true,
-                manufacturer: line.Manufacturer || null,
-                partNumber: line.PartNumber || null,
-              })),
-            }));
+            const jobs = servicePackages.map((pkg: any, idx: number) => {
+              // Normalize Lines array similarly
+              let lines: any[] = [];
+              const rawLines = pkg.Lines || pkg.lines || pkg.LineItems || pkg.lineItems;
+              
+              if (Array.isArray(rawLines)) {
+                lines = rawLines;
+              } else if (rawLines && typeof rawLines === 'object') {
+                if (rawLines.ItemCollection && Array.isArray(rawLines.ItemCollection)) {
+                  lines = rawLines.ItemCollection;
+                } else if (rawLines.Line) {
+                  lines = Array.isArray(rawLines.Line) ? rawLines.Line : [rawLines.Line];
+                } else {
+                  lines = [rawLines];
+                }
+              }
+              
+              return {
+                id: `job-${idx}`,
+                name: pkg.Title || pkg.title || pkg.Name || pkg.name || 'Service',
+                description: pkg.Description || pkg.description || '',
+                lineItems: lines.map((line: any, lineIdx: number) => ({
+                  id: `line-${idx}-${lineIdx}`,
+                  type: line.Type === 'Labor' || line.type === 'Labor' ? 'LABOR' 
+                      : line.Type === 'Material' || line.type === 'Material' ? 'PART' : 'FEE',
+                  description: line.Description || line.description || '',
+                  quantity: line.Quantity || line.quantity || 1,
+                  unitCost: line.Cost || line.cost || 0,
+                  unitPrice: line.SellPrice || line.sellPrice || line.Price || line.price || 0,
+                  approved: true,
+                  manufacturer: line.Manufacturer || line.manufacturer || null,
+                  partNumber: line.PartNumber || line.partNumber || null,
+                })),
+              };
+            });
 
             const roData = {
               orgId,

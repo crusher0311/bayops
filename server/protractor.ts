@@ -335,20 +335,36 @@ export class ProtractorClient {
   async getInvoice(id: string, locationId?: string): Promise<ProtractorInvoice> {
     const result = await this.request<any>(`/Invoice/${id}`, {}, locationId);
     
+    let invoice: any;
+    
     // Handle various response formats - Protractor may wrap in ItemCollection or return directly
     if (result.ItemCollection && Array.isArray(result.ItemCollection) && result.ItemCollection.length > 0) {
-      return result.ItemCollection[0];
-    }
-    if (result.Invoice) {
-      return result.Invoice;
-    }
-    // Direct return if the response is the invoice itself
-    if (result.ID || result.Header?.ID) {
-      return result;
+      invoice = result.ItemCollection[0];
+    } else if (result.Invoice) {
+      invoice = result.Invoice;
+    } else if (result.ID || result.Header?.ID) {
+      // Direct return if the response is the invoice itself
+      invoice = result;
+    } else {
+      console.log(`[Protractor API] getInvoice unexpected response structure:`, JSON.stringify(result, null, 2).substring(0, 2000));
+      invoice = result;
     }
     
-    console.log(`[Protractor API] getInvoice unexpected response structure:`, JSON.stringify(result, null, 2).substring(0, 2000));
-    return result;
+    // Log the first invoice response for debugging
+    console.log(`[Protractor API] Invoice ${id} ALL FIELDS: ${Object.keys(invoice || {}).join(', ')}`);
+    console.log(`[Protractor API] Invoice ${id} ContactID=${invoice?.ContactID}, ServiceItemID=${invoice?.ServiceItemID}`);
+    
+    // Check for Contact object structure (common in Protractor)
+    if (invoice?.Contact) {
+      console.log(`[Protractor API] Invoice ${id} Contact object: ${JSON.stringify(invoice.Contact).substring(0, 500)}`);
+    }
+    
+    // Check for ServiceItem object structure
+    if (invoice?.ServiceItem) {
+      console.log(`[Protractor API] Invoice ${id} ServiceItem object: ${JSON.stringify(invoice.ServiceItem).substring(0, 500)}`);
+    }
+    
+    return invoice;
   }
 
   // Get employees (technicians and service advisors)
