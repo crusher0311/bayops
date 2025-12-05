@@ -4351,20 +4351,42 @@ async function runProtractorImport(
               console.log(`[Protractor Import ${jobId}] Could not fetch invoice detail for ${listInvoice.ID}: ${e.message}`);
             }
             
+            // Try multiple field name patterns for customer/contact reference
+            const contactId = (invoice as any).ContactID || 
+                             (invoice as any).contactId || 
+                             (invoice as any).Contact?.ID ||
+                             (invoice as any).Owner?.ID ||
+                             (invoice as any).OwnerID ||
+                             (invoice as any).CustomerID ||
+                             (invoice as any).customerId;
+            
+            // Try multiple field name patterns for vehicle/service item reference                     
+            const serviceItemId = (invoice as any).ServiceItemID || 
+                                  (invoice as any).serviceItemId || 
+                                  (invoice as any).ServiceItem?.ID ||
+                                  (invoice as any).Vehicle?.ID ||
+                                  (invoice as any).VehicleID ||
+                                  (invoice as any).vehicleId;
+            
+            // Log what we found for first invoice
+            if (processedRecords === 0 && failedRecords === 0) {
+              console.log(`[Protractor Import ${jobId}] Extracted contactId: ${contactId}, serviceItemId: ${serviceItemId}`);
+            }
+            
             // Find customer by protractor contact ID
-            const customer = invoice.ContactID ? 
-              await storage.getCustomerByProtractorId(orgId, invoice.ContactID) : null;
+            const customer = contactId ? 
+              await storage.getCustomerByProtractorId(orgId, contactId) : null;
             
             // Find vehicle by protractor service item ID
-            const vehicle = invoice.ServiceItemID ?
-              await storage.getVehicleByProtractorId(invoice.ServiceItemID) : null;
+            const vehicle = serviceItemId ?
+              await storage.getVehicleByProtractorId(serviceItemId) : null;
 
             if (!customer || !vehicle) {
               // Skip if we don't have the customer or vehicle
               failedRecords++;
               errors.push({
                 record: `Invoice: ${invoice.Number || invoice.ID}`,
-                error: `Missing customer (${invoice.ContactID}) or vehicle (${invoice.ServiceItemID})`,
+                error: `Missing customer (${contactId}) or vehicle (${serviceItemId})`,
                 timestamp: new Date().toISOString(),
               });
               continue;
