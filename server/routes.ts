@@ -4337,6 +4337,8 @@ async function runProtractorImport(
             marketingConsent: !contact.NoEmail && !contact.NoMessaging,
             notes: contact.Note || null,
             protractorId: contact.ID,
+            legacySystem: 'protractor' as const,
+            legacyId: contact.ID,
           };
 
           if (existing) {
@@ -4400,6 +4402,7 @@ async function runProtractorImport(
 
               const vehicleData = {
                 customerId: customer.id,
+                orgId,
                 vin: vehicle.VIN || '',
                 year: vehicle.Year || 0,
                 make: vehicle.Make || 'Unknown',
@@ -4410,6 +4413,8 @@ async function runProtractorImport(
                 color: vehicle.Color || null,
                 notes: vehicle.Note || null,
                 protractorId: vehicle.ID,
+                legacySystem: 'protractor' as const,
+                legacyId: vehicle.ID,
               };
 
               if (existing) {
@@ -4708,6 +4713,9 @@ async function runProtractorImport(
               grandTotal: summaryGrandTotal ?? ((calculatedTotalLabor + calculatedTotalParts + calculatedTotalSublet) > 0 
                 ? (calculatedTotalLabor + calculatedTotalParts + calculatedTotalSublet)
                 : null),
+              legacySystem: 'protractor' as const,
+              legacyId: invoice.ID,
+              legacyInvoiceNumber: invoice.InvoiceNumber || invoice.Number,
             };
 
             if (existing) {
