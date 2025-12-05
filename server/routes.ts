@@ -4446,8 +4446,8 @@ async function runProtractorImport(
     if (job.importType === 'FULL' || job.importType === 'WORK_ORDERS' || job.importType === 'INVOICES') {
       console.log(`[Protractor Import ${jobId}] Fetching invoices...`);
       
-      const startDate = job.startDate || new Date(Date.now() - 365 * 24 * 60 * 60 * 1000); // Default to last year
-      const endDate = job.endDate || new Date();
+      const startDate = job.startDate || new Date('2020-01-01'); // Default to 5+ years of history
+      const endDate = job.endDate || new Date(Date.now() + 24 * 60 * 60 * 1000); // Tomorrow to ensure we get today's invoices
 
       try {
         // Fetch invoices from all locations
@@ -4525,18 +4525,22 @@ async function runProtractorImport(
             }
             
             // Try multiple field name patterns for customer/contact reference
-            const contactId = (invoice as any).ContactID || 
+            // IMPORTANT: Protractor embeds Contact as an object with nested ID, not as a scalar ContactID
+            const contactId = (invoice as any).Contact?.ID ||
+                             (invoice as any).Contact?.Header?.ID ||
+                             (invoice as any).ContactID || 
                              (invoice as any).contactId || 
-                             (invoice as any).Contact?.ID ||
                              (invoice as any).Owner?.ID ||
                              (invoice as any).OwnerID ||
                              (invoice as any).CustomerID ||
                              (invoice as any).customerId;
             
-            // Try multiple field name patterns for vehicle/service item reference                     
-            const serviceItemId = (invoice as any).ServiceItemID || 
+            // Try multiple field name patterns for vehicle/service item reference
+            // IMPORTANT: Protractor embeds ServiceItem as an object with nested ID, not as a scalar ServiceItemID
+            const serviceItemId = (invoice as any).ServiceItem?.ID ||
+                                  (invoice as any).ServiceItem?.Header?.ID ||
+                                  (invoice as any).ServiceItemID || 
                                   (invoice as any).serviceItemId || 
-                                  (invoice as any).ServiceItem?.ID ||
                                   (invoice as any).Vehicle?.ID ||
                                   (invoice as any).VehicleID ||
                                   (invoice as any).vehicleId;
