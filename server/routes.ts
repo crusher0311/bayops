@@ -4470,14 +4470,19 @@ async function runProtractorImport(
           console.log(`[Protractor Import ${jobId}] Field names: ${Object.keys(invoices[0]).join(', ')}`);
           console.log(`[Protractor Import ${jobId}] Raw data: ${JSON.stringify(invoices[0], null, 2)}`);
           
-          // Try fetching WorkOrder for full details - WorkOrder endpoint returns complete line item pricing
+          // Try fetching Invoice for full details including Summary field with totals
           try {
-            const singleWorkOrder = await client.getWorkOrder(invoices[0].ID);
-            console.log(`[Protractor Import ${jobId}] SINGLE WORKORDER DETAIL STRUCTURE:`);
-            console.log(`[Protractor Import ${jobId}] Detail field names: ${Object.keys(singleWorkOrder).join(', ')}`);
-            console.log(`[Protractor Import ${jobId}] Detail raw data (first 8000 chars): ${JSON.stringify(singleWorkOrder, null, 2).substring(0, 8000)}`);
+            const singleInvoice = await client.getInvoice(invoices[0].ID);
+            console.log(`[Protractor Import ${jobId}] SINGLE INVOICE DETAIL STRUCTURE:`);
+            console.log(`[Protractor Import ${jobId}] Detail field names: ${Object.keys(singleInvoice).join(', ')}`);
+            console.log(`[Protractor Import ${jobId}] Detail raw data (first 8000 chars): ${JSON.stringify(singleInvoice, null, 2).substring(0, 8000)}`);
+            
+            // Log Summary field specifically if present
+            if ((singleInvoice as any).Summary) {
+              console.log(`[Protractor Import ${jobId}] Invoice Summary: ${JSON.stringify((singleInvoice as any).Summary, null, 2)}`);
+            }
           } catch (e: any) {
-            console.log(`[Protractor Import ${jobId}] Could not fetch single workorder detail: ${e.message}`);
+            console.log(`[Protractor Import ${jobId}] Could not fetch single invoice detail: ${e.message}`);
           }
         }
         
@@ -4485,38 +4490,33 @@ async function runProtractorImport(
 
         for (const listInvoice of invoices) {
           try {
-            // Fetch full WorkOrder details - the Invoice endpoint returns truncated data without line items
-            // The WorkOrder endpoint returns complete ServicePackageLines with Price, Total, ExtendedTotal, TotalCost
+            // Fetch full Invoice details - includes Contact/ServiceItem and Summary with totals
+            // Note: WorkOrder endpoint returns null, so we use Invoice endpoint
             let invoice = listInvoice;
             try {
-              // Use WorkOrder endpoint instead of Invoice - same ID but returns full line item details
-              const fullWorkOrder = await client.getWorkOrder(listInvoice.ID);
-              invoice = fullWorkOrder;
+              const fullInvoice = await client.getInvoice(listInvoice.ID);
+              invoice = fullInvoice;
               
-              // Log first detailed workorder for debugging - show ALL fields
+              // Log first detailed invoice for debugging - show ALL fields
               if (processedRecords === 0 && failedRecords === 0) {
-                console.log(`[Protractor Import ${jobId}] FIRST FULL WORKORDER FIELDS: ${Object.keys(invoice).join(', ')}`);
-                console.log(`[Protractor Import ${jobId}] FIRST FULL WORKORDER DATA: ${JSON.stringify(invoice, null, 2).substring(0, 10000)}`);
+                console.log(`[Protractor Import ${jobId}] FIRST FULL INVOICE FIELDS: ${Object.keys(invoice).join(', ')}`);
+                console.log(`[Protractor Import ${jobId}] FIRST FULL INVOICE DATA: ${JSON.stringify(invoice, null, 2).substring(0, 10000)}`);
                 // Check for various possible field name patterns
                 const possibleContactFields = ['ContactID', 'contactId', 'ContactId', 'contact_id', 'Contact', 'customerId', 'CustomerID', 'Owner', 'OwnerID'];
                 const possibleVehicleFields = ['ServiceItemID', 'serviceItemId', 'ServiceItemId', 'service_item_id', 'ServiceItem', 'vehicleId', 'VehicleID', 'Vehicle'];
                 console.log(`[Protractor Import ${jobId}] Contact field check: ${possibleContactFields.map(f => `${f}=${(invoice as any)[f]}`).join(', ')}`);
                 console.log(`[Protractor Import ${jobId}] Vehicle field check: ${possibleVehicleFields.map(f => `${f}=${(invoice as any)[f]}`).join(', ')}`);
                 
-                // Log ServicePackages structure for debugging line items
+                // Log Summary and ServicePackages structure for debugging
+                if ((invoice as any).Summary) {
+                  console.log(`[Protractor Import ${jobId}] Summary field: ${JSON.stringify((invoice as any).Summary, null, 2)}`);
+                }
                 if (invoice.ServicePackages) {
                   console.log(`[Protractor Import ${jobId}] ServicePackages structure: ${JSON.stringify(invoice.ServicePackages, null, 2).substring(0, 5000)}`);
                 }
               }
             } catch (e: any) {
-              console.log(`[Protractor Import ${jobId}] Could not fetch workorder detail for ${listInvoice.ID}: ${e.message}`);
-              // Fallback to Invoice endpoint if WorkOrder fails
-              try {
-                const fullInvoice = await client.getInvoice(listInvoice.ID);
-                invoice = fullInvoice;
-              } catch (e2: any) {
-                console.log(`[Protractor Import ${jobId}] Fallback invoice fetch also failed: ${e2.message}`);
-              }
+              console.log(`[Protractor Import ${jobId}] Could not fetch invoice detail for ${listInvoice.ID}: ${e.message}`);
             }
             
             // Try multiple field name patterns for customer/contact reference
