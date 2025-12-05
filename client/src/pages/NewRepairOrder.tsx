@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useCustomers, useVehicles, useWorkflows, useCreateCustomer, useCreateVehicle, useCreateRepairOrder } from '@/lib/hooks';
 import { useShopStore } from '@/lib/store';
 import { useAuthStore } from '@/lib/authStore';
-import { useLocation } from 'wouter';
+import { useLocation, useSearch } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,8 +33,15 @@ import { Link } from 'wouter';
 
 export default function NewRepairOrder() {
   const [, navigate] = useLocation();
+  const searchString = useSearch();
   const { currentLocationId } = useShopStore();
   const { user } = useAuthStore();
+  
+  // Parse query parameters
+  const searchParams = new URLSearchParams(searchString);
+  const prefillCustomerId = searchParams.get('customerId');
+  const prefillVehicleId = searchParams.get('vehicleId');
+  const prefillService = searchParams.get('service');
   
   const { data: customers = [] } = useCustomers();
   const { data: vehicles = [] } = useVehicles();
@@ -46,6 +53,7 @@ export default function NewRepairOrder() {
 
   // Step management
   const [step, setStep] = useState<'customer' | 'vehicle' | 'details'>('customer');
+  const [prefillApplied, setPrefillApplied] = useState(false);
   
   // Customer state
   const [customerTab, setCustomerTab] = useState<'existing' | 'new'>('existing');
@@ -89,6 +97,54 @@ export default function NewRepairOrder() {
 
   // Customer vehicles filter
   const customerVehicles = vehicles.filter(v => v.customerId === selectedCustomerId);
+
+  // Apply prefill from URL params once data loads
+  useEffect(() => {
+    if (prefillApplied) return;
+    
+    // Wait for data to load
+    if (customers.length === 0 || (prefillVehicleId && vehicles.length === 0)) return;
+    
+    let customerValid = false;
+    let vehicleValid = false;
+    
+    // Check if prefill customer exists
+    if (prefillCustomerId) {
+      const customer = customers.find(c => c.id === prefillCustomerId);
+      if (customer) {
+        setSelectedCustomerId(prefillCustomerId);
+        setCustomerTab('existing');
+        customerValid = true;
+      }
+    }
+    
+    // Check if prefill vehicle exists
+    if (prefillVehicleId && vehicles.length > 0) {
+      const vehicle = vehicles.find(v => v.id === prefillVehicleId);
+      if (vehicle) {
+        setSelectedVehicleId(prefillVehicleId);
+        setVehicleTab('existing');
+        vehicleValid = true;
+      }
+    }
+    
+    // Prefill notes with service name
+    if (prefillService) {
+      setRoDetails(prev => ({ ...prev, notes: `Deferred service: ${prefillService}` }));
+    }
+    
+    // Advance step based on what's valid
+    if (customerValid && vehicleValid) {
+      setStep('details');
+      setPrefillApplied(true);
+    } else if (customerValid) {
+      setStep('vehicle');
+      setPrefillApplied(true);
+    } else if (prefillCustomerId || prefillVehicleId) {
+      // If we had prefill params but couldn't validate, mark as applied to stop retrying
+      setPrefillApplied(true);
+    }
+  }, [customers, vehicles, prefillCustomerId, prefillVehicleId, prefillService, prefillApplied]);
 
   const handleCreateCustomer = async () => {
     try {

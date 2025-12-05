@@ -28,7 +28,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import type { Customer, Vehicle, DeferredWork, RepairOrder } from '@shared/schema';
 
-function VehicleDeferredWork({ vehicleId }: { vehicleId: string }) {
+function VehicleDeferredWork({ vehicleId, customerId }: { vehicleId: string; customerId: string }) {
   const { data: deferredWork = [], isLoading } = useDeferredWorkByVehicle(vehicleId);
   const updateDeferredWork = useUpdateDeferredWork();
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -104,6 +104,17 @@ function VehicleDeferredWork({ vehicleId }: { vehicleId: string }) {
                   </div>
                 </div>
                 <div className="flex gap-1">
+                  <Link href={`/ros/new?customerId=${customerId}&vehicleId=${vehicleId}&service=${encodeURIComponent(dw.serviceName)}`}>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="text-xs h-7"
+                      data-testid={`btn-convert-ro-${dw.id}`}
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      New RO
+                    </Button>
+                  </Link>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -307,13 +318,25 @@ function CustomerVehicles({ customerId }: { customerId: string }) {
                   </div>
                 </div>
               </div>
-              {(vehicle.engineCylinders || vehicle.engineDisplacement) && (
-                <div className="text-sm text-muted-foreground">
-                  {[vehicle.engineCylinders, vehicle.engineDisplacement].filter(Boolean).join(' ')}
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                {(vehicle.engineCylinders || vehicle.engineDisplacement) && (
+                  <div className="text-sm text-muted-foreground">
+                    {[vehicle.engineCylinders, vehicle.engineDisplacement].filter(Boolean).join(' ')}
+                  </div>
+                )}
+                <Link href={`/ros/new?customerId=${customerId}&vehicleId=${vehicle.id}`}>
+                  <Button 
+                    size="sm" 
+                    className="gap-1"
+                    data-testid={`btn-new-ro-vehicle-${vehicle.id}`}
+                  >
+                    <Plus className="w-3 h-3" />
+                    New RO
+                  </Button>
+                </Link>
+              </div>
             </div>
-            <VehicleDeferredWork vehicleId={vehicle.id} />
+            <VehicleDeferredWork vehicleId={vehicle.id} customerId={customerId} />
             <VehicleServiceHistory vehicleId={vehicle.id} />
           </div>
         ))}
