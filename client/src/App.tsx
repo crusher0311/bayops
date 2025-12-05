@@ -31,6 +31,8 @@ import CustomerAuthorization from "@/pages/CustomerAuthorization";
 import SelfCheckIn from "@/pages/SelfCheckIn";
 import ServiceQueue from "@/pages/ServiceQueue";
 import DispatchBoard from "@/pages/DispatchBoard";
+import PrintRO from "@/pages/PrintRO";
+import PrintInvoice from "@/pages/PrintInvoice";
 
 function ProtectedRouter() {
   const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
@@ -74,6 +76,8 @@ function ProtectedRouter() {
       <Route path="/ros/new" component={NewRepairOrder} />
       <Route path="/quick-checkin" component={QuickCheckIn} />
       <Route path="/ros/:id" component={RepairOrderDetail} />
+      <Route path="/ros/:id/print" component={PrintRO} />
+      <Route path="/ros/:id/invoice" component={PrintInvoice} />
       <Route path="/inventory" component={Inventory} />
       <Route path="/customers" component={Customers} />
       <Route path="/appointments" component={Appointments} />

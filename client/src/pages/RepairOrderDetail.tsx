@@ -53,7 +53,8 @@ import {
   Wrench,
   ShoppingCart,
   Package,
-  ChevronDown
+  ChevronDown,
+  Receipt
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
@@ -1408,9 +1409,28 @@ export default function RepairOrderDetail() {
             </p>
           </div>
           <div className="ml-auto flex gap-2">
-            <Button variant="outline" size="sm" className="gap-2" data-testid="button-print">
-              <Printer className="w-4 h-4" /> Print
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2" data-testid="button-print">
+                  <Printer className="w-4 h-4" /> Print
+                  <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <a href={`/ros/${ro.id}/print`} target="_blank" rel="noopener noreferrer" data-testid="link-print-ro">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Print Repair Order
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <a href={`/ros/${ro.id}/invoice`} target="_blank" rel="noopener noreferrer" data-testid="link-print-invoice">
+                    <Receipt className="w-4 h-4 mr-2" />
+                    Print Invoice
+                  </a>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2" data-testid="button-send-customer">
