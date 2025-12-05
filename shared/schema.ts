@@ -171,6 +171,58 @@ export const vehiclesRelations = relations(vehicles, ({ one, many }) => ({
     references: [customers.id],
   }),
   repairOrders: many(repairOrders),
+  deferredWork: many(deferredWork),
+}));
+
+// Deferred Work Status Enum
+export const deferredWorkStatusEnum = pgEnum('deferred_work_status', ['PENDING', 'CONTACTED', 'SCHEDULED', 'CONVERTED', 'DISMISSED']);
+
+// Deferred Work (Declined Recommendations)
+export const deferredWork = pgTable("deferred_work", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  vehicleId: varchar("vehicle_id").notNull().references(() => vehicles.id, { onDelete: 'cascade' }),
+  customerId: varchar("customer_id").notNull().references(() => customers.id, { onDelete: 'cascade' }),
+  originalRoId: varchar("original_ro_id").references(() => repairOrders.id, { onDelete: 'set null' }),
+  serviceName: text("service_name").notNull(),
+  serviceDescription: text("service_description"),
+  estimatedPrice: decimal("estimated_price", { precision: 10, scale: 2 }),
+  laborHours: decimal("labor_hours", { precision: 5, scale: 2 }),
+  priority: text("priority").default('NORMAL'),
+  reason: text("reason"),
+  notes: text("notes"),
+  status: deferredWorkStatusEnum("status").notNull().default('PENDING'),
+  followUpDate: timestamp("follow_up_date"),
+  contactedAt: timestamp("contacted_at"),
+  convertedRoId: varchar("converted_ro_id"),
+  protractorId: varchar("protractor_id"),
+  protractorInvoiceId: varchar("protractor_invoice_id"),
+  declinedAt: timestamp("declined_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const deferredWorkRelations = relations(deferredWork, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [deferredWork.orgId],
+    references: [organizations.id],
+  }),
+  location: one(locations, {
+    fields: [deferredWork.locationId],
+    references: [locations.id],
+  }),
+  vehicle: one(vehicles, {
+    fields: [deferredWork.vehicleId],
+    references: [vehicles.id],
+  }),
+  customer: one(customers, {
+    fields: [deferredWork.customerId],
+    references: [customers.id],
+  }),
+  originalRepairOrder: one(repairOrders, {
+    fields: [deferredWork.originalRoId],
+    references: [repairOrders.id],
+  }),
 }));
 
 // Workflows
@@ -1339,6 +1391,11 @@ export const insertVehicleSchema = createInsertSchema(vehicles).omit({
   createdAt: true,
 });
 
+export const insertDeferredWorkSchema = createInsertSchema(deferredWork).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertWorkflowSchema = createInsertSchema(workflows).omit({
   id: true,
   createdAt: true,
@@ -1548,6 +1605,9 @@ export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 
 export type Vehicle = typeof vehicles.$inferSelect;
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
+
+export type DeferredWork = typeof deferredWork.$inferSelect;
+export type InsertDeferredWork = z.infer<typeof insertDeferredWorkSchema>;
 
 export type Workflow = typeof workflows.$inferSelect;
 export type InsertWorkflow = z.infer<typeof insertWorkflowSchema>;
