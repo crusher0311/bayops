@@ -2781,27 +2781,6 @@ export async function registerRoutes(
         return res.status(400).json({ message: fromZodError(result.error).toString() });
       }
       const payment = await storage.createPayment(result.data);
-      
-      const invoice = await storage.getInvoice(result.data.invoiceId);
-      if (invoice) {
-        const newAmountPaid = parseFloat(invoice.amountPaid) + parseFloat(result.data.amount);
-        const newAmountDue = parseFloat(invoice.total) - newAmountPaid;
-        let newStatus = invoice.status;
-        
-        if (newAmountDue <= 0) {
-          newStatus = 'PAID';
-        } else if (newAmountPaid > 0) {
-          newStatus = 'PARTIAL';
-        }
-        
-        await storage.updateInvoice(invoice.id, {
-          amountPaid: newAmountPaid.toFixed(2),
-          amountDue: Math.max(0, newAmountDue).toFixed(2),
-          status: newStatus,
-          paidAt: newStatus === 'PAID' ? new Date() : null,
-        });
-      }
-      
       res.status(201).json(payment);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2833,7 +2812,7 @@ export async function registerRoutes(
       const ros = await storage.getRepairOrdersByLocation(req.params.locationId);
       const invoices = await storage.getInvoicesByLocation(req.params.locationId);
       const timeLogs = await storage.getTimeLogsByLocation(req.params.locationId);
-      const partsOrders = await storage.getPartsOrdersByLocation(req.params.locationId);
+      const partsOrders = await storage.getPartOrdersByLocation(req.params.locationId);
       
       const filteredInvoices = startDate 
         ? invoices.filter(i => new Date(i.createdAt) >= startDate!) 
