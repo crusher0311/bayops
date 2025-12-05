@@ -1,0 +1,1795 @@
+{
+  "Header": {
+    "ID": "3451fc55-8c18-4e5e-b572-26543fcc0206",
+    "CreationTime": "2025-10-17T15:23:31.18-04:00",
+    "DeletionTime": "0001-01-01T00:00:00",
+    "DeletionTimeSpecified": true,
+    "LastModifiedTime": "2025-10-24T18:54:26.537-04:00",
+    "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+  },
+  "ID": "3451fc55-8c18-4e5e-b572-26543fcc0206",
+  "Type": "WorkOrder",
+  "ScheduledTime": "2025-10-17T16:00:00-04:00",
+  "PromisedTime": "2025-10-24T19:00:00-04:00",
+  "InvoiceTime": "2025-10-24T18:54:26.78-04:00",
+  "WorkOrderNumber": 3463,
+  "InvoiceNumber": 2543,
+  "PurchaseOrderNumber": "",
+  "Contact": {
+    "Header": {
+      "ID": "d6c61835-cde1-4662-86ec-b0d7b87c6c99",
+      "CreationTime": "2025-10-17T15:16:23.193-04:00",
+      "DeletionTime": "0001-01-01T00:00:00",
+      "DeletionTimeSpecified": true,
+      "LastModifiedTime": "2025-10-17T15:16:23.193-04:00",
+      "LastModifiedBy": "Pro_AB1369.AACE\\Andrew Nock"
+    },
+    "ID": "d6c61835-cde1-4662-86ec-b0d7b87c6c99",
+    "FileAs": "Matthew, Nathan",
+    "Name": {
+      "Title": "Name",
+      "Prefix": "",
+      "FirstName": "Nathan",
+      "MiddleName": "",
+      "LastName": "Matthew",
+      "Suffix": ""
+    },
+    "Address": {
+      "Title": "Home",
+      "ID": "d33d8fa9-b5f7-4a4c-b1c3-255be15291fa",
+      "Street": "629 Branchline Rd",
+      "City": "Yukon",
+      "Province": "OK",
+      "PostalCode": "",
+      "Country": "USA"
+    },
+    "Company": "",
+    "Phone1Title": "Phone",
+    "Phone1": "(405) 589-3282",
+    "Phone2Title": "",
+    "Phone2": "",
+    "EmailTitle": "Email",
+    "Email": "nathan.m2428@gmail.com",
+    "AdditionalNames": {
+      "ItemCollection": [
+        {
+          "Header": {
+            "ID": "092b7295-6c0b-4c00-b67e-d5da0bdfddae",
+            "CreationTime": "2025-10-17T15:16:22.867-04:00",
+            "DeletionTime": "0001-01-01T00:00:00",
+            "DeletionTimeSpecified": true,
+            "LastModifiedTime": "2025-10-17T15:16:22.867-04:00",
+            "LastModifiedBy": "Pro_AB1369.AACE\\Andrew Nock"
+          },
+          "ID": "092b7295-6c0b-4c00-b67e-d5da0bdfddae",
+          "OwnerID": "d6c61835-cde1-4662-86ec-b0d7b87c6c99",
+          "Title": "Name",
+          "BaseFullName": {
+            "Prefix": "",
+            "FirstName": "Nathan",
+            "MiddleName": "",
+            "LastName": "Matthew",
+            "Suffix": ""
+          }
+        }
+      ]
+    },
+    "AdditionalPhones": {
+      "ItemCollection": [
+        {
+          "Header": {
+            "ID": "321c989e-aad3-481f-8c83-0d72ee56933e",
+            "CreationTime": "2025-10-17T15:16:22.867-04:00",
+            "DeletionTime": "0001-01-01T00:00:00",
+            "DeletionTimeSpecified": true,
+            "LastModifiedTime": "2025-10-17T15:16:22.867-04:00",
+            "LastModifiedBy": "Pro_AB1369.AACE\\Andrew Nock"
+          },
+          "ID": "321c989e-aad3-481f-8c83-0d72ee56933e",
+          "OwnerID": "d6c61835-cde1-4662-86ec-b0d7b87c6c99",
+          "Title": "Phone",
+          "BasePhoneNumber": {
+            "IsEmpty": false,
+            "Region": "",
+            "AreaCode": "405",
+            "PhoneNumber": "589-3282",
+            "Extension": ""
+          }
+        }
+      ]
+    },
+    "AdditionalURIs": {
+      "ItemCollection": [
+        {
+          "Header": {
+            "ID": "ebcaae55-1c61-4324-9f79-199a0c8081b2",
+            "CreationTime": "2025-10-17T15:16:32.773-04:00",
+            "DeletionTime": "0001-01-01T00:00:00",
+            "DeletionTimeSpecified": true,
+            "LastModifiedTime": "2025-10-17T15:16:32.773-04:00",
+            "LastModifiedBy": "Pro_AB1369.AACE\\Andrew Nock"
+          },
+          "ID": "ebcaae55-1c61-4324-9f79-199a0c8081b2",
+          "OwnerID": "d6c61835-cde1-4662-86ec-b0d7b87c6c99",
+          "Title": "Email",
+          "Type": "Email",
+          "Address": "nathan.m2428@gmail.com"
+        }
+      ]
+    },
+    "PreferredContactMethod": "Email",
+    "MarketingSource": "Discount Tire",
+    "Note": "",
+    "NoMessaging": false,
+    "NoEmail": false,
+    "NoPostCard": false
+  },
+  "ServiceItem": {
+    "IsComplete": true,
+    "PlateRegistration": "OK",
+    "VIN": "3N1AB7AP2EY334775",
+    "Unit": "",
+    "Color": "Black",
+    "Year": 2014,
+    "Make": "Nissan",
+    "Model": "Sentra",
+    "Submodel": "SL",
+    "Engine": "L4 1.8L 1798CC 110CID",
+    "Header": {
+      "ID": "60243e58-74b5-4dc3-a908-0a06ece3ee51",
+      "CreationTime": "2025-10-17T15:17:39.213-04:00",
+      "DeletionTime": "0001-01-01T00:00:00",
+      "DeletionTimeSpecified": true,
+      "LastModifiedTime": "2025-10-24T18:54:27.017-04:00",
+      "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+    },
+    "ID": "60243e58-74b5-4dc3-a908-0a06ece3ee51",
+    "Type": "Vehicle",
+    "Lookup": "PBC942",
+    "Description": "2014 Nissan Sentra SL",
+    "Usage": 115628,
+    "ProductionDate": "2014-11-11T01:00:00-05:00",
+    "Note": "",
+    "NoEmail": false,
+    "NoPostCard": false,
+    "OwnerID": "d6c61835-cde1-4662-86ec-b0d7b87c6c99"
+  },
+  "ServiceAdvisor": {
+    "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+    "Type": "",
+    "Name": "Mason Banta"
+  },
+  "Technician": {
+    "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+    "Type": "",
+    "Name": "Ryan Christian"
+  },
+  "Duration": 0,
+  "InUsage": 115628,
+  "OutUsage": 115628,
+  "WorkflowStage": "Invoice",
+  "SearchString": "Matthew, Nathan PBC942 2014 Nissan Sentra SL",
+  "Note": "",
+  "ServicePackages": {
+    "ItemCollection": [
+      {
+        "Header": {
+          "ID": "97f9a472-d1d4-4c4f-93bf-fb41187f1746",
+          "CreationTime": "2025-10-17T15:54:41.53-04:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-10-20T08:08:00.11-04:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Andrew Nock"
+        },
+        "ID": "97f9a472-d1d4-4c4f-93bf-fb41187f1746",
+        "Chapter": "Inspection",
+        "Rank": 1,
+        "Code": "WDVI",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "Waiter DVI",
+          "Description": "Waiting Customer Inspection Results"
+        },
+        "ServicePackageLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": [
+            {
+              "Header": {
+                "ID": "738823ee-ed34-4fed-9f0e-2615c38199f6",
+                "CreationTime": "2025-10-17T15:54:43.813-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.813-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "738823ee-ed34-4fed-9f0e-2615c38199f6",
+              "Rank": 2,
+              "Type": "Header",
+              "InputType": "",
+              "Title": "Customer DVI Link",
+              "Result": "",
+              "Comment": "",
+              "Notes": "https://carexpertsok.autotext.me/Admin/microsite/index.php?id=WGxUVCtrdndqc0o0a3RSc21Pb29pbUJIbThoREZrMXZUaXIvekwwWktwbz0=",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "d343f30a-0e32-4275-ab75-6e3c7c2135e8",
+                "CreationTime": "2025-10-17T15:54:43.83-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.83-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "d343f30a-0e32-4275-ab75-6e3c7c2135e8",
+              "Rank": 3,
+              "Type": "Header",
+              "InputType": "",
+              "Title": "Top Side",
+              "Result": "",
+              "Comment": "",
+              "Notes": "",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "25d6f630-3fcd-4d1e-87ed-43725181d84a",
+                "CreationTime": "2025-10-17T15:54:43.843-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-20T10:24:58.757-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "25d6f630-3fcd-4d1e-87ed-43725181d84a",
+              "Rank": 4,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Dash Lights",
+              "Result": "Required",
+              "Comment": "",
+              "Notes": "TPMs light, traction control light, and air bag lights on.  (1 image on DVI)",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "311e5cd0-10f5-40e5-b4e3-c5282e725024",
+                "CreationTime": "2025-10-17T15:54:43.843-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.843-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "311e5cd0-10f5-40e5-b4e3-c5282e725024",
+              "Rank": 5,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Engine Oil Level on Arrival",
+              "Result": "OK",
+              "Comment": "",
+              "Notes": "Fluid Level Still in Recommended Safe Zone",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "58491db3-f247-4510-8ca7-4727dd8f0d71",
+                "CreationTime": "2025-10-17T15:54:43.843-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.843-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "58491db3-f247-4510-8ca7-4727dd8f0d71",
+              "Rank": 6,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Headlights",
+              "Result": "OK",
+              "Comment": "",
+              "Notes": "Headlights are working as intended",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "066409cd-4f4a-4434-8d21-d82d0b0f18a2",
+                "CreationTime": "2025-10-17T15:54:43.86-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.86-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "066409cd-4f4a-4434-8d21-d82d0b0f18a2",
+              "Rank": 7,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Park Lights",
+              "Result": "OK",
+              "Comment": "",
+              "Notes": "Park Lights are working as intended",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "43bd58d9-74c7-45c8-8e2f-42c11f7d7e5d",
+                "CreationTime": "2025-10-17T15:54:43.86-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.86-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "43bd58d9-74c7-45c8-8e2f-42c11f7d7e5d",
+              "Rank": 8,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Tail Lights",
+              "Result": "OK",
+              "Comment": "",
+              "Notes": "All Tail/Brake Lights are working as intended",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "6b3cb557-e5ec-493e-a63a-990073b44008",
+                "CreationTime": "2025-10-17T15:54:43.86-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.86-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "6b3cb557-e5ec-493e-a63a-990073b44008",
+              "Rank": 9,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Blinkers",
+              "Result": "Required",
+              "Comment": "",
+              "Notes": "Passenger front blinker out, recommend replacing and rechecking. ",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "cb5be42c-64ff-42fb-adeb-a4c86b539b48",
+                "CreationTime": "2025-10-17T15:54:43.873-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.873-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "cb5be42c-64ff-42fb-adeb-a4c86b539b48",
+              "Rank": 10,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Battery",
+              "Result": "OK",
+              "Comment": "",
+              "Notes": "Battery Test Passed - No action required at this time",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "ca0d3300-8321-4437-a571-a4ed88530162",
+                "CreationTime": "2025-10-17T15:54:43.873-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.873-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "ca0d3300-8321-4437-a571-a4ed88530162",
+              "Rank": 11,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Serpentine Belt",
+              "Result": "OK",
+              "Comment": "",
+              "Notes": "Belt appears in good condition - No action recommended at this time",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "aa08d9ff-e7c2-45df-838a-329165b8ed1d",
+                "CreationTime": "2025-10-17T15:54:43.873-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.873-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "aa08d9ff-e7c2-45df-838a-329165b8ed1d",
+              "Rank": 12,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Transmission Fluid",
+              "Result": "Suggested",
+              "Comment": "",
+              "Notes": "Recommend transmission flush due to mileage ",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "510b2259-76d4-453a-8534-1741134e1618",
+                "CreationTime": "2025-10-17T15:54:43.89-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.89-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "510b2259-76d4-453a-8534-1741134e1618",
+              "Rank": 13,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Coolant",
+              "Result": "OK",
+              "Comment": "",
+              "Notes": "Good level and condition - Recommend following BG Service Intervals for Optimum Life Expectancy (1 image on DVI)",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "9dfcda6c-ad0a-4236-99b9-f75622708027",
+                "CreationTime": "2025-10-17T15:54:43.89-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.89-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "9dfcda6c-ad0a-4236-99b9-f75622708027",
+              "Rank": 14,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Brake Fluid",
+              "Result": "OK",
+              "Comment": "",
+              "Notes": "Good condition - Recommend following BG Service Intervals for Optimum Life Expectancy (1 image on DVI)",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "2911a328-e9e0-4d57-a6b0-2b502952f21a",
+                "CreationTime": "2025-10-17T15:54:43.907-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.907-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "2911a328-e9e0-4d57-a6b0-2b502952f21a",
+              "Rank": 15,
+              "Type": "Header",
+              "InputType": "",
+              "Title": "Bottom Side",
+              "Result": "",
+              "Comment": "",
+              "Notes": "",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "4d8be97a-1ba9-4b90-9b6f-ae0cffb65b50",
+                "CreationTime": "2025-10-17T15:54:43.907-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-24T18:28:58.817-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "4d8be97a-1ba9-4b90-9b6f-ae0cffb65b50",
+              "Rank": 16,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Fluid Leaks",
+              "Result": "Required",
+              "Comment": "",
+              "Notes": "Ac compressor appears to be leaking. recommend Level 1 (1 image on DVI)",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "f8bfdd94-a1dd-4f4c-9b55-056b24eb2dab",
+                "CreationTime": "2025-10-17T15:54:43.92-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-24T18:28:58.833-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "f8bfdd94-a1dd-4f4c-9b55-056b24eb2dab",
+              "Rank": 17,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Alignment",
+              "Result": "Required",
+              "Comment": "",
+              "Notes": "Rear subframe bent, recommend replacing rear subframe and passenger rear wheel bearing hub assembly. Passenger rear shock bent, recommend replacing both rear shocks. Possible that emergency brake hardware could be damaged from rubbing, may need to be replaced as well. Will know upon tear down. Recommend replacing all following parts before alignment will be possible. Possible damage to wheel, will know upon putting on tire balancer/visual inspection when off vehicle. Rear end not adjustable. Recommend installing camber bolts to both front struts to correct camber. (5 images on DVI)",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "8851089f-cc31-49e1-9d96-39583250505c",
+                "CreationTime": "2025-10-17T15:54:43.937-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.937-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "8851089f-cc31-49e1-9d96-39583250505c",
+              "Rank": 18,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Other",
+              "Result": "Required",
+              "Comment": "",
+              "Notes": "Passenger rear wheel suspension is bent in. (2 images on DVI)",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "f0385746-05c9-4103-a88c-1a2ecefeaddc",
+                "CreationTime": "2025-10-17T15:54:43.937-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.937-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "f0385746-05c9-4103-a88c-1a2ecefeaddc",
+              "Rank": 19,
+              "Type": "Header",
+              "InputType": "",
+              "Title": "TIRE INSPECTION",
+              "Result": "",
+              "Comment": "",
+              "Notes": "",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "532ce588-435e-43df-9e12-0db13b796e8c",
+                "CreationTime": "2025-10-17T15:54:43.953-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.953-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "532ce588-435e-43df-9e12-0db13b796e8c",
+              "Rank": 20,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "LR TIRE",
+              "Result": "Required",
+              "Comment": "",
+              "Notes": "00/32 - No tread remains.  Excessive wear.  Unsafe.\n",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "55634ab2-fb3f-4d00-b858-83eeb5c808fd",
+                "CreationTime": "2025-10-17T15:54:43.953-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.953-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "55634ab2-fb3f-4d00-b858-83eeb5c808fd",
+              "Rank": 21,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "RR TIRE",
+              "Result": "Required",
+              "Comment": "",
+              "Notes": "00/32 - No tread remains.  Excessive wear.  Unsafe.\n",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "b0613d6b-a085-4d3d-acde-b02d17dcbeae",
+                "CreationTime": "2025-10-17T15:54:43.953-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.953-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "b0613d6b-a085-4d3d-acde-b02d17dcbeae",
+              "Rank": 22,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "LF TIRE",
+              "Result": "Required",
+              "Comment": "",
+              "Notes": "00/32 - No tread remains.  Excessive wear.  Unsafe.\n",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "b3365fab-541d-4dc2-9f2c-3409242816ac",
+                "CreationTime": "2025-10-17T15:54:43.97-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.97-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "b3365fab-541d-4dc2-9f2c-3409242816ac",
+              "Rank": 23,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "RF TIRE",
+              "Result": "Required",
+              "Comment": "",
+              "Notes": "00/32 - No tread remains.  Excessive wear.  Unsafe.\n",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "39ce4a6d-e4e0-4559-9209-47906425695e",
+                "CreationTime": "2025-10-17T15:54:43.97-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.97-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "39ce4a6d-e4e0-4559-9209-47906425695e",
+              "Rank": 24,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Front | Tire Size: O.E. 205/50/17 - Actual 205/50/17",
+              "Result": "OK",
+              "Comment": "",
+              "Notes": "",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "Header": {
+                "ID": "bbb5d75a-3df6-4856-bd75-0ebf2bea12b5",
+                "CreationTime": "2025-10-17T15:54:43.97-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-17T15:54:43.97-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "MediaKeys": "",
+              "TemplateInspectionLineID": "00000000-0000-0000-0000-000000000000",
+              "Measurement": "",
+              "ID": "bbb5d75a-3df6-4856-bd75-0ebf2bea12b5",
+              "Rank": 25,
+              "Type": "Line",
+              "InputType": "",
+              "Title": "Rear | Tire Size: O.E. 205/50/17 - Actual 205/50/17",
+              "Result": "OK",
+              "Comment": "",
+              "Notes": "",
+              "ShopNotes": "",
+              "Data": "",
+              "ServicePackageTemplateInspectionLineID": "00000000-0000-0000-0000-000000000000"
+            }
+          ]
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "https://carexpertsok.autotext.me/Admin/dvi_v3/index.php?status_id=26298160",
+        "Flag": "External",
+        "InspectionReferenceID": "00000000-0000-0000-0000-000000000000",
+        "ServicePackageTemplateID": "00000000-0000-0000-0000-000000000000",
+        "ServiceCategoryID": "9c58d73e-4325-48bb-9a8e-e51039a8eff2",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": true
+      },
+      {
+        "Header": {
+          "ID": "2fd9207b-9046-40f9-9aa7-156f3583b88e",
+          "CreationTime": "2025-10-20T10:24:58.757-04:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-10-20T10:52:10.84-04:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Mason Banta"
+        },
+        "ID": "2fd9207b-9046-40f9-9aa7-156f3583b88e",
+        "Chapter": "Service",
+        "Rank": 2,
+        "Code": "Level 1",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "LEVEL 1: Root Cause Analysis ",
+          "Description": "An issue that can be duplicated consistently may include a DTC (Diagnostic Trouble Code) or multiple related DTC’s but involves a single vehicle system.\r\nA/C system root cause analysis\r\nEvap system smoke testing\r\nBasic driveability concerns including sensor pinpoint testing, ignition system checks, injector testing (not including flow rate), propane or supplemental fuel testing, etc….\r\n"
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "Completed": false,
+              "TechnicianHour": 1,
+              "Header": {
+                "ID": "e7e56bb5-9bb1-45ca-a762-91b6d174ce96",
+                "CreationTime": "2025-10-20T10:24:58.757-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-24T18:28:57.863-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "e7e56bb5-9bb1-45ca-a762-91b6d174ce96",
+              "Rank": 1,
+              "Type": "Labor",
+              "Description": "Labor",
+              "Quantity": 1,
+              "Unit": "",
+              "RateCode": "1",
+              "Price": 170,
+              "PriceUnit": "",
+              "MinimumCharge": 0,
+              "Total": 170,
+              "Discount": 0,
+              "ExtendedTotal": 170,
+              "TotalCost": 70,
+              "OtherChargeCode": "*",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "d51e6760-bc5c-4ce9-9aa5-4026767efafd",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "",
+        "Flag": "",
+        "InspectionReferenceID": "25d6f630-3fcd-4d1e-87ed-43725181d84a",
+        "ServicePackageTemplateID": "31979693-fc97-4787-8af1-c0e06908b849",
+        "ServiceCategoryID": "9c58d73e-4325-48bb-9a8e-e51039a8eff2",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": true
+      },
+      {
+        "Header": {
+          "ID": "e516f6e0-b910-4946-91c9-5e8b442d9488",
+          "CreationTime": "2025-10-17T15:24:29.88-04:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-10-24T18:08:18.793-04:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+        },
+        "ID": "e516f6e0-b910-4946-91c9-5e8b442d9488",
+        "Chapter": "Service",
+        "Rank": 3,
+        "Code": "COM ALIGN",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "Alignment",
+          "Description": "Inspect steering and suspension system components.  Connect alignment equipment to verify and adjust front and rear wheel alignment settings for caster, camber, and toe in/out settings, thrust angle where applicable and center steering wheel.  Some vehicles may require installation of alignment shims at additional charges.  Adjust to meet manufacturers’ specifications.  Perform final road test where applicable."
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "Completed": false,
+              "TechnicianHour": 1.3,
+              "Header": {
+                "ID": "19a46b67-c127-4ab3-80eb-98c86e2a23ca",
+                "CreationTime": "2025-10-17T15:24:29.893-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-24T18:28:57.893-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "19a46b67-c127-4ab3-80eb-98c86e2a23ca",
+              "Rank": 1,
+              "Type": "Labor",
+              "Description": "Alignment",
+              "Quantity": 1.3,
+              "Unit": "Hours",
+              "RateCode": "FixedTotal",
+              "Price": 107.65,
+              "PriceUnit": "Hour",
+              "MinimumCharge": 0,
+              "Total": 139.95,
+              "Discount": 40,
+              "ExtendedTotal": 99.95,
+              "TotalCost": 91,
+              "OtherChargeCode": "*",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "97ab0515-f516-4007-a7c0-0f80a8e5a490",
+              "Warranty": ""
+            },
+            {
+              "PartTerminology": {
+                "IsValid": true,
+                "ID": "13486",
+                "Text": "Alignment Camber / Toe Cam Bolt"
+              },
+              "LineCode": "FCMW",
+              "PartNumber": "81260",
+              "Manufacturer": "Specialty Products Company / SPC Performance",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "NotReturned",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "af28dad4-5cab-4f34-bcfc-215f3e58994a",
+                "CreationTime": "2025-10-24T17:35:31.583-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-24T18:28:57.893-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "af28dad4-5cab-4f34-bcfc-215f3e58994a",
+              "Rank": 2,
+              "Type": "Material",
+              "Description": "Front Camber",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 94.57,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 94.57,
+              "Discount": 0,
+              "ExtendedTotal": 94.57,
+              "TotalCost": 28.37,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "00000000-0000-0000-0000-000000000000",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "",
+        "Flag": "",
+        "InspectionReferenceID": "00000000-0000-0000-0000-000000000000",
+        "ServicePackageTemplateID": "7840df49-e2ea-42a5-b038-9c252562c709",
+        "ServiceCategoryID": "56a4cd74-48d4-438f-89b9-8ec77128bc41",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": true
+      },
+      {
+        "Header": {
+          "ID": "f22231a9-30ba-4a2a-8e08-a0861a2a1437",
+          "CreationTime": "2025-10-20T10:48:59.877-04:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-10-24T18:52:51.483-04:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+        },
+        "ID": "f22231a9-30ba-4a2a-8e08-a0861a2a1437",
+        "Chapter": "Service",
+        "Rank": 6,
+        "Code": "",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "Rear Sub Frame",
+          "Description": "Remove and Replace components as required to access and install materials, and/or perform needed service, adjustments as required.  Retest and verify repair as required.  Perform final road test where applicable."
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "Completed": false,
+              "TechnicianHour": 5.13,
+              "Header": {
+                "ID": "257c5c6c-f5dd-4642-bbff-02f64d464122",
+                "CreationTime": "2025-10-20T10:52:10.917-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-24T18:28:57.893-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "257c5c6c-f5dd-4642-bbff-02f64d464122",
+              "Rank": 1,
+              "Type": "Labor",
+              "Description": "Labor",
+              "Quantity": 5.3,
+              "Unit": "",
+              "RateCode": "1",
+              "Price": 170,
+              "PriceUnit": "",
+              "MinimumCharge": 0,
+              "Total": 901,
+              "Discount": 0,
+              "ExtendedTotal": 901,
+              "TotalCost": 359.1,
+              "OtherChargeCode": "*",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "b282061a-1805-43a9-b850-ec948ae65ac1",
+              "Warranty": ""
+            },
+            {
+              "LineCode": "",
+              "PartNumber": "555015UD0B",
+              "Manufacturer": "",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "NotReturned",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "09daca39-61f8-43b5-96da-1a4be5bf1d73",
+                "CreationTime": "2025-10-20T10:52:10.917-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-24T18:28:57.893-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "09daca39-61f8-43b5-96da-1a4be5bf1d73",
+              "Rank": 2,
+              "Type": "Material",
+              "Description": "BEAM COMPL-REAR SUSPENSION",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 492,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 492,
+              "Discount": 0,
+              "ExtendedTotal": 492,
+              "TotalCost": 123,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "bac9dcd5-96b3-4226-aaa7-8a398d496f8e",
+              "Warranty": ""
+            },
+            {
+              "PartTerminology": {
+                "IsValid": true,
+                "ID": "14999",
+                "Text": "Wheel Bearing and Hub Assembly"
+              },
+              "LineCode": "CFHH",
+              "PartNumber": "DL930870",
+              "Manufacturer": "Duralast",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "NotReturned",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "db027ae0-dfea-4a8e-a4f8-615f2cd9b717",
+                "CreationTime": "2025-10-17T16:29:08.86-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-24T18:28:57.893-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "db027ae0-dfea-4a8e-a4f8-615f2cd9b717",
+              "Rank": 3,
+              "Type": "Material",
+              "Description": "Wheel Bearing/Hub Assembly",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 278.03,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 278.03,
+              "Discount": 0,
+              "ExtendedTotal": 278.03,
+              "TotalCost": 111.38,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "ac8bda05-c16c-4993-b1b0-b20d63d51477",
+              "Warranty": ""
+            },
+            {
+              "PartTerminology": {
+                "IsValid": true,
+                "ID": "7556",
+                "Text": "Shock Absorber"
+              },
+              "LineCode": "CFHH",
+              "PartNumber": "TS32-39842B",
+              "Manufacturer": "Duralast",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "NotReturned",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "a73b21c3-6e8e-47b0-818a-acd5823c2aaa",
+                "CreationTime": "2025-10-17T16:34:15.683-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-24T18:28:57.893-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "a73b21c3-6e8e-47b0-818a-acd5823c2aaa",
+              "Rank": 4,
+              "Type": "Material",
+              "Description": "Shocks",
+              "Quantity": 2,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 80.86,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 161.72,
+              "Discount": 0,
+              "ExtendedTotal": 161.72,
+              "TotalCost": 80.86,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "1b97e119-fe05-4dc6-a83f-c7b285c9aca6",
+              "Warranty": ""
+            },
+            {
+              "LineCode": "GQFV",
+              "PartNumber": "2ABS0922",
+              "Manufacturer": "HOLSTEIN",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "NotReturned",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "cefc0ef2-0b8e-4013-8239-846fae81b9e0",
+                "CreationTime": "2025-10-20T10:52:10.95-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-24T18:52:51.483-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "cefc0ef2-0b8e-4013-8239-846fae81b9e0",
+              "Rank": 5,
+              "Type": "Material",
+              "Description": "ABS Wheel Speed Sensor",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 188.24,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 188.24,
+              "Discount": 0,
+              "ExtendedTotal": 188.24,
+              "TotalCost": 60.82,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "00000000-0000-0000-0000-000000000000",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "",
+        "Flag": "",
+        "InspectionReferenceID": "00000000-0000-0000-0000-000000000000",
+        "ServicePackageTemplateID": "d7f2ed61-502d-464c-840e-6214a758535d",
+        "ServiceCategoryID": "56a4cd74-48d4-438f-89b9-8ec77128bc41",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": true
+      },
+      {
+        "Header": {
+          "ID": "4c40d4dc-e869-4ac5-a121-fd7a6708d5a1",
+          "CreationTime": "2025-10-20T10:52:10.963-04:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-10-21T17:25:44.03-04:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+        },
+        "ID": "4c40d4dc-e869-4ac5-a121-fd7a6708d5a1",
+        "Chapter": "Service",
+        "Rank": 7,
+        "Code": "BG Brake Flush",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "BG Brake Fluid System Flush",
+          "Description": "Connect flush equipment to remove existing fluid.  Additional flush and cleaning chemicals may be added to assist in cleaning system contamination.  Fill system fluid(s) to proper capacity with new fluid.  Fluid additives and/or conditioners may be added to system.  Leak test vehicle system.  Perform final road test where applicable."
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "Completed": false,
+              "TechnicianHour": 0.8,
+              "Header": {
+                "ID": "8eb5dde1-4c1f-4c5e-bb97-a57716a1a7f0",
+                "CreationTime": "2025-10-20T10:52:10.963-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-24T18:28:57.91-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "8eb5dde1-4c1f-4c5e-bb97-a57716a1a7f0",
+              "Rank": 1,
+              "Type": "Labor",
+              "Description": "Labor",
+              "Quantity": 0.8,
+              "Unit": "",
+              "RateCode": "1",
+              "Price": 170,
+              "PriceUnit": "",
+              "MinimumCharge": 0,
+              "Total": 136,
+              "Discount": 0,
+              "ExtendedTotal": 136,
+              "TotalCost": 56,
+              "OtherChargeCode": "*",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "10f4f970-88e6-4841-964e-d5f37bceb948",
+              "Warranty": ""
+            },
+            {
+              "PartTerminology": {
+                "IsValid": true,
+                "ID": "11389",
+                "Text": "Brake Fluid"
+              },
+              "LineCode": "",
+              "PartNumber": "84032",
+              "Manufacturer": "BG Products",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "NotReturned",
+              "DOT": "",
+              "InventoryMaterialID": "94559a83-95a5-491b-9c50-d88e45eb4ab7",
+              "InventoryServiceCategoryID": "34d55ba0-8fbc-4f30-9636-e5cdf40e6c1a",
+              "Header": {
+                "ID": "9ce707ee-4454-4d53-b52c-4513fe959f21",
+                "CreationTime": "2025-10-20T10:52:10.963-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-24T18:28:57.91-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "9ce707ee-4454-4d53-b52c-4513fe959f21",
+              "Rank": 2,
+              "Type": "Material",
+              "Description": "Brake Fluid DOT 4",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "1",
+              "Price": 54.4,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 54.4,
+              "Discount": 0,
+              "ExtendedTotal": 54.4,
+              "TotalCost": 27.5,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "0227ae6a-afc0-48f5-b931-41526c2cd86e",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "",
+        "Flag": "HideLinePricing",
+        "InspectionReferenceID": "00000000-0000-0000-0000-000000000000",
+        "ServicePackageTemplateID": "c632293a-bfdc-4c7c-9f16-43015a810e36",
+        "ServiceCategoryID": "34d55ba0-8fbc-4f30-9636-e5cdf40e6c1a",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": true
+      }
+    ]
+  },
+  "DeferredServicePackages": {
+    "ItemCollection": [
+      {
+        "Header": {
+          "ID": "788ba4d7-f1f8-43b4-bba1-2dec2f2e1fb8",
+          "CreationTime": "2025-10-20T09:20:19.947-04:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-10-20T10:52:10.87-04:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Mason Banta"
+        },
+        "ID": "788ba4d7-f1f8-43b4-bba1-2dec2f2e1fb8",
+        "Chapter": "DeferredService",
+        "Rank": 4,
+        "Code": "",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "Air Conditioning Compressor",
+          "Description": "Remove and Replace components as required to access and install materials, and/or perform needed service.  Air Conditioning repairs which include replacement materials will normally require an additional service to evacuate and recharge system refrigerant and oil.  Retest and verify repair as required.  Perform final road test where applicable."
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "Completed": false,
+              "TechnicianHour": 1.89,
+              "Header": {
+                "ID": "11adb105-c2ed-4f37-9bce-fba12b3dcacd",
+                "CreationTime": "2025-10-20T10:24:58.757-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-20T10:52:10.87-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "11adb105-c2ed-4f37-9bce-fba12b3dcacd",
+              "Rank": 1,
+              "Type": "Labor",
+              "Description": "Labor",
+              "Quantity": 2,
+              "Unit": "",
+              "RateCode": "1",
+              "Price": 170,
+              "PriceUnit": "",
+              "MinimumCharge": 0,
+              "Total": 340,
+              "Discount": 0,
+              "ExtendedTotal": 340,
+              "TotalCost": 132.3,
+              "OtherChargeCode": "*",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "2bd74a63-84a7-4f9a-b01b-5689a8743fd7",
+              "Warranty": ""
+            },
+            {
+              "PartTerminology": {
+                "IsValid": true,
+                "ID": "6628",
+                "Text": "A/C Compressor"
+              },
+              "LineCode": "BBRN",
+              "PartNumber": "98585",
+              "Manufacturer": "Four Seasons",
+              "UnitCoreValue": 10,
+              "TotalCoreValue": 10,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "00000000-0000-0000-0000-000000000000",
+              "InventoryServiceCategoryID": "00000000-0000-0000-0000-000000000000",
+              "Header": {
+                "ID": "da3c894b-1a1c-43fd-9cd5-0da690dfbb0f",
+                "CreationTime": "2025-10-20T09:20:19.947-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-20T10:52:10.887-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "da3c894b-1a1c-43fd-9cd5-0da690dfbb0f",
+              "Rank": 2,
+              "Type": "Material",
+              "Description": "Compressor",
+              "Quantity": 1,
+              "Unit": "Unit",
+              "RateCode": "FixedRate",
+              "Price": 598.12,
+              "PriceUnit": "Unit",
+              "MinimumCharge": 0,
+              "Total": 598.12,
+              "Discount": 0,
+              "ExtendedTotal": 608.12,
+              "TotalCost": 296.74,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "d28819a0-cae1-4b92-87ed-186c35ceb79e",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "",
+          "Description": ""
+        },
+        "URL": "",
+        "Flag": "",
+        "InspectionReferenceID": "4d8be97a-1ba9-4b90-9b6f-ae0cffb65b50",
+        "ServicePackageTemplateID": "0c058284-fe52-4047-807a-dc25f096e532",
+        "ServiceCategoryID": "c00e9c2c-c2e0-45bc-99eb-797b13686085",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": false
+      },
+      {
+        "Header": {
+          "ID": "c51e1807-5c3d-46f4-9716-51fcfec8353a",
+          "CreationTime": "2025-10-20T10:27:43.88-04:00",
+          "DeletionTime": "0001-01-01T00:00:00",
+          "DeletionTimeSpecified": true,
+          "LastModifiedTime": "2025-10-20T10:52:10.9-04:00",
+          "LastModifiedBy": "Pro_AB1369.AACE\\Mason Banta"
+        },
+        "ID": "c51e1807-5c3d-46f4-9716-51fcfec8353a",
+        "Chapter": "DeferredService",
+        "Rank": 5,
+        "Code": "",
+        "Status": "",
+        "ServicePackageHeader": {
+          "Title": "Evacuate and Recharge R134A Air Conditioning System",
+          "Description": "Connect AC equipment, evacuate system of contaminates, verify system pressures, refrigerant levels and cooling vent temperature.  Charge AC system, install proper refrigerant and oil capacity. Leak test AC system.  Refrigerant leak detection dye may be added to system."
+        },
+        "ServicePackageLines": {
+          "ItemCollection": [
+            {
+              "Completed": false,
+              "TechnicianHour": 1,
+              "Header": {
+                "ID": "4e532348-eb16-4068-8e16-4a5680620c13",
+                "CreationTime": "2025-10-20T10:52:10.9-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-20T10:52:10.9-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "4e532348-eb16-4068-8e16-4a5680620c13",
+              "Rank": 1,
+              "Type": "Labor",
+              "Description": "Labor",
+              "Quantity": 1,
+              "Unit": "",
+              "RateCode": "1",
+              "Price": 170,
+              "PriceUnit": "",
+              "MinimumCharge": 0,
+              "Total": 170,
+              "Discount": 0,
+              "ExtendedTotal": 170,
+              "TotalCost": 70,
+              "OtherChargeCode": "*",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "b3006f53-78be-461c-a6d1-918e91d006c0",
+              "Warranty": ""
+            },
+            {
+              "PartTerminology": {
+                "IsValid": true,
+                "ID": "6984",
+                "Text": "Refrigerant"
+              },
+              "LineCode": "",
+              "PartNumber": "R134a",
+              "Manufacturer": "",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "a0c93a73-6f03-485b-8d4c-2d0eb6561b4a",
+              "InventoryServiceCategoryID": "c00e9c2c-c2e0-45bc-99eb-797b13686085",
+              "Header": {
+                "ID": "2e03d9ae-97c4-498b-9990-5862a7f93078",
+                "CreationTime": "2025-10-20T10:27:56.363-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-20T10:52:10.9-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "2e03d9ae-97c4-498b-9990-5862a7f93078",
+              "Rank": 2,
+              "Type": "Material",
+              "Description": "R134a Refrigerant",
+              "Quantity": 1,
+              "Unit": "Kgs",
+              "RateCode": "1",
+              "Price": 47.8,
+              "PriceUnit": "Kgs",
+              "MinimumCharge": 0,
+              "Total": 47.8,
+              "Discount": 0,
+              "ExtendedTotal": 47.8,
+              "TotalCost": 9.33,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "6943c295-e6a4-4c1c-95d6-d65742e22d6c",
+              "Warranty": ""
+            },
+            {
+              "PartTerminology": {
+                "IsValid": true,
+                "ID": "6928",
+                "Text": "Refrigerant Oil"
+              },
+              "LineCode": "",
+              "PartNumber": "7018",
+              "Manufacturer": "BG Products",
+              "UnitCoreValue": 0,
+              "TotalCoreValue": 0,
+              "UnitFETValue": 0,
+              "TotalFETValue": 0,
+              "CoreStatus": "Unknown",
+              "DOT": "",
+              "InventoryMaterialID": "fc7c44ce-8da8-43a6-bc88-751d236873a4",
+              "InventoryServiceCategoryID": "c00e9c2c-c2e0-45bc-99eb-797b13686085",
+              "Header": {
+                "ID": "f81c7c6b-e9cd-426d-a3ba-a374e1d5d153",
+                "CreationTime": "2025-10-20T10:27:43.88-04:00",
+                "DeletionTime": "0001-01-01T00:00:00",
+                "DeletionTimeSpecified": true,
+                "LastModifiedTime": "2025-10-20T10:52:10.917-04:00",
+                "LastModifiedBy": "Pro_AB1369.AACE\\Kieryn Storz"
+              },
+              "ID": "f81c7c6b-e9cd-426d-a3ba-a374e1d5d153",
+              "Rank": 3,
+              "Type": "Material",
+              "Description": "Frigi-Quiet for R-134a with Dye",
+              "Quantity": 1,
+              "Unit": "oz.",
+              "RateCode": "1",
+              "Price": 9.99,
+              "PriceUnit": "oz.",
+              "MinimumCharge": 0,
+              "Total": 9.99,
+              "Discount": 0,
+              "ExtendedTotal": 9.99,
+              "TotalCost": 2.31,
+              "OtherChargeCode": "*HS",
+              "Tags": "",
+              "Flag": "",
+              "Technician": {
+                "ID": "28edb095-615a-46d6-9b8d-8d59702b55bb",
+                "Type": "",
+                "Name": "Ryan Christian"
+              },
+              "ServiceAdvisor": {
+                "ID": "08cf8dd3-4766-4f8a-b619-248ade0e1a24",
+                "Type": "",
+                "Name": "Mason Banta"
+              },
+              "ServicePackageTemplateLineID": "3c933284-a8b8-4de4-9e99-9c899a09e69e",
+              "Warranty": ""
+            }
+          ]
+        },
+        "ServicePackageInspectionLines": {
+          "ItemCollection": []
+        },
+        "ServicePackageFooter": {
+          "Title": "Technician Notes:",
+          "Description": "Injected dye into system, recommend return in 2 weeks or when A/C stops blowing cold to determine source of leak. \r\n\r\nRecovered:\r\n\r\nCharged:\r\n"
+        },
+        "URL": "",
+        "Flag": "",
+        "InspectionReferenceID": "00000000-0000-0000-0000-000000000000",
+        "ServicePackageTemplateID": "289ff91b-340f-4908-ab38-bc1085b35eb9",
+        "ServiceCategoryID": "c00e9c2c-c2e0-45bc-99eb-797b13686085",
+        "ContactID": "00000000-0000-0000-0000-000000000000",
+        "IsInvoicing": false
+      }
+    ]
+  },
+  "Summary": {
+    "PartsTotal": 1268.96,
+    "LaborTotal": 1306.95,
+    "SubletTotal": 0,
+    "NetTotal": 2575.91,
+    "OtherCharges": {
+      "ItemCollection": [
+        {
+          "ID": "a4fbb96b-0b5e-418a-94db-a55e3786fdc5",
+          "Type": "OtherCharge",
+          "Code": "*",
+          "Name": "Shop Supplies",
+          "Value": 81.66,
+          "OtherChargeCode": "S,S1",
+          "Flag": ""
+        },
+        {
+          "ID": "06198d2e-cce9-4134-ad54-670d89926b86",
+          "Type": "OtherCharge",
+          "Code": "H",
+          "Name": "HAZMAT Fee",
+          "Value": 23.22,
+          "OtherChargeCode": "",
+          "Flag": ""
+        },
+        {
+          "ID": "57055d14-0b5a-44b7-99eb-de07f112383d",
+          "Type": "Tax",
+          "Code": "S",
+          "Name": "State Sales Tax - Yukon",
+          "Value": 119.53,
+          "OtherChargeCode": "",
+          "Flag": ""
+        }
+      ]
+    },
+    "OtherChargeTotal": 104.88,
+    "TaxTotal": 119.53,
+    "GrandTotal": 2800.32,
+    "TotalOutstanding": 0
+  },
+  "OtherChargeCode": "",
+  "Flag": "Appointment",
+  "WorkOrderFlags": "",
+  "Tags": "",
+  "Completed": false,
+  "ContactID": "d6c61835-cde1-4662-86ec-b0d7b87c6c99",
+  "ServiceItemID": "60243e58-74b5-4dc3-a908-0a06ece3ee51"
+}

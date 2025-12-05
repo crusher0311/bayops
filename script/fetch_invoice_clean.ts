@@ -8,12 +8,12 @@ async function main() {
   const conn = connections[0];
   const client = createProtractorClient(conn.connectionId, conn.apiKey, conn.authentication);
   
-  const invoiceId = '0748f473-d211-43a9-b01d-07d3cb799085';
+  const invoiceId = '3451fc55-8c18-4e5e-b572-26543fcc0206';
   const invoice = await client.getInvoice(invoiceId);
   
   // Save to file
-  fs.writeFileSync('/tmp/invoice_clean.json', JSON.stringify(invoice, null, 2));
-  console.log('Saved to /tmp/invoice_clean.json');
+  fs.writeFileSync('/home/runner/workspace/attached_assets/raw_protractor_invoice_2543.json', JSON.stringify(invoice, null, 2));
+  console.log('Saved to attached_assets/raw_protractor_invoice_2543.json');
   
   // Show top-level keys
   console.log('\n=== TOP-LEVEL KEYS ===\n');
