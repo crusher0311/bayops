@@ -4377,15 +4377,34 @@ async function runProtractorImport(
             const customer = contactId ? 
               await storage.getCustomerByProtractorId(orgId, contactId) : null;
             
-            // Find vehicle by protractor service item ID
-            const vehicle = serviceItemId ?
+            // Find vehicle by protractor service item ID, or by customer relationship if not available
+            let vehicle = serviceItemId ?
               await storage.getVehicleByProtractorId(serviceItemId) : null;
+
+            // If no vehicle found by serviceItemId, try to find through customer relationship
+            if (!vehicle && customer) {
+              const customerVehicles = await storage.getVehiclesByCustomer(customer.id);
+              if (customerVehicles.length === 1) {
+                // Customer has exactly one vehicle - use it
+                vehicle = customerVehicles[0];
+              } else if (customerVehicles.length > 1) {
+                // Customer has multiple vehicles - we can't determine which one
+                // Log with specific message for manual review
+                failedRecords++;
+                errors.push({
+                  record: `Invoice: ${invoice.InvoiceNumber || invoice.ID}`,
+                  error: `Customer has ${customerVehicles.length} vehicles - cannot determine which vehicle was serviced`,
+                  timestamp: new Date().toISOString(),
+                });
+                continue;
+              }
+            }
 
             if (!customer || !vehicle) {
               // Skip if we don't have the customer or vehicle
               failedRecords++;
               errors.push({
-                record: `Invoice: ${invoice.Number || invoice.ID}`,
+                record: `Invoice: ${invoice.InvoiceNumber || invoice.ID}`,
                 error: `Missing customer (${contactId}) or vehicle (${serviceItemId})`,
                 timestamp: new Date().toISOString(),
               });
