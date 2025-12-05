@@ -798,6 +798,41 @@ export default function RepairOrderDetail() {
     },
   });
 
+  const createInvoiceMutation = useMutation({
+    mutationFn: async () => {
+      if (!ro?.id || !ro?.locationId || !ro?.customerId) {
+        throw new Error('Repair order data is incomplete');
+      }
+      const res = await fetch('/api/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          locationId: ro.locationId,
+          repairOrderId: ro.id,
+          customerId: ro.customerId,
+          status: 'DRAFT',
+        }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to create invoice');
+      }
+      return res.json();
+    },
+    onSuccess: (invoice) => {
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === 'invoices' });
+      toast({ 
+        title: 'Invoice Created!', 
+        description: `Invoice #${invoice.invoiceNumber} has been created.` 
+      });
+      window.open(`/ros/${ro?.id}/invoice`, '_blank');
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('estimate');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
@@ -1543,6 +1578,21 @@ export default function RepairOrderDetail() {
                 ? `Move to ${activeStages[currentStepIndex + 1]?.label}` 
                 : 'Completed'}
             </Button>
+            {currentStepIndex >= 0 && currentStepIndex >= activeStages.length - 1 && ro?.id && ro?.locationId && ro?.customerId && (
+              <Button 
+                className="gap-2 bg-green-600 hover:bg-green-700" 
+                onClick={() => createInvoiceMutation.mutate()}
+                disabled={createInvoiceMutation.isPending}
+                data-testid="button-convert-to-invoice"
+              >
+                {createInvoiceMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Receipt className="w-4 h-4" />
+                )}
+                Convert to Invoice
+              </Button>
+            )}
           </div>
         </div>
 
