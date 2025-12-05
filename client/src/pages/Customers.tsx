@@ -213,7 +213,7 @@ function VehicleServiceHistory({ vehicleId }: { vehicleId: string }) {
         {repairOrders.map((ro: RepairOrder) => (
           <Link
             key={ro.id}
-            href={`/repair-orders/${ro.id}`}
+            href={`/ros/${ro.id}`}
             className="block bg-muted/50 border rounded-md p-3 hover:bg-muted/80 hover:border-primary/30 transition-colors cursor-pointer"
             data-testid={`service-history-${ro.id}`}
             onClick={(e) => e.stopPropagation()}
