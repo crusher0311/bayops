@@ -4492,6 +4492,12 @@ async function runProtractorImport(
         }
         
         totalRecords += invoices.length;
+        
+        // Update job with total records count
+        await storage.updateProtractorImportJob(jobId, {
+          totalRecords,
+        });
+        console.log(`[Protractor Import ${jobId}] Starting invoice processing: ${invoices.length} invoices`);
 
         for (const listInvoice of invoices) {
           try {
@@ -4847,6 +4853,15 @@ async function runProtractorImport(
             }
             
             processedRecords++;
+            
+            // Update progress every 10 records
+            if (processedRecords % 10 === 0) {
+              await storage.updateProtractorImportJob(jobId, {
+                processedRecords,
+                failedRecords,
+              });
+              console.log(`[Protractor Import ${jobId}] Progress: ${processedRecords}/${totalRecords} processed, ${failedRecords} failed`);
+            }
           } catch (err: any) {
             failedRecords++;
             errors.push({
