@@ -4453,9 +4453,9 @@ async function runProtractorImport(
             
             // Map service packages to jobs
             const jobs = servicePackages.map((pkg: any, idx: number) => {
-              // Normalize Lines array similarly
+              // Normalize Lines array - Protractor uses ServicePackageLines.ItemCollection
               let lines: any[] = [];
-              const rawLines = pkg.Lines || pkg.lines || pkg.LineItems || pkg.lineItems;
+              const rawLines = pkg.ServicePackageLines || pkg.Lines || pkg.lines || pkg.LineItems || pkg.lineItems;
               
               if (Array.isArray(rawLines)) {
                 lines = rawLines;
@@ -4469,18 +4469,23 @@ async function runProtractorImport(
                 }
               }
               
+              // Get job name from ServicePackageHeader (Protractor structure)
+              const jobTitle = pkg.ServicePackageHeader?.Title || pkg.Title || pkg.title || pkg.Name || pkg.name || 'Service';
+              const jobDescription = pkg.ServicePackageHeader?.Description || pkg.Description || pkg.description || '';
+              
               return {
                 id: `job-${idx}`,
-                name: pkg.Title || pkg.title || pkg.Name || pkg.name || 'Service',
-                description: pkg.Description || pkg.description || '',
+                name: jobTitle,
+                description: jobDescription,
                 lineItems: lines.map((line: any, lineIdx: number) => ({
                   id: `line-${idx}-${lineIdx}`,
                   type: line.Type === 'Labor' || line.type === 'Labor' ? 'LABOR' 
-                      : line.Type === 'Material' || line.type === 'Material' ? 'PART' : 'FEE',
+                      : line.Type === 'Material' || line.type === 'Material' ? 'PART' 
+                      : line.Type === 'Part' || line.type === 'Part' ? 'PART' : 'FEE',
                   description: line.Description || line.description || '',
-                  quantity: line.Quantity || line.quantity || 1,
-                  unitCost: line.Cost || line.cost || 0,
-                  unitPrice: line.SellPrice || line.sellPrice || line.Price || line.price || 0,
+                  quantity: parseFloat(line.Quantity || line.quantity || 1),
+                  unitCost: parseFloat(line.TotalCost || line.Cost || line.cost || 0),
+                  unitPrice: parseFloat(line.ExtendedTotal || line.Total || line.SellPrice || line.sellPrice || line.Price || line.price || 0),
                   approved: true,
                   manufacturer: line.Manufacturer || line.manufacturer || null,
                   partNumber: line.PartNumber || line.partNumber || null,
