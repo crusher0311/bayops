@@ -25,6 +25,7 @@ import {
   insertLocationSchema,
   insertCustomerSchema,
   insertVehicleSchema,
+  insertDeferredWorkSchema,
   insertWorkflowSchema,
   insertRepairOrderSchema,
   insertInventoryItemSchema,
@@ -346,6 +347,85 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Vehicle not found" });
       }
       res.json(vehicle);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Deferred Work
+  app.get("/api/deferred-work", requireAuth, async (req, res) => {
+    try {
+      const deferredWork = await storage.getDeferredWorkByOrg(req.user!.orgId);
+      res.json(deferredWork);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/deferred-work/vehicle/:vehicleId", requireAuth, async (req, res) => {
+    try {
+      const deferredWork = await storage.getDeferredWorkByVehicle(req.params.vehicleId);
+      res.json(deferredWork);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/deferred-work/customer/:customerId", requireAuth, async (req, res) => {
+    try {
+      const deferredWork = await storage.getDeferredWorkByCustomer(req.params.customerId);
+      res.json(deferredWork);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/deferred-work/:id", requireAuth, async (req, res) => {
+    try {
+      const dw = await storage.getDeferredWork(req.params.id);
+      if (!dw) {
+        return res.status(404).json({ message: "Deferred work not found" });
+      }
+      res.json(dw);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/deferred-work", requireAuth, async (req, res) => {
+    try {
+      const result = insertDeferredWorkSchema.safeParse({
+        ...req.body,
+        orgId: req.user!.orgId,
+      });
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: fromZodError(result.error).toString() 
+        });
+      }
+      const dw = await storage.createDeferredWork(result.data);
+      res.status(201).json(dw);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/deferred-work/:id", requireAuth, async (req, res) => {
+    try {
+      const dw = await storage.updateDeferredWork(req.params.id, req.body);
+      if (!dw) {
+        return res.status(404).json({ message: "Deferred work not found" });
+      }
+      res.json(dw);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/deferred-work/:id", requireAuth, async (req, res) => {
+    try {
+      const deleted = await storage.deleteDeferredWork(req.params.id);
+      res.json({ success: deleted });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
