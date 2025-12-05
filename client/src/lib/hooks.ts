@@ -156,6 +156,14 @@ export function useRepairOrder(id: string) {
   });
 }
 
+export function useRepairOrdersByVehicle(vehicleId: string) {
+  return useQuery<RepairOrder[]>({
+    queryKey: ['repair-orders', 'vehicle', vehicleId],
+    queryFn: () => api.getRepairOrdersByVehicle(vehicleId),
+    enabled: !!vehicleId,
+  });
+}
+
 export function useCreateRepairOrder() {
   const queryClient = useQueryClient();
   return useMutation({

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { useCustomers, useCreateCustomer, useUpdateCustomer, useVehiclesByCustomer, useDeferredWorkByVehicle, useUpdateDeferredWork } from '@/lib/hooks';
+import { useCustomers, useCreateCustomer, useUpdateCustomer, useVehiclesByCustomer, useDeferredWorkByVehicle, useUpdateDeferredWork, useRepairOrdersByVehicle } from '@/lib/hooks';
 import { 
   Table, 
   TableBody, 
@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, Phone, Mail, MapPin, Loader2, Pencil, ChevronDown, ChevronRight, Car, AlertTriangle, Wrench, DollarSign, Calendar, CheckCircle, X, Clock } from 'lucide-react';
+import { Plus, Search, Phone, Mail, MapPin, Loader2, Pencil, ChevronDown, ChevronRight, Car, AlertTriangle, Wrench, DollarSign, Calendar, CheckCircle, X, Clock, FileText, History } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   Dialog,
@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import type { Customer, Vehicle, DeferredWork } from '@shared/schema';
+import type { Customer, Vehicle, DeferredWork, RepairOrder } from '@shared/schema';
 
 function VehicleDeferredWork({ vehicleId }: { vehicleId: string }) {
   const { data: deferredWork = [], isLoading } = useDeferredWorkByVehicle(vehicleId);
@@ -151,6 +151,106 @@ function VehicleDeferredWork({ vehicleId }: { vehicleId: string }) {
   );
 }
 
+function VehicleServiceHistory({ vehicleId }: { vehicleId: string }) {
+  const { data: repairOrders = [], isLoading } = useRepairOrdersByVehicle(vehicleId);
+
+  if (isLoading) {
+    return (
+      <div className="mt-3 pt-3 border-t flex items-center gap-2 text-muted-foreground text-sm">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        Loading service history...
+      </div>
+    );
+  }
+
+  if (repairOrders.length === 0) {
+    return (
+      <div className="mt-3 pt-3 border-t">
+        <div className="flex items-center gap-2 mb-2 text-sm font-medium text-muted-foreground">
+          <History className="w-4 h-4" />
+          No service history
+        </div>
+      </div>
+    );
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'COMPLETED':
+      case 'INVOICED':
+        return 'bg-green-50 text-green-700 border-green-200';
+      case 'IN_PROGRESS':
+      case 'WAITING_FOR_PARTS':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'PENDING':
+        return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+      default:
+        return 'bg-gray-50 text-gray-600 border-gray-200';
+    }
+  };
+
+  const calculateTotal = (ro: RepairOrder): number => {
+    if (!ro.jobs || !Array.isArray(ro.jobs)) return 0;
+    return ro.jobs.reduce((total: number, job: any) => {
+      if (!job.lineItems || !Array.isArray(job.lineItems)) return total;
+      return total + job.lineItems.reduce((jobTotal: number, item: any) => {
+        return jobTotal + (item.quantity * item.unitPrice);
+      }, 0);
+    }, 0);
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t">
+      <div className="flex items-center gap-2 mb-2 text-sm font-medium">
+        <History className="w-4 h-4 text-primary" />
+        Service History ({repairOrders.length})
+      </div>
+      <div className="space-y-2">
+        {repairOrders.map((ro: RepairOrder) => (
+          <div
+            key={ro.id}
+            className="bg-muted/50 border rounded-md p-3"
+            data-testid={`service-history-${ro.id}`}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-medium text-sm">RO #{ro.roNumber}</span>
+                  <Badge variant="outline" className={getStatusColor(ro.status)}>
+                    {ro.status.replace(/_/g, ' ')}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {format(new Date(ro.createdAt), 'MMM d, yyyy')}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <DollarSign className="w-3 h-3" />
+                    ${calculateTotal(ro).toFixed(2)}
+                  </span>
+                  {ro.odometerIn && (
+                    <span>
+                      {ro.odometerIn.toLocaleString()} mi
+                    </span>
+                  )}
+                </div>
+                {ro.jobs && Array.isArray(ro.jobs) && ro.jobs.length > 0 && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    <span className="font-medium">Services: </span>
+                    {ro.jobs.map((job: any) => job.name).join(', ')}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function CustomerVehicles({ customerId }: { customerId: string }) {
   const { data: vehicles = [], isLoading } = useVehiclesByCustomer(customerId);
 
@@ -207,6 +307,7 @@ function CustomerVehicles({ customerId }: { customerId: string }) {
               )}
             </div>
             <VehicleDeferredWork vehicleId={vehicle.id} />
+            <VehicleServiceHistory vehicleId={vehicle.id} />
           </div>
         ))}
       </div>
@@ -216,7 +317,17 @@ function CustomerVehicles({ customerId }: { customerId: string }) {
 
 export default function Customers() {
   const [search, setSearch] = useState('');
-  const { data: customers = [], isLoading } = useCustomers(search || undefined);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  
+  // Debounce search to prevent focus loss and excessive API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+  
+  const { data: customers = [], isLoading } = useCustomers(debouncedSearch || undefined);
   const createCustomer = useCreateCustomer();
   const updateCustomer = useUpdateCustomer();
   const [isDialogOpen, setIsDialogOpen] = useState(false);

@@ -499,6 +499,15 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/repair-orders/vehicle/:vehicleId", requireAuth, async (req, res) => {
+    try {
+      const ros = await storage.getRepairOrdersByVehicle(req.params.vehicleId, req.user!.orgId);
+      res.json(ros);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/repair-orders/:id", requireAuth, async (req, res) => {
     try {
       const ro = await storage.getRepairOrder(req.params.id, req.user!.orgId);

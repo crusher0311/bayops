@@ -161,6 +161,10 @@ class ApiClient {
     return this.request(`/api/repair-orders/${id}`);
   }
 
+  async getRepairOrdersByVehicle(vehicleId: string): Promise<RepairOrder[]> {
+    return this.request(`/api/repair-orders/vehicle/${vehicleId}`);
+  }
+
   async createRepairOrder(ro: InsertRepairOrder): Promise<RepairOrder> {
     return this.request("/api/repair-orders", {
       method: "POST",

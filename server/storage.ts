@@ -200,6 +200,7 @@ export interface IStorage {
   getRepairOrderByAuthToken(token: string): Promise<RepairOrder | undefined>;
   getRepairOrdersByLocation(locationId: string, orgId: string): Promise<RepairOrder[]>;
   getRepairOrdersByOrg(orgId: string): Promise<RepairOrder[]>;
+  getRepairOrdersByVehicle(vehicleId: string, orgId: string): Promise<RepairOrder[]>;
   createRepairOrder(ro: InsertRepairOrder): Promise<RepairOrder>;
   updateRepairOrder(id: string, orgId: string, updates: Partial<InsertRepairOrder>): Promise<RepairOrder | undefined>;
 
@@ -689,6 +690,12 @@ export class DatabaseStorage implements IStorage {
 
   async getRepairOrdersByOrg(orgId: string): Promise<RepairOrder[]> {
     return db.select().from(repairOrders).where(eq(repairOrders.orgId, orgId)).orderBy(desc(repairOrders.createdAt));
+  }
+
+  async getRepairOrdersByVehicle(vehicleId: string, orgId: string): Promise<RepairOrder[]> {
+    return db.select().from(repairOrders).where(
+      and(eq(repairOrders.vehicleId, vehicleId), eq(repairOrders.orgId, orgId))
+    ).orderBy(desc(repairOrders.createdAt));
   }
 
   async createRepairOrder(insertRO: InsertRepairOrder): Promise<RepairOrder> {
