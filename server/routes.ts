@@ -2816,7 +2816,7 @@ export async function registerRoutes(
         startDate = new Date(now.getFullYear(), 0, 1);
       }
       
-      const ros = await storage.getRepairOrdersByLocation(req.params.locationId);
+      const ros = await storage.getRepairOrdersByLocation(req.params.locationId, req.user!.orgId);
       const invoices = await storage.getInvoicesByLocation(req.params.locationId);
       const timeLogs = await storage.getTimeLogsByLocation(req.params.locationId);
       const partsOrders = await storage.getPartOrdersByLocation(req.params.locationId);
@@ -2980,7 +2980,7 @@ export async function registerRoutes(
       }
 
       // Fetch all data
-      const ros = await storage.getRepairOrdersByLocation(req.params.locationId);
+      const ros = await storage.getRepairOrdersByLocation(req.params.locationId, req.user!.orgId);
       const invoices = await storage.getInvoicesByLocation(req.params.locationId);
       const timeLogs = await storage.getTimeLogsByLocation(req.params.locationId);
       const customers = await storage.getCustomersByOrg(req.user!.orgId);
@@ -3237,7 +3237,7 @@ export async function registerRoutes(
           csvData += `"${inv.invoiceNumber}","${customer?.firstName || ''} ${customer?.lastName || ''}","${inv.status}",${inv.total},${inv.amountPaid},${inv.amountDue},"${new Date(inv.createdAt).toLocaleDateString()}","${inv.paidAt ? new Date(inv.paidAt).toLocaleDateString() : ''}"\n`;
         }
       } else if (type === 'ros') {
-        const ros = await storage.getRepairOrdersByLocation(req.params.locationId);
+        const ros = await storage.getRepairOrdersByLocation(req.params.locationId, req.user!.orgId);
         const customers = await storage.getCustomersByOrg(req.user!.orgId);
         const vehicles = await storage.getVehiclesByOrg(req.user!.orgId);
         const filtered = ros.filter(r => new Date(r.createdAt) >= startDate);
@@ -3262,7 +3262,7 @@ export async function registerRoutes(
               hours += (new Date(log.clockOut).getTime() - new Date(log.clockIn).getTime()) / (1000 * 60 * 60);
             }
           }
-          const ros = await storage.getRepairOrdersByLocation(req.params.locationId);
+          const ros = await storage.getRepairOrdersByLocation(req.params.locationId, req.user!.orgId);
           const techRos = ros.filter(r => r.technicianId === tech.id && r.completedAt && new Date(r.completedAt) >= startDate);
           csvData += `"${tech.name || tech.username}",${hours.toFixed(1)},${techRos.length}\n`;
         }
@@ -3308,7 +3308,7 @@ export async function registerRoutes(
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       }
 
-      const ros = await storage.getRepairOrdersByLocation(req.params.locationId);
+      const ros = await storage.getRepairOrdersByLocation(req.params.locationId, req.user!.orgId);
       const invoices = await storage.getInvoicesByLocation(req.params.locationId);
       const customers = await storage.getCustomersByOrg(req.user!.orgId);
       const vehicles = await storage.getVehiclesByOrg(req.user!.orgId);
