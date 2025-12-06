@@ -448,7 +448,7 @@ export default function Reports() {
                   <CardTitle className="text-base">Gross Profit</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-green-600">
+                  <div className={`text-3xl font-bold ${analytics.kpis.grossProfit.value >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {formatCurrency(analytics.kpis.grossProfit.value)}
                   </div>
                   <div className="flex gap-4 mt-4">
@@ -610,12 +610,12 @@ export default function Reports() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
-                    <div className="flex items-center justify-between p-4 border rounded-lg bg-green-50 dark:bg-green-950">
+                    <div className={`flex items-center justify-between p-4 border rounded-lg ${analytics.kpis.grossProfit.value >= 0 ? 'bg-green-50 dark:bg-green-950' : 'bg-red-50 dark:bg-red-950'}`}>
                       <div>
-                        <div className="font-medium text-green-700 dark:text-green-300">Gross Profit</div>
+                        <div className={`font-medium ${analytics.kpis.grossProfit.value >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>Gross Profit</div>
                         <div className="text-sm text-muted-foreground">Revenue minus direct costs</div>
                       </div>
-                      <div className="text-2xl font-bold text-green-600">
+                      <div className={`text-2xl font-bold ${analytics.kpis.grossProfit.value >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {formatCurrency(analytics.kpis.grossProfit.value)}
                       </div>
                     </div>

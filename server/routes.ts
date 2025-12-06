@@ -3172,7 +3172,7 @@ export async function registerRoutes(
           otherRevenue: { value: otherRevenue },
           laborMargin: { value: laborRevenue > 0 ? ((laborRevenue - laborCost) / laborRevenue) * 100 : 0 },
           partsMargin: { value: partsRevenue > 0 ? ((partsRevenue - partsCost) / partsRevenue) * 100 : 0 },
-          grossProfit: { value: totalRevenue - laborCost - partsCost },
+          grossProfit: { value: (laborRevenue + partsRevenue + otherRevenue) - laborCost - partsCost },
         },
         trends: dailyData,
         technicians: techData.sort((a, b) => b.revenue - a.revenue),
