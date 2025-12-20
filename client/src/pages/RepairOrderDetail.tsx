@@ -2329,7 +2329,7 @@ export default function RepairOrderDetail() {
                 <MaintenanceScheduleTab 
                   vehicleId={ro.vehicleId} 
                   roId={ro.id}
-                  onJobAdded={() => queryClient.invalidateQueries({ queryKey: ['repair-order', id] })}
+                  onJobAdded={() => queryClient.invalidateQueries({ queryKey: ['repair-orders', roId] })}
                 />
               </TabsContent>
             </Tabs>
