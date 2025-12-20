@@ -54,7 +54,9 @@ import {
   ShoppingCart,
   Package,
   ChevronDown,
-  Receipt
+  Receipt,
+  Calendar,
+  RefreshCw
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
@@ -544,6 +546,316 @@ function PartstechDialog({ isOpen, onClose, vehicle, onSelect }: PartstechDialog
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface MaintenanceItem {
+  maintenance_id: number;
+  maintenance_category: string;
+  maintenance_name: string;
+  maintenance_notes: string | null;
+  miles: number | null;
+  months: number | null;
+  dueStatus: 'DUE_NOW' | 'DUE_SOON' | 'UPCOMING' | 'OK';
+  dueMileage: number | null;
+  milesUntilDue: number | null;
+}
+
+interface MaintenanceScheduleResponse {
+  vehicle: {
+    id: string;
+    vin: string;
+    year: number;
+    make: string;
+    model: string;
+    mileage: number;
+  };
+  vehicleInfo?: {
+    year: number;
+    make: string;
+    model: string;
+    trim: string;
+    engine: string;
+    transmission: string;
+    driveType: string;
+    fuelType: string;
+  };
+  source: 'api' | 'cache';
+  cachedAt?: string;
+  totalItems: number;
+  categories: string[];
+  items: MaintenanceItem[];
+  summary: {
+    dueNow: number;
+    dueSoon: number;
+    upcoming: number;
+  };
+}
+
+function MaintenanceScheduleTab({ 
+  vehicleId, 
+  roId,
+  onJobAdded 
+}: { 
+  vehicleId: string | null; 
+  roId: string;
+  onJobAdded: () => void;
+}) {
+  const { toast } = useToast();
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [addingItemId, setAddingItemId] = useState<number | null>(null);
+
+  const { data, isLoading, error, refetch, isRefetching } = useQuery<MaintenanceScheduleResponse>({
+    queryKey: ['maintenance-schedule', vehicleId],
+    queryFn: async () => {
+      const res = await fetch(`/api/vehicles/${vehicleId}/maintenance-schedule`, { 
+        credentials: 'include' 
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to fetch maintenance schedule');
+      }
+      return res.json();
+    },
+    enabled: !!vehicleId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const addJobMutation = useMutation({
+    mutationFn: async (item: MaintenanceItem) => {
+      const res = await fetch(`/api/repair-orders/${roId}/add-maintenance-job`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          maintenanceId: item.maintenance_id,
+          name: item.maintenance_name,
+          category: item.maintenance_category,
+          description: item.maintenance_notes,
+          intervalMiles: item.miles,
+          intervalMonths: item.months,
+        }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to add job');
+      }
+      return res.json();
+    },
+    onMutate: (item) => {
+      setAddingItemId(item.maintenance_id);
+    },
+    onSuccess: (result) => {
+      toast({
+        title: 'Job added',
+        description: result.message || 'Maintenance item added to repair order',
+      });
+      onJobAdded();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to add job',
+        variant: 'destructive',
+      });
+    },
+    onSettled: () => {
+      setAddingItemId(null);
+    },
+  });
+
+  if (!vehicleId) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <Calendar className="w-12 h-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold">No Vehicle Selected</h3>
+          <p className="text-muted-foreground max-w-sm">
+            A vehicle with a valid VIN is required to show OEM maintenance recommendations.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 gap-4">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        <p className="text-muted-foreground">Loading OEM maintenance schedule...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <AlertCircle className="w-12 h-12 text-destructive mb-4" />
+          <h3 className="text-lg font-semibold">Unable to Load Maintenance Schedule</h3>
+          <p className="text-muted-foreground max-w-sm mb-4">
+            {error instanceof Error ? error.message : 'An error occurred'}
+          </p>
+          <Button variant="outline" onClick={() => refetch()}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Try Again
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!data || data.items.length === 0) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <Calendar className="w-12 h-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold">No Maintenance Data Available</h3>
+          <p className="text-muted-foreground max-w-sm">
+            OEM maintenance schedule not available for this vehicle.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const filteredItems = selectedCategory === 'all' 
+    ? data.items 
+    : data.items.filter(item => item.maintenance_category === selectedCategory);
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'DUE_NOW':
+        return <Badge variant="destructive" className="text-xs">Due Now</Badge>;
+      case 'DUE_SOON':
+        return <Badge variant="default" className="bg-amber-500 text-xs">Due Soon</Badge>;
+      default:
+        return <Badge variant="secondary" className="text-xs">Upcoming</Badge>;
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <h3 className="font-semibold">OEM Maintenance Schedule</h3>
+          <div className="flex gap-2">
+            <Badge variant="destructive">{data.summary.dueNow} Due</Badge>
+            <Badge variant="default" className="bg-amber-500">{data.summary.dueSoon} Soon</Badge>
+            <Badge variant="secondary">{data.summary.upcoming} Upcoming</Badge>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {data.vehicleInfo && (
+            <span className="text-xs text-muted-foreground">
+              {data.vehicleInfo.engine} · {data.vehicleInfo.transmission}
+            </span>
+          )}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => refetch()}
+            disabled={isRefetching}
+            data-testid="button-refresh-maintenance"
+          >
+            <RefreshCw className={cn("w-4 h-4", isRefetching && "animate-spin")} />
+          </Button>
+        </div>
+      </div>
+
+      {data.source === 'cache' && data.cachedAt && (
+        <p className="text-xs text-muted-foreground">
+          Data cached {new Date(data.cachedAt).toLocaleDateString()} · {data.vehicle.mileage.toLocaleString()} mi
+        </p>
+      )}
+
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          variant={selectedCategory === 'all' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setSelectedCategory('all')}
+          data-testid="button-category-all"
+        >
+          All ({data.items.length})
+        </Button>
+        {data.categories.map(cat => (
+          <Button
+            key={cat}
+            variant={selectedCategory === cat ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setSelectedCategory(cat)}
+            data-testid={`button-category-${cat}`}
+          >
+            {cat} ({data.items.filter(i => i.maintenance_category === cat).length})
+          </Button>
+        ))}
+      </div>
+
+      <ScrollArea className="h-[500px]">
+        <div className="space-y-2">
+          {filteredItems.map((item) => (
+            <Card 
+              key={item.maintenance_id} 
+              className={cn(
+                "transition-colors",
+                item.dueStatus === 'DUE_NOW' && "border-destructive/50 bg-destructive/5",
+                item.dueStatus === 'DUE_SOON' && "border-amber-500/50 bg-amber-500/5"
+              )}
+              data-testid={`maintenance-item-${item.maintenance_id}`}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      {getStatusBadge(item.dueStatus)}
+                      <span className="text-xs text-muted-foreground">{item.maintenance_category}</span>
+                    </div>
+                    <h4 className="font-medium text-sm">{item.maintenance_name}</h4>
+                    {item.maintenance_notes && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        {item.maintenance_notes}
+                      </p>
+                    )}
+                    <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
+                      {item.miles && (
+                        <span>Every {item.miles.toLocaleString()} mi</span>
+                      )}
+                      {item.months && (
+                        <span>Every {item.months} months</span>
+                      )}
+                      {item.milesUntilDue !== null && (
+                        <span className={cn(
+                          "font-medium",
+                          item.milesUntilDue <= 0 ? "text-destructive" : 
+                          item.milesUntilDue <= 1000 ? "text-amber-600" : ""
+                        )}>
+                          {item.milesUntilDue <= 0 
+                            ? `${Math.abs(item.milesUntilDue).toLocaleString()} mi overdue`
+                            : `${item.milesUntilDue.toLocaleString()} mi until due`
+                          }
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => addJobMutation.mutate(item)}
+                    disabled={addingItemId === item.maintenance_id}
+                    data-testid={`button-add-maintenance-${item.maintenance_id}`}
+                  >
+                    {addingItemId === item.maintenance_id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Plus className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </ScrollArea>
+    </div>
   );
 }
 
@@ -1692,6 +2004,9 @@ export default function RepairOrderDetail() {
                 <TabsTrigger value="inspection" className="gap-2">
                    <LayoutList className="w-4 h-4" /> Inspection (DVI)
                 </TabsTrigger>
+                <TabsTrigger value="maintenance" className="gap-2">
+                   <Calendar className="w-4 h-4" /> OEM Maintenance
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="estimate" className="mt-6 space-y-6">
@@ -2008,6 +2323,14 @@ export default function RepairOrderDetail() {
                     </CardContent>
                   </Card>
                 )}
+              </TabsContent>
+
+              <TabsContent value="maintenance" className="mt-6">
+                <MaintenanceScheduleTab 
+                  vehicleId={ro.vehicleId} 
+                  roId={ro.id}
+                  onJobAdded={() => queryClient.invalidateQueries({ queryKey: ['repair-order', id] })}
+                />
               </TabsContent>
             </Tabs>
           </div>
