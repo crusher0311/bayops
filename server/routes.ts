@@ -20,6 +20,12 @@ import {
 } from "./messaging";
 import { createProtractorClient, createProtractorClientFromEnv } from "./protractor";
 import { 
+  getMaintenanceScheduleCached, 
+  triageMaintenanceItems,
+  decodeVin,
+  invalidateCache,
+} from "./services/dataone";
+import { 
   insertUserSchema,
   insertOrganizationSchema,
   insertLocationSchema,
@@ -5689,6 +5695,207 @@ function setupMessagingRoutes(app: Express) {
     } catch (error: any) {
       console.error('Telnyx webhook error:', error);
       res.status(200).json({ received: true }); // Always return 200 to Telnyx
+    }
+  });
+
+  // ============================================================================
+  // DataOne OEM Maintenance API
+  // ============================================================================
+
+  // Get OEM maintenance schedule for a vehicle (used from RO context)
+  app.get("/api/vehicles/:vehicleId/maintenance-schedule", requireAuth, async (req, res) => {
+    try {
+      const vehicle = await storage.getVehicle(req.params.vehicleId, req.user!.orgId);
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+      
+      if (!vehicle.vin || vehicle.vin.length < 11) {
+        return res.status(400).json({ message: "Vehicle VIN is missing or invalid" });
+      }
+
+      const result = await getMaintenanceScheduleCached(vehicle.vin);
+      
+      if (!result.ok) {
+        return res.status(404).json({ 
+          message: result.error || "No maintenance schedule found for this vehicle",
+          vin: vehicle.vin,
+        });
+      }
+
+      const currentMileage = vehicle.mileage || 0;
+      const triaged = triageMaintenanceItems(result.items, currentMileage);
+      
+      const categories = [...new Set(triaged.map(item => item.maintenance_category))].sort();
+      
+      res.json({
+        vehicle: {
+          id: vehicle.id,
+          vin: vehicle.vin,
+          year: vehicle.year,
+          make: vehicle.make,
+          model: vehicle.model,
+          mileage: currentMileage,
+        },
+        vehicleInfo: result.vehicleInfo,
+        source: result.source,
+        cachedAt: result.cachedAt,
+        totalItems: result.count,
+        categories,
+        items: triaged,
+        summary: {
+          dueNow: triaged.filter(i => i.dueStatus === 'DUE_NOW').length,
+          dueSoon: triaged.filter(i => i.dueStatus === 'DUE_SOON').length,
+          upcoming: triaged.filter(i => i.dueStatus === 'UPCOMING').length,
+        },
+      });
+    } catch (error: any) {
+      console.error('[DataOne API] Error fetching maintenance schedule:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Decode a VIN (for manual entry or validation)
+  app.get("/api/vin/:vin/decode", requireAuth, async (req, res) => {
+    try {
+      const vin = req.params.vin.toUpperCase().trim();
+      if (vin.length !== 17) {
+        return res.status(400).json({ message: "VIN must be 17 characters" });
+      }
+
+      const result = await decodeVin(vin);
+      
+      if (!result.ok) {
+        return res.status(404).json({ 
+          message: result.error || "VIN not found",
+          vin,
+        });
+      }
+
+      res.json({
+        vin,
+        vehicle: result.vehicle,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get maintenance schedule directly by VIN (for RO creation flow)
+  app.get("/api/vin/:vin/maintenance", requireAuth, async (req, res) => {
+    try {
+      const vin = req.params.vin.toUpperCase().trim();
+      if (vin.length < 11) {
+        return res.status(400).json({ message: "VIN must be at least 11 characters" });
+      }
+
+      const mileage = parseInt(req.query.mileage as string) || 0;
+      
+      const result = await getMaintenanceScheduleCached(vin);
+      
+      if (!result.ok) {
+        return res.status(404).json({ 
+          message: result.error || "No maintenance schedule found",
+          vin,
+        });
+      }
+
+      const triaged = triageMaintenanceItems(result.items, mileage);
+      
+      res.json({
+        vin,
+        vehicleInfo: result.vehicleInfo,
+        source: result.source,
+        totalItems: result.count,
+        items: triaged,
+        summary: {
+          dueNow: triaged.filter(i => i.dueStatus === 'DUE_NOW').length,
+          dueSoon: triaged.filter(i => i.dueStatus === 'DUE_SOON').length,
+          upcoming: triaged.filter(i => i.dueStatus === 'UPCOMING').length,
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Invalidate cache for a VIN (force refresh)
+  app.post("/api/vin/:vin/refresh-maintenance", requireAuth, async (req, res) => {
+    try {
+      const vin = req.params.vin.toUpperCase().trim();
+      await invalidateCache(vin);
+      
+      const mileage = parseInt(req.query.mileage as string) || 0;
+      const result = await getMaintenanceScheduleCached(vin);
+      
+      if (!result.ok) {
+        return res.status(404).json({ message: result.error });
+      }
+
+      const triaged = triageMaintenanceItems(result.items, mileage);
+      
+      res.json({
+        vin,
+        vehicleInfo: result.vehicleInfo,
+        source: result.source,
+        totalItems: result.count,
+        items: triaged,
+        summary: {
+          dueNow: triaged.filter(i => i.dueStatus === 'DUE_NOW').length,
+          dueSoon: triaged.filter(i => i.dueStatus === 'DUE_SOON').length,
+          upcoming: triaged.filter(i => i.dueStatus === 'UPCOMING').length,
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Add a maintenance item as a job to a repair order
+  app.post("/api/repair-orders/:roId/add-maintenance-job", requireAuth, async (req, res) => {
+    try {
+      const { maintenanceId, name, category, description, intervalMiles, intervalMonths } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: "Job name is required" });
+      }
+
+      const ro = await storage.getRepairOrder(req.params.roId, req.user!.orgId);
+      if (!ro) {
+        return res.status(404).json({ message: "Repair order not found" });
+      }
+
+      const vehicle = ro.vehicleId ? await storage.getVehicle(ro.vehicleId, req.user!.orgId) : null;
+      
+      const notes: string[] = [];
+      if (description) notes.push(description);
+      if (intervalMiles) notes.push(`Recommended interval: ${intervalMiles.toLocaleString()} miles`);
+      if (intervalMonths) notes.push(`Recommended interval: ${intervalMonths} months`);
+      
+      const newJob = {
+        id: crypto.randomUUID(),
+        chapter: 'OEM Maintenance',
+        code: `OEM-${maintenanceId || Date.now()}`,
+        title: name,
+        notes: notes.join('\n'),
+        lineItems: [] as any[],
+        isDeferred: false,
+      };
+
+      const existingJobs = (ro.jobs as any[]) || [];
+      const updatedJobs = [...existingJobs, newJob];
+
+      await storage.updateRepairOrder(req.params.roId, req.user!.orgId, {
+        jobs: updatedJobs,
+      });
+
+      res.json({ 
+        success: true, 
+        job: newJob,
+        message: `Added "${name}" to repair order`,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 }
