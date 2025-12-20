@@ -1,0 +1,262 @@
+// app/dashboard/page.tsx
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { getDb } from "@/lib/mongo";
+import DashboardClient from "./DashboardClient";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+export default async function DashboardPage() {
+  // Session
+  const store = await cookies();
+  const sid = store.get("sid")?.value ?? store.get("session_token")?.value;
+  if (!sid) redirect("/login");
+
+  const db = await getDb();
+  const sessions = db.collection("sessions");
+  const users = db.collection("users");
+  const now = new Date();
+
+  const sess = await sessions.findOne({ token: sid, expiresAt: { $gt: now } });
+  if (!sess) redirect("/login");
+
+  const user = await users.findOne(
+    { _id: sess.userId },
+    { projection: { email: 1, role: 1, shopId: 1 } }
+  );
+  if (!user) redirect("/login");
+
+  // Build rows from latest AutoFlow events per VIN (hide closed/appointments)
+  const rows = await db.collection("events").aggregate([
+    {
+      $match: {
+        $and: [
+          { $or: [{ shopId: String(user.shopId) }, { shopId: Number(user.shopId) }] },
+          { provider: "autoflow" }
+        ]
+      }
+    },
+    // Normalize basic fields we need from events
+    {
+      $addFields: {
+        createdAtDate: "$createdAt",
+        statusRaw: {
+          $ifNull: [
+            "$payload.ticket.status",
+            { $ifNull: ["$status", { $ifNull: ["$payload.status", "$type"] }] }
+          ]
+        },
+        vinNorm: {
+          $toUpper: {
+            $ifNull: [
+              "$vehicleVin",
+              { $ifNull: ["$vin", "$payload.vehicle.vin"] }
+            ]
+          }
+        }
+      }
+    },
+    // Require VIN
+    { $match: { vinNorm: { $type: "string", $ne: "" } } },
+    // Sort by VIN asc, then time desc, so first in group is the latest per VIN
+    { $sort: { vinNorm: 1, createdAtDate: -1 } },
+    {
+      $group: {
+        _id: "$vinNorm",
+        latest: { $first: "$$ROOT" }
+      }
+    },
+    { $replaceRoot: { newRoot: "$latest" } },
+    // Hide Closed and Appointment statuses
+    { $match: { statusRaw: { $not: /close|appoint/i } } },
+    // Compute display fields
+    {
+      $addFields: {
+        // Name from payload; fallback to nested customer fields if used
+        displayName: {
+          $let: {
+            vars: {
+              full: {
+                $trim: {
+                  input: {
+                    $concat: [
+                      { $ifNull: ["$payload.customer.firstname", ""] },
+                      {
+                        $cond: [
+                          {
+                            $and: [
+                              { $ifNull: ["$payload.customer.firstname", false] },
+                              { $ifNull: ["$payload.customer.lastname", false] }
+                            ]
+                          },
+                          " ",
+                          ""
+                        ]
+                      },
+                      { $ifNull: ["$payload.customer.lastname", ""] }
+                    ]
+                  }
+                }
+              }
+            },
+            in: {
+              $cond: [
+                { $ne: ["$$full", ""] },
+                "$$full",
+                { $ifNull: ["$payload.customer.name", null] }
+              ]
+            }
+          }
+        },
+        // Vehicle display from payload
+        displayVehicle: {
+          $trim: {
+            input: {
+              $concat: [
+                { $toString: { $ifNull: ["$payload.vehicle.year", ""] } },
+                { $cond: [{ $ifNull: ["$payload.vehicle.year", false] }, " ", ""] },
+                { $ifNull: ["$payload.vehicle.make", ""] },
+                { $cond: [{ $ifNull: ["$payload.vehicle.make", false] }, " ", ""] },
+                { $ifNull: ["$payload.vehicle.model", ""] }
+              ]
+            }
+          }
+        },
+        displayVin: "$vinNorm",
+        displayRo: {
+          $ifNull: [
+            "$payload.ticket.invoice",
+            {
+              $ifNull: [
+                "$payload.ticket.id", 
+                {
+                  $ifNull: [
+                    "$payload.event.invoice",
+                    { $ifNull: ["$roNumber", null] }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        af: {
+          createdAt: "$createdAtDate",
+          status: "$statusRaw",
+          miles: {
+            $ifNull: [
+              "$payload.ticket.mileage",
+              {
+                $ifNull: [
+                  "$payload.mileage",
+                  {
+                    $ifNull: [
+                      "$payload.vehicle.mileage",
+                      {
+                        $ifNull: [
+                          "$payload.vehicle.miles",
+                          { $ifNull: ["$payload.vehicle.odometer", null] }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        updatedAt: {
+          $ifNull: [
+            "$createdAtDate",
+            { $ifNull: ["$createdAt", new Date()] }
+          ]
+        }
+      }
+    },
+    // DVI presence using roNumber (if present)
+    {
+      $lookup: {
+        from: "dvi_results",
+        let: { ro: { $toString: "$displayRo" } },
+        pipeline: [
+          {
+            $match: {
+              $expr: { 
+                $and: [
+                  { $ne: ["$$ro", null] }, 
+                  { $ne: ["$$ro", "null"] },
+                  { $or: [
+                    { $eq: ["$roNumber", "$$ro"] },
+                    { $eq: [{ $toString: "$roNumber" }, "$$ro"] }
+                  ]}
+                ] 
+              }
+            }
+          },
+          { $limit: 1 },
+          { $project: { _id: 1 } }
+        ],
+        as: "dviRes"
+      }
+    },
+    {
+      $lookup: {
+        from: "dvi",
+        let: { ro: { $toString: "$displayRo" } },
+        pipeline: [
+          {
+            $match: {
+              $expr: { 
+                $and: [
+                  { $ne: ["$$ro", null] }, 
+                  { $ne: ["$$ro", "null"] },
+                  { $or: [
+                    { $eq: ["$roNumber", "$$ro"] },
+                    { $eq: [{ $toString: "$roNumber" }, "$$ro"] }
+                  ]}
+                ] 
+              }
+            }
+          },
+          { $limit: 1 },
+          { $project: { _id: 1 } }
+        ],
+        as: "dviAlt"
+      }
+    },
+    { $addFields: { dviDone: { $gt: [{ $size: { $concatArrays: ["$dviRes", "$dviAlt"] } }, 0] } } },
+    // Final projection
+    {
+      $project: {
+        _id: 0,
+        updatedAt: 1,
+        af: 1,
+        displayName: 1,
+        displayVehicle: 1,
+        displayVin: 1,
+        displayMiles: "$af.miles",
+        displayRo: 1,
+        dviDone: 1
+      }
+    },
+    // Sort alphabetically by name for stable order
+    { 
+      $sort: { 
+        displayName: 1  // Alphabetical by customer name
+      } 
+    },
+    // Limit to a reasonable count
+    { $limit: 100 }
+  ]).toArray();
+
+  const initialData = {
+    rows,
+    user: {
+      email: user.email,
+      role: user.role,
+      shopId: user.shopId
+    }
+  };
+
+  return <DashboardClient initialData={initialData} />;
+}

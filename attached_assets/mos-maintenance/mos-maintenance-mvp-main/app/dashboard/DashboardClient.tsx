@@ -1,0 +1,266 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { RefreshCw, Car, CheckCircle, Clock, TrendingUp, Search, Filter, MoreVertical, ExternalLink, ChevronRight, HelpCircle } from "lucide-react";
+
+type DashboardData = {
+  rows: any[];
+  user: any;
+};
+
+export default function DashboardClient({ initialData }: { initialData: DashboardData }) {
+  const [data, setData] = useState(initialData);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      await refreshData();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const refreshData = async () => {
+    try {
+      setIsRefreshing(true);
+      const response = await fetch('/api/dashboard/data', {
+        cache: 'no-store'
+      });
+      
+      if (response.ok) {
+        const newData = await response.json();
+        setData(newData);
+        setLastUpdated(new Date());
+      }
+    } catch (error) {
+      console.error('Failed to refresh dashboard data:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const VEHICLE_HREF = (vin: string) => `/dashboard/vehicles/${encodeURIComponent(vin)}`;
+
+  const filteredRows = data.rows.filter(row => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      row.displayName?.toLowerCase().includes(query) ||
+      row.displayVin?.toLowerCase().includes(query) ||
+      row.displayVehicle?.toLowerCase().includes(query) ||
+      row.displayRo?.toString().includes(query)
+    );
+  });
+
+  const stats = {
+    total: data.rows.length,
+    dviComplete: data.rows.filter(r => r.dviDone).length,
+    inProgress: data.rows.filter(r => !r.dviDone).length
+  };
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <header className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Car className="w-6 h-6 text-gray-600" />
+            <h1 className="text-xl font-semibold text-gray-900">Vehicles</h1>
+            <span className="text-sm text-gray-500">({stats.total} active)</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={refreshData}
+              disabled={isRefreshing}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? "Refreshing..." : "Refresh"}
+            </button>
+            <div className="flex items-center gap-2">
+              <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                <HelpCircle className="w-5 h-5" />
+              </button>
+              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
+                {data.user?.email?.charAt(0).toUpperCase() || "U"}
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 overflow-auto p-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <Car className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Active Vehicles</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">DVI Complete</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.dviComplete}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+                <Clock className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">In Progress</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.inProgress}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search vehicles..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <button className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                  <Filter className="w-4 h-4" />
+                  Filter
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 text-left text-sm text-gray-600">
+                <tr>
+                  <th className="px-6 py-3 font-medium">Customer</th>
+                  <th className="px-6 py-3 font-medium">Vehicle</th>
+                  <th className="px-6 py-3 font-medium">VIN</th>
+                  <th className="px-6 py-3 font-medium">RO #</th>
+                  <th className="px-6 py-3 font-medium">Status</th>
+                  <th className="px-6 py-3 font-medium">DVI</th>
+                  <th className="px-6 py-3 font-medium">Mileage</th>
+                  <th className="px-6 py-3 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredRows.map((r: any) => {
+                  const vin = r.displayVin || "";
+                  const statusText = r.af?.status || "Unknown";
+                  
+                  return (
+                    <tr key={vin} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <Link href={VEHICLE_HREF(vin)} className="text-gray-900 font-medium hover:text-blue-600 transition-colors">
+                          {r.displayName || "Unknown"}
+                        </Link>
+                      </td>
+                      <td className="px-6 py-4 text-gray-600">
+                        {r.displayVehicle && r.displayVehicle.trim() !== "" ? r.displayVehicle : "—"}
+                      </td>
+                      <td className="px-6 py-4">
+                        <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono text-gray-700">
+                          {vin}
+                        </code>
+                      </td>
+                      <td className="px-6 py-4">
+                        {r.displayRo ? (
+                          <span className="text-gray-600">{r.displayRo}</span>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          statusText.toLowerCase().includes('close') 
+                            ? 'bg-green-100 text-green-800' 
+                            : statusText.toLowerCase().includes('open')
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {statusText}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {r.dviDone ? (
+                          <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                          </div>
+                        ) : (
+                          <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center">
+                            <Clock className="w-4 h-4 text-gray-400" />
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 font-mono text-sm text-gray-600">
+                        {r.displayMiles != null
+                          ? Number(r.displayMiles).toLocaleString()
+                          : "—"}
+                      </td>
+                      <td className="px-6 py-4">
+                        <Link
+                          href={VEHICLE_HREF(vin)}
+                          className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                        >
+                          View
+                          <ChevronRight className="w-4 h-4" />
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filteredRows.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                          <Car className="w-6 h-6 text-gray-400" />
+                        </div>
+                        <div>
+                          <p className="text-gray-900 font-medium">No vehicles found</p>
+                          <p className="text-sm text-gray-500">
+                            {searchQuery ? "Try adjusting your search" : "No active vehicles to display"}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
+          <p>Last updated: {lastUpdated.toLocaleTimeString()}</p>
+          <p className="flex items-center gap-1">
+            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+            Auto-refreshes every 30 seconds
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
