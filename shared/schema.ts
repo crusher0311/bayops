@@ -2034,3 +2034,93 @@ export type InsertConversation = z.infer<typeof insertConversationSchema>;
 
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
+
+// ============================================================================
+// DataOne OEM Maintenance Integration
+// ============================================================================
+
+// Recommendation Status Enum
+export const maintenanceRecommendationStatusEnum = pgEnum('maintenance_recommendation_status', [
+  'PENDING',      // Not yet reviewed by advisor
+  'ADDED_TO_RO',  // Added as a job to a repair order
+  'DECLINED',     // Customer declined
+  'DEFERRED',     // Moved to deferred work
+  'COMPLETED'     // Service was performed
+]);
+
+// DataOne API Response Cache
+export const dataoneCache = pgTable("dataone_cache", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  squish: varchar("squish", { length: 10 }).notNull().unique(),
+  vin: varchar("vin", { length: 17 }).notNull(),
+  vehicleInfo: jsonb("vehicle_info"),
+  maintenanceItems: jsonb("maintenance_items").notNull(),
+  itemCount: integer("item_count").notNull().default(0),
+  source: varchar("source", { length: 10 }).notNull().default('api'),
+  fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
+// Maintenance Recommendations (tracks what was shown and what action was taken)
+export const maintenanceRecommendations = pgTable("maintenance_recommendations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  vehicleId: varchar("vehicle_id").notNull().references(() => vehicles.id, { onDelete: 'cascade' }),
+  repairOrderId: varchar("repair_order_id").references(() => repairOrders.id, { onDelete: 'set null' }),
+  maintenanceId: integer("maintenance_id").notNull(),
+  category: text("category").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  intervalMiles: integer("interval_miles"),
+  intervalMonths: integer("interval_months"),
+  dueMileage: integer("due_mileage"),
+  vehicleMileageAtCheck: integer("vehicle_mileage_at_check"),
+  status: maintenanceRecommendationStatusEnum("status").notNull().default('PENDING'),
+  dueStatus: varchar("due_status", { length: 20 }).notNull().default('UPCOMING'),
+  addedJobId: varchar("added_job_id"),
+  declinedReason: text("declined_reason"),
+  reviewedByUserId: varchar("reviewed_by_user_id").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const maintenanceRecommendationsRelations = relations(maintenanceRecommendations, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [maintenanceRecommendations.orgId],
+    references: [organizations.id],
+  }),
+  location: one(locations, {
+    fields: [maintenanceRecommendations.locationId],
+    references: [locations.id],
+  }),
+  vehicle: one(vehicles, {
+    fields: [maintenanceRecommendations.vehicleId],
+    references: [vehicles.id],
+  }),
+  repairOrder: one(repairOrders, {
+    fields: [maintenanceRecommendations.repairOrderId],
+    references: [repairOrders.id],
+  }),
+  reviewedByUser: one(users, {
+    fields: [maintenanceRecommendations.reviewedByUserId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas for DataOne
+export const insertDataoneCacheSchema = createInsertSchema(dataoneCache).omit({
+  id: true,
+});
+
+export const insertMaintenanceRecommendationSchema = createInsertSchema(maintenanceRecommendations).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for DataOne
+export type DataoneCache = typeof dataoneCache.$inferSelect;
+export type InsertDataoneCache = z.infer<typeof insertDataoneCacheSchema>;
+
+export type MaintenanceRecommendation = typeof maintenanceRecommendations.$inferSelect;
+export type InsertMaintenanceRecommendation = z.infer<typeof insertMaintenanceRecommendationSchema>;
