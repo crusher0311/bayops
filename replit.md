@@ -49,3 +49,9 @@ The database is undergoing a three-phase refactor for enterprise-grade normalize
 - **Geoapify**: Used for address autocomplete (`GEOAPIFY_API_KEY`).
 - **VehicleDatabases.com**: Provides labor guide API for repair pricing estimates (`VEHICLE_DATABASES_API_KEY`).
 - **PartsTech**: Offers native parts search and ordering integration. This includes both a popup mode (using existing PartsTech shop account) and a full API mode for in-app search and direct part selection. Requires `PARTSTECH_USERNAME`, `PARTSTECH_API_KEY`, and optionally `PARTSTECH_PARTNER_ID`, `PARTSTECH_PARTNER_KEY` for full API access.
+- **DataOne**: Provides OEM maintenance schedules for vehicles via VIN lookup (`DATAONE_API_URL`). Features include:
+  - VIN decoding with "squish" pattern matching (first 8 + positions 10-11)
+  - PostgreSQL-backed caching with 7-day TTL to minimize API calls
+  - Maintenance item triage based on vehicle mileage (DUE_NOW / DUE_SOON / UPCOMING)
+  - Integration in repair order detail page's "OEM Maintenance" tab
+  - One-click addition of maintenance items as jobs to the current RO
