@@ -17,9 +17,12 @@ import {
   Check,
   Loader2,
   Wrench,
+  Database,
+  ArrowRight,
+  PartyPopper,
 } from 'lucide-react';
 
-type Step = 'account' | 'organization' | 'location' | 'settings';
+type Step = 'account' | 'organization' | 'location' | 'settings' | 'complete';
 
 const steps: { id: Step; label: string; icon: React.ReactNode }[] = [
   { id: 'account', label: 'Account', icon: <User className="w-5 h-5" /> },
@@ -81,7 +84,8 @@ export default function Signup() {
           title: 'Welcome to BayOPS!',
           description: 'Your shop has been created successfully.',
         });
-        setLocation('/');
+        // Show completion step with import option
+        setCurrentStep('complete');
       }
     },
     onError: (error: Error) => {
@@ -156,6 +160,57 @@ export default function Signup() {
 
   const currentStepIndex = steps.findIndex(s => s.id === currentStep);
 
+  // Show completion screen after successful signup
+  if (currentStep === 'complete') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <div className="w-full max-w-lg">
+          <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
+            <CardHeader className="text-center pb-2">
+              <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
+                <PartyPopper className="w-10 h-10 text-green-400" />
+              </div>
+              <CardTitle className="text-2xl text-white">Welcome to BayOPS!</CardTitle>
+              <CardDescription className="text-slate-400">
+                Your shop has been created successfully
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="bg-slate-700/50 rounded-lg p-4">
+                <h3 className="text-white font-medium mb-2">Migrating from Protractor?</h3>
+                <p className="text-slate-400 text-sm mb-4">
+                  Import all your customers, vehicles, and repair order history from Protractor in just a few minutes.
+                </p>
+                <Button
+                  onClick={() => setLocation('/import/protractor')}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  data-testid="button-import-protractor"
+                >
+                  <Database className="w-4 h-4 mr-2" />
+                  Import from Protractor
+                </Button>
+              </div>
+              
+              <div className="text-center">
+                <span className="text-slate-500 text-sm">or</span>
+              </div>
+
+              <Button
+                onClick={() => setLocation('/')}
+                variant="outline"
+                className="w-full border-slate-600 text-slate-300 hover:bg-slate-700"
+                data-testid="button-go-dashboard"
+              >
+                Start Fresh
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
@@ -192,7 +247,7 @@ export default function Signup() {
 
         <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
           <CardHeader>
-            <CardTitle className="text-white">{steps[currentStepIndex].label}</CardTitle>
+            <CardTitle className="text-white">{steps[currentStepIndex]?.label}</CardTitle>
             <CardDescription className="text-slate-400">
               {currentStep === 'account' && 'Create your administrator account'}
               {currentStep === 'organization' && 'Tell us about your business'}

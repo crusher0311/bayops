@@ -4717,6 +4717,124 @@ export async function registerRoutes(
     }
   });
 
+  // ==========================================
+  // PROTRACTOR MIGRATION ENDPOINTS (One-time import)
+  // These endpoints accept credentials in the request body for one-time data migration
+  // Credentials are NOT stored permanently - only used for the import session
+  // ==========================================
+
+  // Test Protractor connection with provided credentials (one-time, no storage)
+  app.post("/api/migration/protractor/test", requireAuth, async (req, res) => {
+    try {
+      const { connectionId, apiKey } = req.body;
+      
+      if (!connectionId || !apiKey) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Connection ID and API Key are required" 
+        });
+      }
+
+      const client = createProtractorClient(connectionId, apiKey);
+      const result = await client.testConnection();
+      
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
+  // In-memory storage for active migration jobs (credentials never persisted to DB)
+  const activeMigrationJobs: Map<string, { connectionId: string; apiKey: string }> = new Map();
+
+  // Start one-time migration import (credentials kept in memory only, never stored to DB)
+  app.post("/api/migration/protractor/import", requireAuth, async (req, res) => {
+    try {
+      const { connectionId, apiKey, startDate, endDate } = req.body;
+      
+      if (!connectionId || !apiKey) {
+        return res.status(400).json({ message: "Connection ID and API Key are required" });
+      }
+
+      const user = req.user!;
+      
+      // Get user's default location for the import
+      const location = await storage.getLocation(user.locationId);
+      if (!location) {
+        return res.status(400).json({ message: "User location not found" });
+      }
+
+      // Create a cryptographically secure job ID (credentials stored in memory only)
+      const jobId = `migration-${crypto.randomUUID()}`;
+      
+      // Store credentials in memory only (cleared after import)
+      activeMigrationJobs.set(jobId, { connectionId, apiKey });
+
+      // Create the import job record (no credentials stored - uses jobId as connectionId)
+      const job = await storage.createProtractorImportJob({
+        connectionId: jobId, // Use jobId as reference, not a real connection
+        locationId: location.id,
+        importType: 'FULL',
+        status: 'PENDING',
+        startDate: startDate ? new Date(startDate) : new Date(new Date().setFullYear(new Date().getFullYear() - 5)),
+        endDate: endDate ? new Date(endDate) : new Date(),
+      });
+
+      // Create in-memory connection object for the import (not persisted)
+      const inMemoryConnection = {
+        id: jobId,
+        connectionId,
+        apiKey,
+        authentication: '', // Will be computed by client
+      };
+
+      // Start the import process asynchronously
+      runProtractorImport(job.id, inMemoryConnection, location, user.orgId)
+        .catch(err => {
+          console.error(`Migration job ${job.id} failed:`, err);
+        })
+        .finally(() => {
+          // Always clean up in-memory credentials after import
+          activeMigrationJobs.delete(jobId);
+        });
+
+      res.json({ success: true, jobId: job.id });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get migration job status
+  app.get("/api/migration/protractor/status/:jobId", requireAuth, async (req, res) => {
+    try {
+      const job = await storage.getProtractorImportJob(req.params.jobId);
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+
+      const location = await storage.getLocation(job.locationId);
+      if (!location || location.orgId !== req.user!.orgId) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+
+      // Return status without exposing any connection details
+      res.json({
+        status: job.status,
+        totalRecords: job.totalRecords || 0,
+        processedRecords: job.processedRecords || 0,
+        failedRecords: job.failedRecords || 0,
+        currentPhase: job.status === 'RUNNING' ? 'Importing records...' : undefined,
+        errorLog: job.status === 'FAILED' || job.status === 'COMPLETED' ? job.errorLog : undefined,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==========================================
+  // END PROTRACTOR MIGRATION ENDPOINTS
+  // ==========================================
+
   // Delete Protractor connection
   app.delete("/api/integrations/protractor/:locationId", requireAuth, async (req, res) => {
     try {

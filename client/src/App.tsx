@@ -35,6 +35,7 @@ import DispatchBoard from "@/pages/DispatchBoard";
 import PrintRO from "@/pages/PrintRO";
 import PrintInvoice from "@/pages/PrintInvoice";
 import Messages from "@/pages/Messages";
+import ProtractorMigration from "@/pages/ProtractorMigration";
 
 function ProtectedRouter() {
   const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
@@ -93,6 +94,7 @@ function ProtectedRouter() {
       <Route path="/service-queue" component={ServiceQueue} />
       <Route path="/settings" component={Settings} />
       <Route path="/org-settings" component={OrganizationSettings} />
+      <Route path="/import/protractor" component={ProtractorMigration} />
       <Route component={NotFound} />
     </Switch>
   );
