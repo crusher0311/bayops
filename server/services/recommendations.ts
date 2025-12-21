@@ -304,10 +304,31 @@ export async function generateRecommendations(
         }
         
         // Determine if this is a "never performed and overdue" situation
-        // If no CARFAX match AND vehicle mileage exceeds the OEM due mileage, it's overdue
+        // But be smart about it - don't flag inspections as URGENT just because there's no CARFAX record
         const neverPerformed = !carfaxMatch;
         const oemDueMileage = item.miles || 0;
-        const neverPerformedOverdue = neverPerformed && oemDueMileage > 0 && currentMileage > oemDueMileage;
+        
+        // Check if this is an inspection-only item (less critical than replacements)
+        const normalizedLower = item.maintenance_name.toLowerCase();
+        const isInspectionOnly = normalizedLower.startsWith('inspect') && 
+          !normalizedLower.includes('replace') && 
+          !normalizedLower.includes('change');
+        
+        // Check if this is likely an outdated/severe-duty interval
+        // Intervals under 5k miles are typically severe duty schedules that don't apply to normal driving
+        const isLikelySevereDutyInterval = oemDueMileage > 0 && oemDueMileage < 5000;
+        
+        // Only escalate to "never performed overdue" if:
+        // 1. It's a replacement service (not just an inspection)
+        // 2. The interval is reasonable (not severe duty schedule)
+        // 3. Vehicle is significantly past due (>50% over the interval)
+        const significantlyOverdue = currentMileage > (oemDueMileage * 1.5);
+        const neverPerformedOverdue = neverPerformed && 
+          oemDueMileage > 0 && 
+          currentMileage > oemDueMileage &&
+          !isInspectionOnly &&
+          !isLikelySevereDutyInterval &&
+          significantlyOverdue;
         
         const { score, priority } = calculatePriorityScore(
           item.dueStatus,
@@ -326,7 +347,7 @@ export async function generateRecommendations(
         
         let suggestedAction = 'Review and discuss with customer';
         if (neverPerformedOverdue) {
-          suggestedAction = `Overdue - no record of this service ever being performed. Due at ${oemDueMileage.toLocaleString()} mi, vehicle now at ${currentMileage.toLocaleString()} mi`;
+          suggestedAction = `No service history on file - due at ${oemDueMileage.toLocaleString()} mi, vehicle now at ${currentMileage.toLocaleString()} mi. Verify with customer.`;
         } else if (priority === 'URGENT') {
           suggestedAction = 'Recommend immediate service';
         } else if (priority === 'SOON') {
