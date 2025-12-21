@@ -77,8 +77,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 interface ServiceJob {
   id: string;
-  name: string;
+  name?: string;
+  title?: string;  // OEM maintenance jobs use title instead of name
   description?: string;
+  notes?: string;
+  chapter?: string;
+  code?: string;
   lineItems: LineItem[];
 }
 
@@ -2069,14 +2073,14 @@ export default function RepairOrderDetail() {
     if (!vehicle) return;
     
     setAIActiveJobId(job.id);
-    setAIDialogTitle(`AI Service Description: ${job.name}`);
+    setAIDialogTitle(`AI Service Description: ${job.name || job.title}`);
     setAIDialogContent('');
     setIsAIDialogOpen(true);
     
     try {
       const result = await generateDescription.mutateAsync({
         job: {
-          name: job.name,
+          name: job.name || job.title,
           description: job.description,
           lineItems: job.lineItems.map(item => ({
             type: item.type,
@@ -2114,7 +2118,7 @@ export default function RepairOrderDetail() {
           mileage: vehicle.mileage,
         },
         jobs: jobs.map(job => ({
-          name: job.name,
+          name: job.name || job.title,
           description: job.description,
           lineItems: job.lineItems.map(item => ({
             type: item.type,
@@ -2834,7 +2838,7 @@ export default function RepairOrderDetail() {
                       <CardHeader className="bg-muted/10 pb-4 border-b">
                         <div className="flex items-center justify-between">
                           <div>
-                            <CardTitle className="text-lg">{job.name}</CardTitle>
+                            <CardTitle className="text-lg">{job.name || job.title}</CardTitle>
                             {job.description && <p className="text-sm text-muted-foreground mt-1">{job.description}</p>}
                           </div>
                           <div className="flex gap-2">
