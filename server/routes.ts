@@ -4744,10 +4744,10 @@ export async function registerRoutes(
     }
   });
 
-  // In-memory storage for active migration jobs (credentials never persisted to DB)
-  const activeMigrationJobs: Map<string, { connectionId: string; apiKey: string }> = new Map();
+  // Track active migration connections for cleanup (connection ID -> location ID)
+  const activeMigrationConnections: Map<string, string> = new Map();
 
-  // Start one-time migration import (credentials kept in memory only, never stored to DB)
+  // Start one-time migration import
   app.post("/api/migration/protractor/import", requireAuth, async (req, res) => {
     try {
       const { connectionId, apiKey, startDate, endDate } = req.body;
@@ -4769,15 +4769,29 @@ export async function registerRoutes(
         return res.status(400).json({ message: "User location not found" });
       }
 
-      // Create a cryptographically secure job ID (credentials stored in memory only)
-      const jobId = `migration-${crypto.randomUUID()}`;
-      
-      // Store credentials in memory only (cleared after import)
-      activeMigrationJobs.set(jobId, { connectionId, apiKey });
+      // Check if there's already a connection for this location (don't overwrite)
+      const existingConnection = await storage.getProtractorConnection(location.id);
+      if (existingConnection) {
+        return res.status(400).json({ 
+          message: "This location already has a Protractor connection. Please use the integration settings to manage it." 
+        });
+      }
 
-      // Create the import job record (no credentials stored - uses jobId as connectionId)
+      // Create a temporary connection record for the import job
+      // This will be deleted after import completes
+      const tempConnection = await storage.createProtractorConnection({
+        locationId: location.id,
+        connectionId,
+        apiKey,
+        authentication: '', // Will be computed by client
+      });
+
+      // Track for cleanup
+      activeMigrationConnections.set(tempConnection.id, location.id);
+
+      // Create the import job
       const job = await storage.createProtractorImportJob({
-        connectionId: jobId, // Use jobId as reference, not a real connection
+        connectionId: tempConnection.id,
         locationId: location.id,
         importType: 'FULL',
         status: 'PENDING',
@@ -4785,22 +4799,22 @@ export async function registerRoutes(
         endDate: endDate ? new Date(endDate) : new Date(),
       });
 
-      // Create in-memory connection object for the import (not persisted)
-      const inMemoryConnection = {
-        id: jobId,
-        connectionId,
-        apiKey,
-        authentication: '', // Will be computed by client
-      };
-
       // Start the import process asynchronously
-      runProtractorImport(job.id, inMemoryConnection, location, user.orgId)
+      runProtractorImport(job.id, tempConnection, location, user.orgId)
         .catch(err => {
           console.error(`Migration job ${job.id} failed:`, err);
         })
-        .finally(() => {
-          // Always clean up in-memory credentials after import
-          activeMigrationJobs.delete(jobId);
+        .finally(async () => {
+          // Clean up: delete the temporary connection after import
+          try {
+            if (activeMigrationConnections.has(tempConnection.id)) {
+              await storage.deleteProtractorConnection(location.id);
+              activeMigrationConnections.delete(tempConnection.id);
+              console.log(`[Migration] Cleaned up temporary connection for location ${location.id}`);
+            }
+          } catch (e) {
+            console.error(`[Migration] Failed to clean up connection:`, e);
+          }
         });
 
       res.json({ success: true, jobId: job.id });
