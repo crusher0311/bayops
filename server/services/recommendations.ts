@@ -76,7 +76,9 @@ function getServiceInterval(serviceName: string): { miles: number; months: numbe
 
 function calculateMilesSince(lastOdometer: number | null, currentMileage: number): number | null {
   if (lastOdometer === null || lastOdometer === 0) return null;
-  return currentMileage - lastOdometer;
+  const diff = currentMileage - lastOdometer;
+  // Return null for negative values (data anomaly - last service odometer higher than current)
+  return diff < 0 ? null : diff;
 }
 
 function isServiceDue(
@@ -141,15 +143,21 @@ function calculatePriorityScore(
 ): { score: number; priority: RecommendationPriority } {
   let score = 0;
   
+  // DVI findings are the strongest signal - physical inspection of the vehicle
   if (dviFinding?.status === 'RED') score += 100;
   else if (dviFinding?.status === 'YELLOW') score += 50;
   
+  // OEM schedule is the primary source for maintenance timing
   if (oemDueStatus === 'DUE_NOW') score += 80;
   else if (oemDueStatus === 'DUE_SOON') score += 40;
   else if (oemDueStatus === 'UPCOMING') score += 20;
   
-  if (carfaxDueCheck?.dueLevel === 'OVERDUE') score += 30;
-  else if (carfaxDueCheck?.dueLevel === 'DUE_SOON') score += 15;
+  // CARFAX only adds to score when OEM says DUE_NOW or DUE_SOON
+  // This prevents old CARFAX dates from overriding OEM UPCOMING status
+  if (oemDueStatus === 'DUE_NOW' || oemDueStatus === 'DUE_SOON') {
+    if (carfaxDueCheck?.dueLevel === 'OVERDUE') score += 15;
+    else if (carfaxDueCheck?.dueLevel === 'DUE_SOON') score += 10;
+  }
   
   let priority: RecommendationPriority;
   if (score >= 80) priority = 'URGENT';

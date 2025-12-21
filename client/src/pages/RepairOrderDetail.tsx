@@ -73,6 +73,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ServiceJob {
   id: string;
@@ -1268,9 +1269,45 @@ function RecommendationsTab({
 
   const getSourceBadge = (source: string) => {
     switch (source) {
-      case 'OEM': return <Badge variant="outline" className="text-xs bg-blue-50">OEM</Badge>;
-      case 'CARFAX': return <Badge variant="outline" className="text-xs bg-orange-50">CARFAX</Badge>;
-      case 'DVI': return <Badge variant="outline" className="text-xs bg-purple-50">DVI</Badge>;
+      case 'OEM': 
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="text-xs bg-blue-50 cursor-help">OEM</Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Based on manufacturer's maintenance schedule</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      case 'CARFAX': 
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="text-xs bg-orange-50 cursor-help">CARFAX</Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Service history from CARFAX records</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      case 'DVI': 
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="text-xs bg-purple-50 cursor-help">DVI</Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Finding from digital vehicle inspection</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
       default: return null;
     }
   };
