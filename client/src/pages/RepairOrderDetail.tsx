@@ -1119,9 +1119,8 @@ function CarfaxServiceHistoryTab({
           <CardTitle className="text-base">Service Records ({data.summary.totalRecords})</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <ScrollArea className="h-[400px]">
-            <div className="divide-y">
-              {data.displayRecords.map((record, idx) => (
+          <div className="divide-y">
+            {data.displayRecords.map((record, idx) => (
                 <div 
                   key={idx} 
                   className="p-4 hover:bg-muted/50"
@@ -1162,9 +1161,8 @@ function CarfaxServiceHistoryTab({
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
-          </ScrollArea>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>
