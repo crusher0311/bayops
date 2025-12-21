@@ -26,6 +26,7 @@ import Settings from "@/pages/Settings";
 import OrganizationSettings from "@/pages/OrganizationSettings";
 import MasterDashboard from "@/pages/MasterDashboard";
 import Login from "@/pages/Login";
+import Signup from "@/pages/Signup";
 import QuickCheckIn from "@/pages/QuickCheckIn";
 import CustomerAuthorization from "@/pages/CustomerAuthorization";
 import SelfCheckIn from "@/pages/SelfCheckIn";
@@ -61,6 +62,7 @@ function ProtectedRouter() {
     return (
       <Switch>
         <Route path="/login" component={Login} />
+        <Route path="/signup" component={Signup} />
         <Route component={Login} />
       </Switch>
     );
@@ -105,6 +107,7 @@ function App() {
           <Route path="/inspection/:token" component={InspectionReport} />
           <Route path="/authorize/:token" component={CustomerAuthorization} />
           <Route path="/checkin/:locationId/:token" component={SelfCheckIn} />
+          <Route path="/signup" component={Signup} />
           <Route component={ProtectedRouter} />
         </Switch>
       </TooltipProvider>

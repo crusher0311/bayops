@@ -71,6 +71,16 @@ import {
   insertServiceQueueEntrySchema,
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
+import { z } from "zod";
+import { db } from "./db";
+import { 
+  organizations, 
+  locations, 
+  users, 
+  workflows, 
+  laborRates, 
+  taxSettings 
+} from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 
 export async function registerRoutes(
@@ -136,6 +146,200 @@ export async function registerRoutes(
       return res.status(401).json({ message: "Not authenticated" });
     }
     res.json({ user: req.user });
+  });
+
+  // ============================================================================
+  // Self-Service Shop Onboarding API
+  // ============================================================================
+  
+  // Zod schema for onboarding validation
+  const onboardingSchema = z.object({
+    // Account info
+    username: z.string().min(3, "Username must be at least 3 characters").max(50),
+    password: z.string().min(6, "Password must be at least 6 characters").max(100),
+    email: z.string().email("Invalid email address"),
+    name: z.string().min(1, "Name is required").max(100),
+    // Organization info
+    shopName: z.string().min(1, "Shop name is required").max(200),
+    // Location info
+    locationName: z.string().min(1, "Location name is required").max(200),
+    address: z.string().min(1, "Address is required").max(500),
+    city: z.string().min(1, "City is required").max(100),
+    state: z.string().min(2, "State is required").max(50),
+    zip: z.string().min(1, "ZIP code is required").max(20),
+    phone: z.string().min(1, "Phone is required").max(50),
+    // Optional settings
+    laborRate: z.string().optional(),
+    salesTaxRate: z.string().optional(),
+  });
+  
+  app.post("/api/onboarding/register", async (req, res, next) => {
+    try {
+      // Validate request body with Zod schema
+      const validationResult = onboardingSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: fromZodError(validationResult.error).toString() 
+        });
+      }
+      
+      const { 
+        username, password, email, name, shopName,
+        locationName, address, city, state, zip, phone,
+        laborRate, salesTaxRate,
+      } = validationResult.data;
+
+      // Check if username already exists (before transaction)
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(409).json({ message: "Username already exists. Please choose a different username." });
+      }
+
+      // Generate unique slug from shop name with timestamp suffix for uniqueness
+      const baseSlug = shopName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      const timestamp = Date.now().toString(36);
+      let slug = baseSlug;
+      let slugCounter = 1;
+      while (await storage.getOrganizationBySlug(slug)) {
+        slug = `${baseSlug}-${timestamp}-${slugCounter}`;
+        slugCounter++;
+      }
+
+      // Hash password before transaction
+      const hashedPassword = await hashPassword(password);
+      
+      // Use transaction to ensure atomic creation of all entities
+      const result = await db.transaction(async (tx) => {
+        // 1. Create Organization
+        const [org] = await tx.insert(organizations).values({
+          name: shopName,
+          slug,
+          billingEmail: email,
+          subscriptionPlan: 'STARTER',
+          subscriptionStatus: 'ACTIVE',
+        }).returning();
+
+        // 2. Create Location
+        const [location] = await tx.insert(locations).values({
+          orgId: org.id,
+          name: locationName,
+          locationType: 'RETAIL',
+          address,
+          city,
+          state,
+          zip,
+          phone,
+          email,
+        }).returning();
+
+        // 3. Create Admin User
+        const [user] = await tx.insert(users).values({
+          orgId: org.id,
+          username,
+          password: hashedPassword,
+          name,
+          email,
+          role: 'OWNER',
+          locationIds: [location.id],
+        }).returning();
+
+        // 4. Create Default Workflow
+        await tx.insert(workflows).values({
+          orgId: org.id,
+          name: 'Standard Workflow',
+          description: 'Default repair order workflow',
+          isDefault: true,
+          stages: [
+            { id: 'estimate', label: 'Estimate', color: '#6366f1', type: 'SYSTEM', order: 0, isEnabled: true },
+            { id: 'waiting_auth', label: 'Waiting Authorization', color: '#f59e0b', type: 'SYSTEM', order: 1, isEnabled: true },
+            { id: 'authorized', label: 'Authorized', color: '#22c55e', type: 'SYSTEM', order: 2, isEnabled: true },
+            { id: 'in_progress', label: 'In Progress', color: '#3b82f6', type: 'SYSTEM', order: 3, isEnabled: true },
+            { id: 'completed', label: 'Completed', color: '#10b981', type: 'SYSTEM', order: 4, isEnabled: true },
+            { id: 'invoiced', label: 'Invoiced', color: '#8b5cf6', type: 'SYSTEM', order: 5, isEnabled: true },
+          ],
+        });
+
+        // 5. Create Default Labor Rate
+        const defaultLaborRate = parseFloat(laborRate || '125.00') || 125.00;
+        await tx.insert(laborRates).values({
+          locationId: location.id,
+          name: 'Standard Labor',
+          rate: defaultLaborRate.toString(),
+          sortOrder: 0,
+          isDefault: true,
+        });
+
+        // 6. Create Default Tax Settings
+        const defaultTaxRate = parseFloat(salesTaxRate || '0') || 0.0;
+        await tx.insert(taxSettings).values({
+          locationId: location.id,
+          salesTaxRate: defaultTaxRate.toString(),
+          taxOnLabor: false,
+          taxOnParts: true,
+          taxOnFees: false,
+        });
+
+        return { org, location, user };
+      });
+
+      // Log the user in (handle gracefully if session fails)
+      const { password: _, ...userWithoutPassword } = result.user;
+      
+      req.login(userWithoutPassword, (loginErr) => {
+        if (loginErr) {
+          // Account was created but auto-login failed
+          // Still return success, user can log in manually
+          console.error('Auto-login failed after signup:', loginErr);
+          return res.status(201).json({ 
+            success: true,
+            message: 'Your shop has been created! Please log in with your credentials.',
+            requiresManualLogin: true,
+            organization: result.org,
+            location: result.location,
+          });
+        }
+        return res.status(201).json({ 
+          success: true,
+          message: 'Your shop has been created successfully!',
+          user: userWithoutPassword,
+          organization: result.org,
+          location: result.location,
+        });
+      });
+    } catch (error: any) {
+      console.error('Onboarding error:', error);
+      // Handle unique constraint violations with user-friendly messages
+      if (error.code === '23505') { // PostgreSQL unique violation
+        if (error.constraint?.includes('username')) {
+          return res.status(409).json({ message: "Username already exists. Please choose a different username." });
+        }
+        if (error.constraint?.includes('slug')) {
+          return res.status(409).json({ message: "Shop name conflict. Please try a slightly different name." });
+        }
+        return res.status(409).json({ message: "A conflict occurred. Please try again." });
+      }
+      return res.status(500).json({ message: error.message || 'Failed to create shop. Please try again.' });
+    }
+  });
+
+  // Check if slug is available
+  app.get("/api/onboarding/check-slug/:slug", async (req, res) => {
+    try {
+      const existing = await storage.getOrganizationBySlug(req.params.slug);
+      res.json({ available: !existing });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Check if username is available
+  app.get("/api/onboarding/check-username/:username", async (req, res) => {
+    try {
+      const existing = await storage.getUserByUsername(req.params.username);
+      res.json({ available: !existing });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
   });
 
   // Organizations

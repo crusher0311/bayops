@@ -86,6 +86,19 @@ export default function Login() {
             <p className="font-mono text-xs">owner / password123</p>
             <p className="font-mono text-xs">advisor / password123</p>
           </div>
+          <div className="mt-6 pt-6 border-t border-slate-800 text-center">
+            <p className="text-slate-400 text-sm">
+              New to BayOPS?{' '}
+              <button
+                type="button"
+                onClick={() => setLocation('/signup')}
+                className="text-blue-400 hover:text-blue-300 font-medium"
+                data-testid="link-signup"
+              >
+                Create your shop account
+              </button>
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
