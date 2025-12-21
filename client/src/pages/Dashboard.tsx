@@ -253,24 +253,26 @@ export default function Dashboard() {
                 recentNativeRos.slice(0, 5).map((ro) => {
                   const jobs = ro.jobs as Array<{ name: string }>;
                   return (
-                    <div key={ro.id} className="flex items-center" data-testid={`row-activity-${ro.id}`}>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">
-                          RO #{ro.roNumber} - {jobs[0]?.name || 'Service'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {format(new Date(ro.createdAt), 'MMM d, h:mm a')}
-                        </p>
+                    <Link key={ro.id} href={`/ros/${ro.id}`}>
+                      <div className="flex items-center cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors" data-testid={`row-activity-${ro.id}`}>
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium leading-none">
+                            RO #{ro.roNumber} - {jobs[0]?.name || 'Service'}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {format(new Date(ro.createdAt), 'MMM d, h:mm a')}
+                          </p>
+                        </div>
+                        <div className="ml-auto font-medium">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
+                            ${ro.status === 'completed' ? 'bg-green-50 text-green-700 border-green-200' : 
+                              ro.status === 'in-progress' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
+                              'bg-gray-100 text-gray-800 border-gray-200'}`}>
+                            {ro.status.replace(/-/g, ' ').toUpperCase()}
+                          </span>
+                        </div>
                       </div>
-                      <div className="ml-auto font-medium">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
-                          ${ro.status === 'completed' ? 'bg-green-50 text-green-700 border-green-200' : 
-                            ro.status === 'in-progress' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
-                            'bg-gray-100 text-gray-800 border-gray-200'}`}>
-                          {ro.status.replace(/-/g, ' ').toUpperCase()}
-                        </span>
-                      </div>
-                    </div>
+                    </Link>
                   );
                 })
               )}
