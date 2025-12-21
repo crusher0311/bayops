@@ -291,7 +291,7 @@ export async function generateRecommendations(
         processedServices.add(normalizedName);
         
         const carfaxMatch = carfaxResult.ok 
-          ? matchServiceToOemMaintenance(carfaxResult.serviceCategories, item.maintenance_name)
+          ? matchServiceToOemMaintenance(carfaxResult.serviceCategories, item.maintenance_name, carfaxResult.displayRecords)
           : null;
         
         const dviMatch = findDVIMatch(item.maintenance_name, dviFindings);

@@ -254,35 +254,69 @@ export function getCarfaxStatus(): { configured: boolean } {
 
 export function matchServiceToOemMaintenance(
   serviceCategories: CarfaxServiceCategory[],
-  oemMaintenanceName: string
+  oemMaintenanceName: string,
+  displayRecords?: CarfaxDisplayRecord[]
 ): CarfaxServiceCategory | null {
   const normalizedOem = oemMaintenanceName.toLowerCase();
 
+  // Comprehensive mapping between OEM service names and CARFAX service text
   const matchPatterns: Record<string, string[]> = {
-    'oil': ['oil change', 'engine oil', 'oil and filter'],
-    'tire rotation': ['tire rotation', 'rotate tires'],
-    'cabin air filter': ['cabin air filter'],
-    'air filter': ['air filter', 'air cleaner'],
-    'coolant': ['coolant', 'antifreeze', 'radiator flush'],
-    'transmission': ['transmission fluid', 'trans fluid'],
-    'brake': ['brake', 'brake pad', 'brake lining'],
-    'spark plug': ['spark plug'],
+    'oil': ['oil change', 'engine oil', 'oil and filter', 'oil/filter changed'],
+    'tire': ['tire rotation', 'rotate tires', 'tires rotated', 'tire balanced'],
+    'cabin air filter': ['cabin air filter', 'cabin filter'],
+    'air filter': ['air filter', 'air cleaner', 'engine air filter'],
+    'coolant': ['coolant', 'antifreeze', 'radiator flush', 'cooling system'],
+    'transmission': ['transmission fluid', 'trans fluid', 'atf', 'transmission service'],
+    'brake': ['brake', 'brake pad', 'brake lining', 'brake rotor', 'brake service'],
+    'spark plug': ['spark plug', 'spark plugs replaced', 'ignition'],
     'battery': ['battery'],
-    'belt': ['serpentine belt', 'drive belt', 'accessory belt'],
+    'belt': ['serpentine belt', 'drive belt', 'accessory belt', 'belt replaced'],
     'fuel filter': ['fuel filter'],
-    'differential': ['differential'],
+    'differential': ['differential', 'axle lubricant', 'rear axle'],
     'transfer case': ['transfer case'],
     'power steering': ['power steering'],
     'emission': ['emission', 'emissions'],
+    'axle': ['axle seal', 'axle lubricant', 'cv joint', 'cv boot'],
   };
 
+  // First, try to match against serviceCategories (aggregated summary)
   for (const [key, patterns] of Object.entries(matchPatterns)) {
-    if (patterns.some(p => normalizedOem.includes(p))) {
+    if (patterns.some(p => normalizedOem.includes(p)) || normalizedOem.includes(key)) {
       const match = serviceCategories.find(cat => 
         cat.serviceName.toLowerCase().includes(key) ||
         patterns.some(p => cat.serviceName.toLowerCase().includes(p))
       );
       if (match) return match;
+    }
+  }
+
+  // If no match in serviceCategories, search displayRecords for detailed service history
+  // This catches services like spark plugs that may not have their own category
+  if (displayRecords && displayRecords.length > 0) {
+    for (const [key, patterns] of Object.entries(matchPatterns)) {
+      if (patterns.some(p => normalizedOem.includes(p)) || normalizedOem.includes(key)) {
+        // Find the most recent record that contains a matching service
+        for (const record of displayRecords) {
+          if (record.type !== 'service') continue;
+          
+          const hasMatch = record.text.some(serviceText => {
+            const lower = serviceText.toLowerCase();
+            return lower.includes(key) || patterns.some(p => lower.includes(p));
+          });
+          
+          if (hasMatch) {
+            // Convert displayRecord to CarfaxServiceCategory format
+            return {
+              serviceName: record.text.find(t => {
+                const lower = t.toLowerCase();
+                return lower.includes(key) || patterns.some(p => lower.includes(p));
+              }) || key,
+              dateOfLastService: record.displayDate,
+              odometerOfLastService: record.odometer,
+            };
+          }
+        }
+      }
     }
   }
 
