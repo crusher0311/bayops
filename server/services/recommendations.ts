@@ -169,9 +169,10 @@ function calculatePriorityScore(
     // CARFAX can override OEM UPCOMING when service is actually overdue based on service history
     if (carfaxDueCheck?.dueLevel === 'OVERDUE') {
       // Service was performed before but is now overdue based on interval
-      score += 70; // Strong signal - confirmed service history + confirmed overdue
+      // This is a strong signal - we have confirmed service history AND it's past due
+      score += 85; // Above URGENT threshold (80) - confirmed overdue is always urgent
     } else if (carfaxDueCheck?.dueLevel === 'DUE_SOON') {
-      score += 35; // Getting close to being due
+      score += 45; // Above SOON threshold (40) - approaching due date
     } else {
       // No CARFAX data or service is up to date - rely on OEM schedule
       if (oemDueStatus === 'DUE_NOW') score += 80;
