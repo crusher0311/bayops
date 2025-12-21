@@ -139,7 +139,8 @@ function isServiceDue(
 function calculatePriorityScore(
   oemDueStatus: 'DUE_NOW' | 'DUE_SOON' | 'UPCOMING' | 'OK' | null,
   dviFinding: { status: 'GREEN' | 'YELLOW' | 'RED' } | null,
-  carfaxDueCheck: { isDue: boolean; dueLevel: 'OVERDUE' | 'DUE_SOON' | 'OK' } | null
+  carfaxDueCheck: { isDue: boolean; dueLevel: 'OVERDUE' | 'DUE_SOON' | 'OK' } | null,
+  neverPerformedOverdue: boolean = false  // True when service was never performed AND current mileage exceeds due mileage
 ): { score: number; priority: RecommendationPriority } {
   let score = 0;
   
@@ -147,16 +148,20 @@ function calculatePriorityScore(
   if (dviFinding?.status === 'RED') score += 100;
   else if (dviFinding?.status === 'YELLOW') score += 50;
   
-  // OEM schedule is the primary source for maintenance timing
-  if (oemDueStatus === 'DUE_NOW') score += 80;
-  else if (oemDueStatus === 'DUE_SOON') score += 40;
-  else if (oemDueStatus === 'UPCOMING') score += 20;
-  
-  // CARFAX only adds to score when OEM says DUE_NOW or DUE_SOON
-  // This prevents old CARFAX dates from overriding OEM UPCOMING status
-  if (oemDueStatus === 'DUE_NOW' || oemDueStatus === 'DUE_SOON') {
-    if (carfaxDueCheck?.dueLevel === 'OVERDUE') score += 15;
-    else if (carfaxDueCheck?.dueLevel === 'DUE_SOON') score += 10;
+  // If never performed and vehicle is past due mileage, this is URGENT regardless of OEM status
+  if (neverPerformedOverdue) {
+    score += 90; // Higher than DUE_NOW to ensure URGENT priority
+  } else {
+    // OEM schedule is the primary source for maintenance timing
+    if (oemDueStatus === 'DUE_NOW') score += 80;
+    else if (oemDueStatus === 'DUE_SOON') score += 40;
+    else if (oemDueStatus === 'UPCOMING') score += 20;
+    
+    // CARFAX only adds to score when OEM says DUE_NOW or DUE_SOON
+    if (oemDueStatus === 'DUE_NOW' || oemDueStatus === 'DUE_SOON') {
+      if (carfaxDueCheck?.dueLevel === 'OVERDUE') score += 15;
+      else if (carfaxDueCheck?.dueLevel === 'DUE_SOON') score += 10;
+    }
   }
   
   let priority: RecommendationPriority;
@@ -298,10 +303,17 @@ export async function generateRecommendations(
           );
         }
         
+        // Determine if this is a "never performed and overdue" situation
+        // If no CARFAX match AND vehicle mileage exceeds the OEM due mileage, it's overdue
+        const neverPerformed = !carfaxMatch;
+        const oemDueMileage = item.miles || 0;
+        const neverPerformedOverdue = neverPerformed && oemDueMileage > 0 && currentMileage > oemDueMileage;
+        
         const { score, priority } = calculatePriorityScore(
           item.dueStatus,
           dviMatch ? { status: dviMatch.status } : null,
-          carfaxDueCheck
+          carfaxDueCheck,
+          neverPerformedOverdue
         );
         
         const milesSinceLastService = lastServiceOdometer 
@@ -313,7 +325,9 @@ export async function generateRecommendations(
         if (dviMatch) sources.push('DVI');
         
         let suggestedAction = 'Review and discuss with customer';
-        if (priority === 'URGENT') {
+        if (neverPerformedOverdue) {
+          suggestedAction = `Overdue - no record of this service ever being performed. Due at ${oemDueMileage.toLocaleString()} mi, vehicle now at ${currentMileage.toLocaleString()} mi`;
+        } else if (priority === 'URGENT') {
           suggestedAction = 'Recommend immediate service';
         } else if (priority === 'SOON') {
           suggestedAction = 'Schedule for next visit or today if time permits';
