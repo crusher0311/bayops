@@ -739,8 +739,10 @@ export class DatabaseStorage implements IStorage {
     locationId: string, 
     jobs: Array<{
       id: string;
-      name: string;
+      name?: string;
+      title?: string;
       description?: string;
+      notes?: string;
       lineItems: Array<{
         id: string;
         type: 'LABOR' | 'PART' | 'TIRE' | 'FEE' | 'SUBLET';
@@ -764,12 +766,16 @@ export class DatabaseStorage implements IStorage {
     for (let jobIndex = 0; jobIndex < jobs.length; jobIndex++) {
       const job = jobs[jobIndex];
       
+      // Support both 'name' and 'title' field names for job name
+      const jobName = job.name || job.title || 'Unnamed Job';
+      const jobDescription = job.description || job.notes || null;
+      
       const [insertedJob] = await tx.insert(roJobs).values({
         orgId,
         locationId,
         repairOrderId,
-        name: job.name,
-        description: job.description || null,
+        name: jobName,
+        description: jobDescription,
         sortOrder: jobIndex,
         approved: job.lineItems?.every(li => li.approved) || false,
       }).returning({ id: roJobs.id });
