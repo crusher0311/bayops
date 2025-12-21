@@ -123,6 +123,9 @@ export default function ProtractorMigration() {
     },
   });
 
+  const [pollingError, setPollingError] = useState<string | null>(null);
+  const [notFoundCount, setNotFoundCount] = useState(0);
+
   const { data: progress, refetch: refetchProgress } = useQuery<ImportProgress>({
     queryKey: ['migration-progress', jobId],
     queryFn: async () => {
@@ -130,11 +133,24 @@ export default function ProtractorMigration() {
       const res = await fetch(`/api/migration/protractor/status/${jobId}`, {
         credentials: 'include',
       });
-      if (!res.ok) throw new Error('Failed to fetch progress');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: 'Failed to fetch progress' }));
+        if (res.status === 404) {
+          setNotFoundCount(prev => prev + 1);
+          // After 5 consecutive not-found responses, show error
+          if (notFoundCount >= 5) {
+            setPollingError('Import job not found. The job may have failed to start. Please try again.');
+            setCurrentStep('complete');
+          }
+        }
+        throw new Error(errorData.message || 'Failed to fetch progress');
+      }
+      setNotFoundCount(0); // Reset on success
       return res.json();
     },
-    enabled: !!jobId && currentStep === 'import',
-    refetchInterval: currentStep === 'import' ? 2000 : false,
+    enabled: !!jobId && currentStep === 'import' && !pollingError,
+    refetchInterval: currentStep === 'import' && !pollingError ? 2000 : false,
+    retry: false,
   });
 
   useEffect(() => {
@@ -399,7 +415,30 @@ export default function ProtractorMigration() {
 
           {currentStep === 'complete' && (
             <div className="space-y-6" data-testid="step-complete">
-              {progress?.status === 'COMPLETED' ? (
+              {pollingError ? (
+                <>
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <XCircle className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="text-white text-xl font-medium">Import Failed</h3>
+                    <p className="text-slate-400">{pollingError}</p>
+                  </div>
+                  <Button 
+                    onClick={() => {
+                      setPollingError(null);
+                      setNotFoundCount(0);
+                      setJobId(null);
+                      setCurrentStep('connect');
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    data-testid="button-try-again"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Try Again
+                  </Button>
+                </>
+              ) : progress?.status === 'COMPLETED' ? (
                 <>
                   <div className="text-center">
                     <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
