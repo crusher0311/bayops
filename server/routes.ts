@@ -6081,7 +6081,14 @@ function setupMessagingRoutes(app: Express) {
         return res.status(400).json({ message: "Repair order has no associated vehicle" });
       }
 
-      const currentMileage = ro.odometerIn || 0;
+      // Use RO odometer if set, otherwise fall back to vehicle's stored mileage
+      let currentMileage = ro.odometerIn || 0;
+      if (!currentMileage) {
+        const vehicle = await storage.getVehicle(ro.vehicleId, req.user!.orgId);
+        if (vehicle?.mileage) {
+          currentMileage = vehicle.mileage;
+        }
+      }
 
       const result = await generateRecommendations(
         ro.vehicleId,
