@@ -92,8 +92,8 @@ export interface LineItem {
 
 export interface ServiceJob {
   id: string;
-  name?: string; // e.g. "Oil Change", "Brake Job"
-  title?: string; // OEM maintenance jobs use title instead of name
+  name: string; // e.g. "Oil Change", "Brake Job"
+  title?: string; // OEM maintenance jobs may also have title for display
   description?: string;
   notes?: string;
   chapter?: string;

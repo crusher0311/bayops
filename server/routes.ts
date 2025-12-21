@@ -5880,9 +5880,10 @@ function setupMessagingRoutes(app: Express) {
       
       const newJob = {
         id: crypto.randomUUID(),
+        name: name,  // Required field for API consumers
         chapter: 'OEM Maintenance',
         code: `OEM-${maintenanceId || Date.now()}`,
-        title: name,
+        title: name,  // Also stored as title for OEM maintenance display
         notes: notes.join('\n'),
         lineItems: [] as any[],
         isDeferred: false,

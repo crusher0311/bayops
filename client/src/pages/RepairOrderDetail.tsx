@@ -77,8 +77,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 interface ServiceJob {
   id: string;
-  name?: string;
-  title?: string;  // OEM maintenance jobs use title instead of name
+  name: string;
+  title?: string;  // OEM maintenance jobs may also have title for display
   description?: string;
   notes?: string;
   chapter?: string;
