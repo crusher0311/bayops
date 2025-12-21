@@ -2,7 +2,7 @@ import { db } from "../db";
 import { dataoneCache, maintenanceRecommendations, vehicles } from "@shared/schema";
 import { eq, and, gt } from "drizzle-orm";
 
-const DATAONE_API_BASE = process.env.DATAONE_API_URL || "http://localhost:3000";
+const DATAONE_API_BASE = (process.env.DATAONE_API_URL || "http://localhost:3000").replace(/\/+$/, "");
 const CACHE_TTL_DAYS = 7;
 
 interface MaintenanceItem {
