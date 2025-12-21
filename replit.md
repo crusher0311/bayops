@@ -21,6 +21,8 @@ Key architectural decisions include:
 - **Digital Vehicle Inspection (DVI)**: Features template management, color-coded status toggles (GREEN/YELLOW/RED), AI-powered findings/recommendations, mandatory recommendations, and shareable customer reports with robust security and media support (photos/videos).
 - **Inventory Management**: Full CRUD for inventory items, stock adjustments (receive, adjust, count, return, transfer), low stock alerts, reorder points, inventory valuation, stock transactions audit trail, vendor part numbers, and bin locations.
 - **Operational Workflows**: Includes dedicated modules for Appointments & Scheduling (service bay management), Parts Ordering (vendor management, order status workflows), Technician Time Tracking (clock in/out, breaks, job assignment), Invoicing (generation from ROs, payment recording), and a Reporting Dashboard (revenue, productivity, parts analytics).
+- **Self-Service Onboarding**: New customers can sign up at `/signup` with a multi-step wizard that creates their organization, location, and admin user atomically. After signup, users can optionally import data from Protractor.
+- **Protractor Migration**: One-time data migration from Protractor at `/import/protractor`. Accepts Protractor API credentials (stored in memory only, never persisted), imports all customers, vehicles, and repair order history. Credentials are automatically cleaned up after import completes.
 
 ## Database Refactor Status (December 2025)
 The database is undergoing a three-phase refactor for enterprise-grade normalized architecture:
