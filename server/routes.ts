@@ -4758,8 +4758,13 @@ export async function registerRoutes(
 
       const user = req.user!;
       
-      // Get user's default location for the import
-      const location = await storage.getLocation(user.locationId);
+      // Get user's default location for the import (use first location from locationIds array)
+      const userLocationId = user.locationId || (user.locationIds && user.locationIds[0]);
+      if (!userLocationId) {
+        return res.status(400).json({ message: "User has no assigned location" });
+      }
+      
+      const location = await storage.getLocation(userLocationId);
       if (!location) {
         return res.status(400).json({ message: "User location not found" });
       }
