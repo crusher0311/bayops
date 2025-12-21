@@ -1021,11 +1021,15 @@ function CarfaxServiceHistoryTab({
     }
   };
 
-  // Helper to parse odometer strings that may contain commas
-  const parseOdometer = (odometerStr: string | undefined): number | null => {
-    if (!odometerStr) return null;
+  // Helper to parse odometer values that may be strings with commas or numbers
+  const parseOdometer = (odometer: string | number | undefined | null): number | null => {
+    if (odometer === null || odometer === undefined) return null;
+    // If it's already a number, return it
+    if (typeof odometer === 'number') {
+      return isNaN(odometer) ? null : odometer;
+    }
     // Remove commas and any non-numeric characters except digits
-    const cleaned = odometerStr.replace(/[^0-9]/g, '');
+    const cleaned = String(odometer).replace(/[^0-9]/g, '');
     const parsed = parseInt(cleaned, 10);
     return isNaN(parsed) ? null : parsed;
   };
@@ -1162,6 +1166,329 @@ function CarfaxServiceHistoryTab({
           </ScrollArea>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// Recommendations types
+interface ServiceRecommendation {
+  id: string;
+  serviceName: string;
+  priority: 'URGENT' | 'SOON' | 'UPCOMING' | 'COMPLETED';
+  priorityScore: number;
+  sources: ('OEM' | 'DVI' | 'CARFAX')[];
+  rationale: {
+    oemDueStatus?: 'DUE_NOW' | 'DUE_SOON' | 'UPCOMING' | 'OK' | null;
+    oemDueMileage?: number | null;
+    oemInterval?: { miles?: number; months?: number } | null;
+    carfaxLastService?: { date: string; odometer: number | null } | null;
+    milesSinceLastService?: number | null;
+    dviFinding?: { status: 'GREEN' | 'YELLOW' | 'RED'; notes?: string } | null;
+  };
+  suggestedAction: string;
+  suppressedReason?: string;
+}
+
+interface RecommendationsResponse {
+  ok: boolean;
+  vehicleId: string;
+  currentMileage: number;
+  recommendations: ServiceRecommendation[];
+  recentlyCompleted: ServiceRecommendation[];
+  dataAvailability: {
+    oem: boolean;
+    carfax: boolean;
+    dvi: boolean;
+  };
+  error?: string;
+}
+
+function RecommendationsTab({
+  roId,
+  onJobAdded,
+}: {
+  roId: string;
+  onJobAdded: () => void;
+}) {
+  const { toast } = useToast();
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [addingId, setAddingId] = useState<string | null>(null);
+
+  const { data, isLoading, error, refetch, isRefetching } = useQuery<RecommendationsResponse>({
+    queryKey: ['recommendations', roId],
+    queryFn: async () => {
+      const res = await fetch(`/api/ros/${roId}/recommendations`, { credentials: 'include' });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to fetch recommendations');
+      }
+      return res.json();
+    },
+    enabled: !!roId,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const addJobMutation = useMutation({
+    mutationFn: async (rec: ServiceRecommendation) => {
+      const res = await fetch(`/api/repair-orders/${roId}/add-maintenance-job`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: rec.serviceName,
+          description: rec.suggestedAction,
+          notes: [
+            rec.rationale.oemDueStatus ? `OEM Status: ${rec.rationale.oemDueStatus}` : null,
+            rec.rationale.milesSinceLastService ? `Miles since last service: ${rec.rationale.milesSinceLastService.toLocaleString()}` : null,
+            rec.rationale.dviFinding ? `Inspection finding: ${rec.rationale.dviFinding.status}${rec.rationale.dviFinding.notes ? ` - ${rec.rationale.dviFinding.notes}` : ''}` : null,
+          ].filter(Boolean).join('\n'),
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to add job');
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Job added successfully' });
+      onJobAdded();
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Failed to add job', description: error.message, variant: 'destructive' });
+    },
+    onSettled: () => setAddingId(null),
+  });
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'URGENT': return 'bg-red-100 text-red-800 border-red-200';
+      case 'SOON': return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'UPCOMING': return 'bg-blue-100 text-blue-800 border-blue-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getSourceBadge = (source: string) => {
+    switch (source) {
+      case 'OEM': return <Badge variant="outline" className="text-xs bg-blue-50">OEM</Badge>;
+      case 'CARFAX': return <Badge variant="outline" className="text-xs bg-orange-50">CARFAX</Badge>;
+      case 'DVI': return <Badge variant="outline" className="text-xs bg-purple-50">DVI</Badge>;
+      default: return null;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-8 text-center">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto text-purple-600" />
+        <p className="mt-4 text-muted-foreground">Analyzing service data...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 text-center">
+        <AlertCircle className="w-12 h-12 mx-auto text-destructive mb-4" />
+        <h3 className="font-semibold text-lg">Unable to Generate Recommendations</h3>
+        <p className="text-muted-foreground mt-2">{(error as Error).message}</p>
+        <Button variant="outline" onClick={() => refetch()} className="mt-4" disabled={isRefetching}>
+          {isRefetching ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  if (!data?.ok) {
+    return (
+      <div className="p-8 text-center">
+        <AlertTriangle className="w-12 h-12 mx-auto text-amber-500 mb-4" />
+        <h3 className="font-semibold text-lg">Cannot Generate Recommendations</h3>
+        <p className="text-muted-foreground mt-2">{data?.error || 'Missing vehicle or mileage data'}</p>
+      </div>
+    );
+  }
+
+  const urgentCount = data.recommendations.filter(r => r.priority === 'URGENT').length;
+  const soonCount = data.recommendations.filter(r => r.priority === 'SOON').length;
+  const upcomingCount = data.recommendations.filter(r => r.priority === 'UPCOMING').length;
+
+  return (
+    <div className="space-y-6 p-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-purple-600" />
+            Service Recommendations
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Based on OEM schedule, CARFAX history, and inspection findings
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isRefetching}>
+          {isRefetching ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+        </Button>
+      </div>
+
+      {/* Data Sources */}
+      <div className="flex gap-2 flex-wrap">
+        <Badge variant={data.dataAvailability.oem ? 'default' : 'outline'} className="text-xs">
+          {data.dataAvailability.oem ? <CheckCircle2 className="w-3 h-3 mr-1" /> : <AlertCircle className="w-3 h-3 mr-1" />}
+          OEM Data
+        </Badge>
+        <Badge variant={data.dataAvailability.carfax ? 'default' : 'outline'} className="text-xs">
+          {data.dataAvailability.carfax ? <CheckCircle2 className="w-3 h-3 mr-1" /> : <AlertCircle className="w-3 h-3 mr-1" />}
+          CARFAX
+        </Badge>
+        <Badge variant={data.dataAvailability.dvi ? 'default' : 'outline'} className="text-xs">
+          {data.dataAvailability.dvi ? <CheckCircle2 className="w-3 h-3 mr-1" /> : <AlertCircle className="w-3 h-3 mr-1" />}
+          Inspection
+        </Badge>
+        <span className="text-xs text-muted-foreground ml-2">
+          @ {data.currentMileage.toLocaleString()} miles
+        </span>
+      </div>
+
+      {/* Summary */}
+      {data.recommendations.length > 0 && (
+        <div className="flex gap-3">
+          {urgentCount > 0 && (
+            <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200">
+              <span className="text-2xl font-bold text-red-700">{urgentCount}</span>
+              <span className="text-sm text-red-600 ml-1">Urgent</span>
+            </div>
+          )}
+          {soonCount > 0 && (
+            <div className="px-3 py-2 rounded-lg bg-amber-50 border border-amber-200">
+              <span className="text-2xl font-bold text-amber-700">{soonCount}</span>
+              <span className="text-sm text-amber-600 ml-1">Due Soon</span>
+            </div>
+          )}
+          {upcomingCount > 0 && (
+            <div className="px-3 py-2 rounded-lg bg-blue-50 border border-blue-200">
+              <span className="text-2xl font-bold text-blue-700">{upcomingCount}</span>
+              <span className="text-sm text-blue-600 ml-1">Upcoming</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Recommendations List */}
+      {data.recommendations.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <CheckCircle2 className="w-12 h-12 mx-auto text-green-500 mb-4" />
+            <h3 className="font-semibold text-lg">All Caught Up!</h3>
+            <p className="text-muted-foreground mt-2">
+              No immediate service recommendations for this vehicle.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {data.recommendations.map((rec) => (
+            <Card key={rec.id} className={cn("border-l-4", getPriorityColor(rec.priority))}>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium">{rec.serviceName}</span>
+                      <Badge className={cn("text-xs", getPriorityColor(rec.priority))}>
+                        {rec.priority}
+                      </Badge>
+                      {rec.sources.map(s => (
+                        <span key={s}>{getSourceBadge(s)}</span>
+                      ))}
+                    </div>
+
+                    <p className="text-sm text-muted-foreground">{rec.suggestedAction}</p>
+
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      {rec.rationale.oemDueStatus && rec.rationale.oemDueStatus !== 'OK' && (
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          OEM: {rec.rationale.oemDueStatus.replace('_', ' ')}
+                        </span>
+                      )}
+                      {rec.rationale.milesSinceLastService !== null && rec.rationale.milesSinceLastService !== undefined && (
+                        <span className="flex items-center gap-1">
+                          <Car className="w-3 h-3" />
+                          {rec.rationale.milesSinceLastService.toLocaleString()} mi since last service
+                        </span>
+                      )}
+                      {rec.rationale.carfaxLastService && (
+                        <span className="flex items-center gap-1">
+                          <History className="w-3 h-3" />
+                          Last: {rec.rationale.carfaxLastService.date}
+                          {rec.rationale.carfaxLastService.odometer && ` @ ${rec.rationale.carfaxLastService.odometer.toLocaleString()} mi`}
+                        </span>
+                      )}
+                      {rec.rationale.dviFinding && (
+                        <span className={cn(
+                          "flex items-center gap-1 font-medium",
+                          rec.rationale.dviFinding.status === 'RED' ? 'text-red-600' :
+                          rec.rationale.dviFinding.status === 'YELLOW' ? 'text-amber-600' : 'text-green-600'
+                        )}>
+                          <AlertTriangle className="w-3 h-3" />
+                          DVI: {rec.rationale.dviFinding.status}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setAddingId(rec.id);
+                      addJobMutation.mutate(rec);
+                    }}
+                    disabled={addingId === rec.id}
+                  >
+                    {addingId === rec.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Plus className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Recently Completed */}
+      {data.recentlyCompleted.length > 0 && (
+        <div className="pt-4 border-t">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowCompleted(!showCompleted)}
+            className="text-muted-foreground"
+          >
+            <ChevronDown className={cn("w-4 h-4 mr-1 transition-transform", showCompleted && "rotate-180")} />
+            Recently Completed ({data.recentlyCompleted.length})
+          </Button>
+
+          {showCompleted && (
+            <div className="mt-3 space-y-2">
+              {data.recentlyCompleted.map((rec) => (
+                <Card key={rec.id} className="border-l-4 border-green-200 bg-green-50/50">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-medium text-sm">{rec.serviceName}</span>
+                        <p className="text-xs text-muted-foreground">{rec.suppressedReason}</p>
+                      </div>
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -2317,6 +2644,9 @@ export default function RepairOrderDetail() {
                 <TabsTrigger value="carfax" className="gap-2">
                    <History className="w-4 h-4" /> Service History
                 </TabsTrigger>
+                <TabsTrigger value="recommendations" className="gap-2 bg-gradient-to-r from-purple-600/10 to-blue-600/10 data-[state=active]:from-purple-600/20 data-[state=active]:to-blue-600/20">
+                   <Sparkles className="w-4 h-4 text-purple-600" /> Recommendations
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="estimate" className="mt-6 space-y-6">
@@ -2646,6 +2976,13 @@ export default function RepairOrderDetail() {
               <TabsContent value="carfax" className="mt-6">
                 <CarfaxServiceHistoryTab 
                   vehicleId={ro.vehicleId} 
+                />
+              </TabsContent>
+
+              <TabsContent value="recommendations" className="mt-6">
+                <RecommendationsTab 
+                  roId={ro.id}
+                  onJobAdded={() => queryClient.invalidateQueries({ queryKey: ['repair-orders', roId] })}
                 />
               </TabsContent>
             </Tabs>

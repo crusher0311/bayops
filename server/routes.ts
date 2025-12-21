@@ -30,6 +30,7 @@ import {
   getCarfaxStatus,
   matchServiceToOemMaintenance,
 } from "./services/carfax";
+import { generateRecommendations } from "./services/recommendations";
 import { 
   insertUserSchema,
   insertOrganizationSchema,
@@ -6060,6 +6061,38 @@ function setupMessagingRoutes(app: Express) {
       });
     } catch (error: any) {
       console.error('[Combined API] Error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============================================================================
+  // Service Advisor Recommendations API
+  // ============================================================================
+
+  // Get intelligent service recommendations for a vehicle/RO combining OEM, CARFAX, and DVI data
+  app.get("/api/ros/:roId/recommendations", requireAuth, async (req, res) => {
+    try {
+      const ro = await storage.getRepairOrder(req.params.roId, req.user!.orgId);
+      if (!ro) {
+        return res.status(404).json({ message: "Repair order not found" });
+      }
+
+      if (!ro.vehicleId) {
+        return res.status(400).json({ message: "Repair order has no associated vehicle" });
+      }
+
+      const currentMileage = ro.odometerIn || 0;
+
+      const result = await generateRecommendations(
+        ro.vehicleId,
+        ro.id,
+        req.user!.orgId,
+        currentMileage
+      );
+
+      res.json(result);
+    } catch (error: any) {
+      console.error('[Recommendations API] Error:', error);
       res.status(500).json({ message: error.message });
     }
   });
