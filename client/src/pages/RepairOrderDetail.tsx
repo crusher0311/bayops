@@ -1021,6 +1021,15 @@ function CarfaxServiceHistoryTab({
     }
   };
 
+  // Helper to parse odometer strings that may contain commas
+  const parseOdometer = (odometerStr: string | undefined): number | null => {
+    if (!odometerStr) return null;
+    // Remove commas and any non-numeric characters except digits
+    const cleaned = odometerStr.replace(/[^0-9]/g, '');
+    const parsed = parseInt(cleaned, 10);
+    return isNaN(parsed) ? null : parsed;
+  };
+
   return (
     <div className="space-y-6 p-4">
       {/* Header with vehicle info */}
@@ -1088,9 +1097,9 @@ function CarfaxServiceHistoryTab({
                     Last: {formatShortDate(category.dateOfLastService)}
                   </div>
                 )}
-                {category.odometerOfLastService && (
+                {category.odometerOfLastService && parseOdometer(category.odometerOfLastService) && (
                   <div className="text-xs text-muted-foreground">
-                    @ {parseInt(category.odometerOfLastService).toLocaleString()} mi
+                    @ {parseOdometer(category.odometerOfLastService)!.toLocaleString()} mi
                   </div>
                 )}
               </div>
@@ -1118,9 +1127,9 @@ function CarfaxServiceHistoryTab({
                       <div className="flex items-center gap-2 text-sm font-medium">
                         <Calendar className="w-4 h-4 text-muted-foreground" />
                         {formatCarfaxDate(record.displayDate)}
-                        {record.odometer && (
+                        {record.odometer && parseOdometer(record.odometer) && (
                           <Badge variant="outline" className="text-xs">
-                            {parseInt(record.odometer).toLocaleString()} mi
+                            {parseOdometer(record.odometer)!.toLocaleString()} mi
                           </Badge>
                         )}
                       </div>
