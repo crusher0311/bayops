@@ -1454,12 +1454,6 @@ function RecommendationsTab({
                     <p className="text-sm text-muted-foreground">{rec.suggestedAction}</p>
 
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      {rec.rationale.oemDueStatus && rec.rationale.oemDueStatus !== 'OK' && (
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          OEM: {rec.rationale.oemDueStatus.replace('_', ' ')}
-                        </span>
-                      )}
                       {rec.rationale.oemInterval && (rec.rationale.oemInterval.miles || rec.rationale.oemInterval.months) && (
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
@@ -1474,17 +1468,23 @@ function RecommendationsTab({
                           Due @ {rec.rationale.oemDueMileage.toLocaleString()} mi
                         </span>
                       )}
-                      {rec.rationale.milesSinceLastService !== null && rec.rationale.milesSinceLastService !== undefined && rec.rationale.milesSinceLastService > 0 && (
+                      {/* Last Performed - show CARFAX data or "Never performed" */}
+                      {rec.rationale.carfaxLastService ? (
                         <span className="flex items-center gap-1">
                           <History className="w-3 h-3" />
-                          {rec.rationale.milesSinceLastService.toLocaleString()} mi since last service
+                          Last performed: {rec.rationale.carfaxLastService.date}
+                          {rec.rationale.carfaxLastService.odometer && ` @ ${rec.rationale.carfaxLastService.odometer.toLocaleString()} mi`}
+                        </span>
+                      ) : rec.sources.includes('OEM') && (
+                        <span className="flex items-center gap-1 text-amber-600">
+                          <AlertCircle className="w-3 h-3" />
+                          Never performed/reported
                         </span>
                       )}
-                      {rec.rationale.carfaxLastService && (
+                      {rec.rationale.milesSinceLastService !== null && rec.rationale.milesSinceLastService !== undefined && rec.rationale.milesSinceLastService > 0 && (
                         <span className="flex items-center gap-1">
-                          <History className="w-3 h-3" />
-                          Last: {rec.rationale.carfaxLastService.date}
-                          {rec.rationale.carfaxLastService.odometer && ` @ ${rec.rationale.carfaxLastService.odometer.toLocaleString()} mi`}
+                          <Car className="w-3 h-3" />
+                          {rec.rationale.milesSinceLastService.toLocaleString()} mi ago
                         </span>
                       )}
                       {rec.rationale.dviFinding && (
@@ -1494,7 +1494,7 @@ function RecommendationsTab({
                           rec.rationale.dviFinding.status === 'YELLOW' ? 'text-amber-600' : 'text-green-600'
                         )}>
                           <AlertTriangle className="w-3 h-3" />
-                          DVI: {rec.rationale.dviFinding.status}
+                          Inspection: {rec.rationale.dviFinding.status}
                         </span>
                       )}
                     </div>
