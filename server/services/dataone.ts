@@ -103,7 +103,7 @@ export async function getMaintenanceSchedule(vin: string): Promise<{
   try {
     const vinMaintenanceUrl = `${DATAONE_API_BASE}/api/data/LKP_VIN_MAINTENANCE?squish=${squish}&limit=500`;
     const vinMaintenanceResponse = await fetch(vinMaintenanceUrl, {
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(30000),
     });
     
     if (!vinMaintenanceResponse.ok) {
@@ -121,10 +121,10 @@ export async function getMaintenanceSchedule(vin: string): Promise<{
 
     const [maintenanceDefsResponse, intervalsResponse] = await Promise.all([
       fetch(`${DATAONE_API_BASE}/api/data/DEF_MAINTENANCE?maintenance_id__in=${maintenanceIds.join(",")}&limit=500`, {
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(30000),
       }),
       fetch(`${DATAONE_API_BASE}/api/data/LKP_VIN_MAINTENANCE_INTERVAL?vin_maintenance_id__in=${vinMaintenanceIds.join(",")}&limit=1000`, {
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(30000),
       })
     ]);
 
@@ -136,7 +136,7 @@ export async function getMaintenanceSchedule(vin: string): Promise<{
     let intervalDefs: any[] = [];
     if (intervalIds.length > 0) {
       const intervalDefsResponse = await fetch(`${DATAONE_API_BASE}/api/data/DEF_MAINTENANCE_INTERVAL?maintenance_interval_id__in=${intervalIds.join(",")}&limit=500`, {
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(30000),
       });
       const intervalDefsData = await intervalDefsResponse.json();
       intervalDefs = intervalDefsData.data || [];
