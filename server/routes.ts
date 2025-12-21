@@ -25,6 +25,11 @@ import {
   decodeVin,
   invalidateCache,
 } from "./services/dataone";
+import {
+  getServiceHistoryCached as getCarfaxServiceHistory,
+  getCarfaxStatus,
+  matchServiceToOemMaintenance,
+} from "./services/carfax";
 import { 
   insertUserSchema,
   insertOrganizationSchema,
@@ -5895,6 +5900,166 @@ function setupMessagingRoutes(app: Express) {
         message: `Added "${name}" to repair order`,
       });
     } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============================================================================
+  // CARFAX Service History API
+  // ============================================================================
+  
+  // Get CARFAX configuration status
+  app.get("/api/carfax/status", requireAuth, async (req, res) => {
+    res.json(getCarfaxStatus());
+  });
+
+  // Get CARFAX service history for a vehicle
+  app.get("/api/vehicles/:vehicleId/service-history", requireAuth, async (req, res) => {
+    try {
+      const vehicle = await storage.getVehicle(req.params.vehicleId, req.user!.orgId);
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+      
+      if (!vehicle.vin || vehicle.vin.length < 17) {
+        return res.status(400).json({ message: "Vehicle VIN is missing or invalid (must be 17 characters)" });
+      }
+
+      const result = await getCarfaxServiceHistory(vehicle.vin);
+      
+      if (!result.ok) {
+        return res.status(404).json({ 
+          message: result.error || "No service history found for this vehicle",
+          vin: vehicle.vin,
+        });
+      }
+
+      res.json({
+        vehicle: {
+          id: vehicle.id,
+          vin: vehicle.vin,
+          year: vehicle.year,
+          make: vehicle.make,
+          model: vehicle.model,
+          mileage: vehicle.mileage || 0,
+        },
+        carfaxVehicleInfo: result.vehicleInfo,
+        source: result.source,
+        cachedAt: result.cachedAt,
+        serviceCategories: result.serviceCategories,
+        displayRecords: result.displayRecords,
+        numberOfServiceRecords: result.numberOfServiceRecords,
+        summary: {
+          totalRecords: result.displayRecords.length,
+          serviceRecords: result.displayRecords.filter(r => r.type === 'service').length,
+          recallRecords: result.displayRecords.filter(r => r.type === 'recall').length,
+        },
+      });
+    } catch (error: any) {
+      console.error('[CARFAX API] Error fetching service history:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get CARFAX service history by VIN directly
+  app.get("/api/vin/:vin/service-history", requireAuth, async (req, res) => {
+    try {
+      const vin = req.params.vin.toUpperCase().trim();
+      if (vin.length !== 17) {
+        return res.status(400).json({ message: "VIN must be 17 characters" });
+      }
+
+      const result = await getCarfaxServiceHistory(vin);
+      
+      if (!result.ok) {
+        return res.status(404).json({ 
+          message: result.error || "No service history found",
+          vin,
+        });
+      }
+
+      res.json({
+        vin,
+        vehicleInfo: result.vehicleInfo,
+        source: result.source,
+        cachedAt: result.cachedAt,
+        serviceCategories: result.serviceCategories,
+        displayRecords: result.displayRecords,
+        numberOfServiceRecords: result.numberOfServiceRecords,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get combined OEM maintenance + CARFAX history for a vehicle
+  app.get("/api/vehicles/:vehicleId/maintenance-with-history", requireAuth, async (req, res) => {
+    try {
+      const vehicle = await storage.getVehicle(req.params.vehicleId, req.user!.orgId);
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+      
+      if (!vehicle.vin || vehicle.vin.length < 11) {
+        return res.status(400).json({ message: "Vehicle VIN is missing or invalid" });
+      }
+
+      const currentMileage = vehicle.mileage || 0;
+
+      // Fetch both OEM maintenance and CARFAX history in parallel
+      const [oemResult, carfaxResult] = await Promise.all([
+        getMaintenanceScheduleCached(vehicle.vin),
+        getCarfaxServiceHistory(vehicle.vin),
+      ]);
+
+      // Triage OEM maintenance items
+      const triagedOem = oemResult.ok ? triageMaintenanceItems(oemResult.items, currentMileage) : [];
+
+      // Match CARFAX service categories to OEM maintenance items
+      const enhancedItems = triagedOem.map(item => {
+        const carfaxMatch = carfaxResult.ok 
+          ? matchServiceToOemMaintenance(carfaxResult.serviceCategories, item.maintenance_name)
+          : null;
+
+        return {
+          ...item,
+          carfaxLastService: carfaxMatch ? {
+            date: carfaxMatch.dateOfLastService,
+            odometer: carfaxMatch.odometerOfLastService,
+          } : null,
+        };
+      });
+
+      res.json({
+        vehicle: {
+          id: vehicle.id,
+          vin: vehicle.vin,
+          year: vehicle.year,
+          make: vehicle.make,
+          model: vehicle.model,
+          mileage: currentMileage,
+        },
+        oemMaintenance: {
+          available: oemResult.ok,
+          source: oemResult.source,
+          totalItems: oemResult.count,
+          items: enhancedItems,
+          summary: {
+            dueNow: enhancedItems.filter(i => i.dueStatus === 'DUE_NOW').length,
+            dueSoon: enhancedItems.filter(i => i.dueStatus === 'DUE_SOON').length,
+            upcoming: enhancedItems.filter(i => i.dueStatus === 'UPCOMING').length,
+          },
+        },
+        carfaxHistory: {
+          available: carfaxResult.ok,
+          source: carfaxResult.source,
+          serviceCategories: carfaxResult.serviceCategories,
+          displayRecords: carfaxResult.displayRecords,
+          numberOfServiceRecords: carfaxResult.numberOfServiceRecords,
+        },
+      });
+    } catch (error: any) {
+      console.error('[Combined API] Error:', error);
       res.status(500).json({ message: error.message });
     }
   });

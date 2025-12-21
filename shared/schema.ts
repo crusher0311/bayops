@@ -2124,3 +2124,22 @@ export type InsertDataoneCache = z.infer<typeof insertDataoneCacheSchema>;
 
 export type MaintenanceRecommendation = typeof maintenanceRecommendations.$inferSelect;
 export type InsertMaintenanceRecommendation = z.infer<typeof insertMaintenanceRecommendationSchema>;
+
+// CARFAX Service History Cache
+export const carfaxCache = pgTable("carfax_cache", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vin: varchar("vin", { length: 17 }).notNull().unique(),
+  vehicleInfo: jsonb("vehicle_info"),
+  serviceCategories: jsonb("service_categories").notNull().default([]),
+  displayRecords: jsonb("display_records").notNull().default([]),
+  numberOfServiceRecords: integer("number_of_service_records").notNull().default(0),
+  fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
+export const insertCarfaxCacheSchema = createInsertSchema(carfaxCache).omit({
+  id: true,
+});
+
+export type CarfaxCache = typeof carfaxCache.$inferSelect;
+export type InsertCarfaxCache = z.infer<typeof insertCarfaxCacheSchema>;

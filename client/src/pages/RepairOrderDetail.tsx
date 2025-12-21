@@ -56,7 +56,11 @@ import {
   ChevronDown,
   Receipt,
   Calendar,
-  RefreshCw
+  RefreshCw,
+  History,
+  Clock,
+  Car,
+  AlertTriangle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
@@ -855,6 +859,300 @@ function MaintenanceScheduleTab({
           ))}
         </div>
       </ScrollArea>
+    </div>
+  );
+}
+
+// CARFAX Service History types - matching backend response
+interface CarfaxServiceCategory {
+  serviceName: string;
+  dateOfLastService: string;
+  odometerOfLastService?: string;
+}
+
+interface CarfaxDisplayRecord {
+  displayDate: string;
+  odometer?: string;
+  text: string[];
+  type: 'service' | 'recall';
+}
+
+interface CarfaxVehicleInfo {
+  year: string;
+  make: string;
+  model: string;
+  bodyType?: string;
+  engine?: string;
+  driveline?: string;
+}
+
+interface CarfaxServiceHistoryResponse {
+  vehicle: {
+    id: string;
+    vin: string;
+    year: number;
+    make: string;
+    model: string;
+    mileage: number;
+  };
+  carfaxVehicleInfo?: CarfaxVehicleInfo;
+  source: 'api' | 'cache';
+  cachedAt?: string;
+  numberOfServiceRecords: number;
+  serviceCategories: CarfaxServiceCategory[];
+  displayRecords: CarfaxDisplayRecord[];
+  summary: {
+    totalRecords: number;
+    serviceRecords: number;
+    recallRecords: number;
+  };
+}
+
+function CarfaxServiceHistoryTab({ 
+  vehicleId 
+}: { 
+  vehicleId: string | null; 
+}) {
+  const { data, isLoading, error, refetch, isRefetching } = useQuery<CarfaxServiceHistoryResponse>({
+    queryKey: ['carfax-service-history', vehicleId],
+    queryFn: async () => {
+      const res = await fetch(`/api/vehicles/${vehicleId}/service-history`, { 
+        credentials: 'include' 
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to fetch CARFAX service history');
+      }
+      return res.json();
+    },
+    enabled: !!vehicleId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Check CARFAX configuration status
+  const { data: carfaxStatus } = useQuery({
+    queryKey: ['carfax-status'],
+    queryFn: async () => {
+      const res = await fetch('/api/carfax/status', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to check CARFAX status');
+      return res.json();
+    },
+    staleTime: 60 * 1000,
+  });
+
+  if (!carfaxStatus?.configured) {
+    return (
+      <div className="p-8 text-center">
+        <AlertTriangle className="w-12 h-12 mx-auto text-amber-500 mb-4" />
+        <h3 className="font-semibold text-lg">CARFAX Not Configured</h3>
+        <p className="text-muted-foreground mt-2">
+          CARFAX integration requires configuration. Please contact your administrator.
+        </p>
+      </div>
+    );
+  }
+
+  if (!vehicleId) {
+    return (
+      <div className="p-8 text-center">
+        <Car className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+        <p className="text-muted-foreground">No vehicle associated with this repair order.</p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-8 text-center">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+        <p className="mt-4 text-muted-foreground">Loading CARFAX service history...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 text-center">
+        <AlertCircle className="w-12 h-12 mx-auto text-destructive mb-4" />
+        <h3 className="font-semibold text-lg">Unable to Load Service History</h3>
+        <p className="text-muted-foreground mt-2">{(error as Error).message}</p>
+        <Button 
+          variant="outline" 
+          onClick={() => refetch()} 
+          className="mt-4"
+          disabled={isRefetching}
+          data-testid="button-retry-carfax"
+        >
+          {isRefetching ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  if (!data || data.numberOfServiceRecords === 0) {
+    return (
+      <div className="p-8 text-center">
+        <History className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+        <h3 className="font-semibold text-lg">No Service History Found</h3>
+        <p className="text-muted-foreground mt-2">
+          CARFAX has no service records for this vehicle.
+        </p>
+      </div>
+    );
+  }
+
+  // Helper to safely parse dates
+  const formatCarfaxDate = (dateStr: string) => {
+    if (dateStr === 'Not Reported' || !dateStr) return dateStr;
+    try {
+      return format(new Date(dateStr), 'MMMM d, yyyy');
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatShortDate = (dateStr: string) => {
+    if (dateStr === 'Not Reported' || !dateStr) return dateStr;
+    try {
+      return format(new Date(dateStr), 'MMM d, yyyy');
+    } catch {
+      return dateStr;
+    }
+  };
+
+  return (
+    <div className="space-y-6 p-4">
+      {/* Header with vehicle info */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <History className="w-5 h-5" />
+            CARFAX Service History
+          </h3>
+          {data.vehicle && (
+            <p className="text-sm text-muted-foreground">
+              {data.vehicle.year} {data.vehicle.make} {data.vehicle.model}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {data.source === 'cache' && data.cachedAt && (
+            <span className="text-xs text-muted-foreground">
+              Cached {formatShortDate(data.cachedAt)}
+            </span>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isRefetching}
+            data-testid="button-refresh-carfax"
+          >
+            {isRefetching ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+          </Button>
+        </div>
+      </div>
+
+      {/* Summary badges */}
+      <div className="flex gap-2">
+        <Badge variant="secondary" className="text-xs">
+          {data.summary.serviceRecords} Service Records
+        </Badge>
+        {data.summary.recallRecords > 0 && (
+          <Badge variant="destructive" className="text-xs">
+            {data.summary.recallRecords} Recalls
+          </Badge>
+        )}
+      </div>
+
+      {/* Service Categories Summary */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Service Categories ({data.serviceCategories.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {data.serviceCategories.map((category, idx) => (
+              <div 
+                key={idx} 
+                className="p-3 rounded-lg border bg-card"
+                data-testid={`carfax-category-${idx}`}
+              >
+                <div className="font-medium text-sm truncate" title={category.serviceName}>
+                  {category.serviceName}
+                </div>
+                {category.dateOfLastService && category.dateOfLastService !== 'Not Reported' && (
+                  <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                    <Clock className="w-3 h-3" />
+                    Last: {formatShortDate(category.dateOfLastService)}
+                  </div>
+                )}
+                {category.odometerOfLastService && (
+                  <div className="text-xs text-muted-foreground">
+                    @ {parseInt(category.odometerOfLastService).toLocaleString()} mi
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Detailed Service Records */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Service Records ({data.summary.totalRecords})</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ScrollArea className="max-h-[400px]">
+            <div className="divide-y">
+              {data.displayRecords.map((record, idx) => (
+                <div 
+                  key={idx} 
+                  className="p-4 hover:bg-muted/50"
+                  data-testid={`carfax-record-${idx}`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        {formatCarfaxDate(record.displayDate)}
+                        {record.odometer && (
+                          <Badge variant="outline" className="text-xs">
+                            {parseInt(record.odometer).toLocaleString()} mi
+                          </Badge>
+                        )}
+                      </div>
+                      <Badge 
+                        variant={record.type === 'recall' ? 'destructive' : 'secondary'} 
+                        className="mt-2 text-xs"
+                      >
+                        {record.type === 'recall' ? 'Recall' : 'Service'}
+                      </Badge>
+                    </div>
+                  </div>
+                  {record.text && record.text.length > 0 && (
+                    <div className="mt-3 pl-6">
+                      <ul className="text-sm space-y-1">
+                        {record.text.map((service, sIdx) => (
+                          <li 
+                            key={sIdx} 
+                            className="text-muted-foreground flex items-start gap-2"
+                          >
+                            <Wrench className="w-3 h-3 mt-1 flex-shrink-0" />
+                            <span>{service}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -2007,6 +2305,9 @@ export default function RepairOrderDetail() {
                 <TabsTrigger value="maintenance" className="gap-2">
                    <Calendar className="w-4 h-4" /> OEM Maintenance
                 </TabsTrigger>
+                <TabsTrigger value="carfax" className="gap-2">
+                   <History className="w-4 h-4" /> Service History
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="estimate" className="mt-6 space-y-6">
@@ -2330,6 +2631,12 @@ export default function RepairOrderDetail() {
                   vehicleId={ro.vehicleId} 
                   roId={ro.id}
                   onJobAdded={() => queryClient.invalidateQueries({ queryKey: ['repair-orders', roId] })}
+                />
+              </TabsContent>
+
+              <TabsContent value="carfax" className="mt-6">
+                <CarfaxServiceHistoryTab 
+                  vehicleId={ro.vehicleId} 
                 />
               </TabsContent>
             </Tabs>

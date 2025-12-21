@@ -55,3 +55,11 @@ The database is undergoing a three-phase refactor for enterprise-grade normalize
   - Maintenance item triage based on vehicle mileage (DUE_NOW / DUE_SOON / UPCOMING)
   - Integration in repair order detail page's "OEM Maintenance" tab
   - One-click addition of maintenance items as jobs to the current RO
+- **CARFAX Service History**: Provides vehicle service history lookup via ServicesSocket API (`CARFAX_PRODUCT_DATA_ID`, `CARFAX_LOCATION_ID`). Features include:
+  - Service history retrieval by VIN (requires 17 characters)
+  - PostgreSQL-backed caching with 24-hour TTL (carfax_cache table)
+  - Service category summaries with last service date/odometer
+  - Detailed service records timeline showing date, odometer, and services performed
+  - Matching logic to correlate CARFAX service history with OEM maintenance recommendations
+  - Integration in repair order detail page's "Service History" tab
+  - API routes: `/api/vehicles/:vehicleId/service-history`, `/api/vin/:vin/service-history`, `/api/carfax/status`
