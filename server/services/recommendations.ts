@@ -339,14 +339,12 @@ export async function generateRecommendations(
         // Only escalate to "never performed overdue" if:
         // 1. It's a replacement service (not just an inspection)
         // 2. The interval is reasonable (not severe duty schedule)
-        // 3. Vehicle is significantly past due (>50% over the interval)
-        const significantlyOverdue = currentMileage > (oemDueMileage * 1.5);
+        // 3. Vehicle is past due mileage
         const neverPerformedOverdue = neverPerformed && 
           oemDueMileage > 0 && 
           currentMileage > oemDueMileage &&
           !isInspectionOnly &&
-          !isLikelySevereDutyInterval &&
-          significantlyOverdue;
+          !isLikelySevereDutyInterval;
         
         const { score, priority } = calculatePriorityScore(
           item.dueStatus,
