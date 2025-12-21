@@ -1468,17 +1468,17 @@ function RecommendationsTab({
                           Due @ {rec.rationale.oemDueMileage.toLocaleString()} mi
                         </span>
                       )}
-                      {/* Last Performed - show CARFAX data or "Never performed" */}
+                      {/* Last Performed - show CARFAX data or "Never performed" only when we have due mileage */}
                       {rec.rationale.carfaxLastService ? (
                         <span className="flex items-center gap-1">
                           <History className="w-3 h-3" />
                           Last performed: {rec.rationale.carfaxLastService.date}
                           {rec.rationale.carfaxLastService.odometer && ` @ ${rec.rationale.carfaxLastService.odometer.toLocaleString()} mi`}
                         </span>
-                      ) : rec.sources.includes('OEM') && (
+                      ) : rec.sources.includes('OEM') && rec.rationale.oemDueMileage && rec.rationale.oemDueMileage > 0 && (
                         <span className="flex items-center gap-1 text-amber-600">
                           <AlertCircle className="w-3 h-3" />
-                          Never performed/reported
+                          No service history on file
                         </span>
                       )}
                       {rec.rationale.milesSinceLastService !== null && rec.rationale.milesSinceLastService !== undefined && rec.rationale.milesSinceLastService > 0 && (
@@ -1542,7 +1542,16 @@ function RecommendationsTab({
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="font-medium text-sm">{rec.serviceName}</span>
-                        <p className="text-xs text-muted-foreground">{rec.suppressedReason}</p>
+                        {rec.rationale.carfaxLastService ? (
+                          <p className="text-xs text-muted-foreground">
+                            Last performed: {rec.rationale.carfaxLastService.date}
+                            {rec.rationale.carfaxLastService.odometer && ` @ ${rec.rationale.carfaxLastService.odometer.toLocaleString()} mi`}
+                            {rec.rationale.milesSinceLastService && rec.rationale.milesSinceLastService > 0 && 
+                              ` (${rec.rationale.milesSinceLastService.toLocaleString()} mi ago)`}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">Completed - monitoring not required</p>
+                        )}
                       </div>
                       <CheckCircle2 className="w-4 h-4 text-green-500" />
                     </div>
