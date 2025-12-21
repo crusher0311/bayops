@@ -1231,21 +1231,34 @@ function RecommendationsTab({
 
   const addJobMutation = useMutation({
     mutationFn: async (rec: ServiceRecommendation) => {
+      // Build description from all available rationale
+      const descriptionParts: string[] = [rec.suggestedAction];
+      if (rec.rationale.oemDueStatus && rec.rationale.oemDueStatus !== 'OK') {
+        descriptionParts.push(`OEM Status: ${rec.rationale.oemDueStatus.replace('_', ' ')}`);
+      }
+      if (rec.rationale.milesSinceLastService && rec.rationale.milesSinceLastService > 0) {
+        descriptionParts.push(`${rec.rationale.milesSinceLastService.toLocaleString()} miles since last service`);
+      }
+      if (rec.rationale.dviFinding) {
+        descriptionParts.push(`Inspection: ${rec.rationale.dviFinding.status}${rec.rationale.dviFinding.notes ? ` - ${rec.rationale.dviFinding.notes}` : ''}`);
+      }
+
       const res = await fetch(`/api/repair-orders/${roId}/add-maintenance-job`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
+          maintenanceId: rec.id,
           name: rec.serviceName,
-          description: rec.suggestedAction,
-          notes: [
-            rec.rationale.oemDueStatus ? `OEM Status: ${rec.rationale.oemDueStatus}` : null,
-            rec.rationale.milesSinceLastService ? `Miles since last service: ${rec.rationale.milesSinceLastService.toLocaleString()}` : null,
-            rec.rationale.dviFinding ? `Inspection finding: ${rec.rationale.dviFinding.status}${rec.rationale.dviFinding.notes ? ` - ${rec.rationale.dviFinding.notes}` : ''}` : null,
-          ].filter(Boolean).join('\n'),
+          description: descriptionParts.join('. '),
+          intervalMiles: rec.rationale.oemInterval?.miles || null,
+          intervalMonths: rec.rationale.oemInterval?.months || null,
         }),
       });
-      if (!res.ok) throw new Error('Failed to add job');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to add job');
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -1447,9 +1460,23 @@ function RecommendationsTab({
                           OEM: {rec.rationale.oemDueStatus.replace('_', ' ')}
                         </span>
                       )}
-                      {rec.rationale.milesSinceLastService !== null && rec.rationale.milesSinceLastService !== undefined && (
+                      {rec.rationale.oemInterval && (rec.rationale.oemInterval.miles || rec.rationale.oemInterval.months) && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          Interval: {rec.rationale.oemInterval.miles ? `${rec.rationale.oemInterval.miles.toLocaleString()} mi` : ''}
+                          {rec.rationale.oemInterval.miles && rec.rationale.oemInterval.months ? ' / ' : ''}
+                          {rec.rationale.oemInterval.months ? `${rec.rationale.oemInterval.months} mo` : ''}
+                        </span>
+                      )}
+                      {rec.rationale.oemDueMileage && rec.rationale.oemDueMileage > 0 && (
                         <span className="flex items-center gap-1">
                           <Car className="w-3 h-3" />
+                          Due @ {rec.rationale.oemDueMileage.toLocaleString()} mi
+                        </span>
+                      )}
+                      {rec.rationale.milesSinceLastService !== null && rec.rationale.milesSinceLastService !== undefined && rec.rationale.milesSinceLastService > 0 && (
+                        <span className="flex items-center gap-1">
+                          <History className="w-3 h-3" />
                           {rec.rationale.milesSinceLastService.toLocaleString()} mi since last service
                         </span>
                       )}
