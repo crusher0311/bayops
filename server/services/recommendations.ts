@@ -85,9 +85,21 @@ function isServiceDue(
   serviceName: string,
   lastServiceOdometer: number | null,
   lastServiceDate: string | null,
-  currentMileage: number
+  currentMileage: number,
+  oemInterval?: { miles?: number; months?: number } | null  // Use OEM interval if provided
 ): { isDue: boolean; reason: string; dueLevel: 'OVERDUE' | 'DUE_SOON' | 'OK' } {
-  const interval = getServiceInterval(serviceName);
+  // Prefer OEM interval data over the generic SERVICE_INTERVALS map
+  let interval: { miles: number; months: number } | null = null;
+  
+  if (oemInterval?.miles || oemInterval?.months) {
+    interval = {
+      miles: oemInterval.miles || 999999,  // Default to high value if not specified
+      months: oemInterval.months || 999,
+    };
+  } else {
+    interval = getServiceInterval(serviceName);
+  }
+  
   if (!interval) {
     return { isDue: false, reason: 'No interval data available', dueLevel: 'OK' };
   }
@@ -152,15 +164,19 @@ function calculatePriorityScore(
   if (neverPerformedOverdue) {
     score += 90; // Higher than DUE_NOW to ensure URGENT priority
   } else {
-    // OEM schedule is the primary source for maintenance timing
-    if (oemDueStatus === 'DUE_NOW') score += 80;
-    else if (oemDueStatus === 'DUE_SOON') score += 40;
-    else if (oemDueStatus === 'UPCOMING') score += 20;
-    
-    // CARFAX only adds to score when OEM says DUE_NOW or DUE_SOON
-    if (oemDueStatus === 'DUE_NOW' || oemDueStatus === 'DUE_SOON') {
-      if (carfaxDueCheck?.dueLevel === 'OVERDUE') score += 15;
-      else if (carfaxDueCheck?.dueLevel === 'DUE_SOON') score += 10;
+    // CARFAX overdue data is highly reliable - if a service was performed and it's now overdue,
+    // that should escalate priority regardless of what OEM triage says
+    // CARFAX can override OEM UPCOMING when service is actually overdue based on service history
+    if (carfaxDueCheck?.dueLevel === 'OVERDUE') {
+      // Service was performed before but is now overdue based on interval
+      score += 70; // Strong signal - confirmed service history + confirmed overdue
+    } else if (carfaxDueCheck?.dueLevel === 'DUE_SOON') {
+      score += 35; // Getting close to being due
+    } else {
+      // No CARFAX data or service is up to date - rely on OEM schedule
+      if (oemDueStatus === 'DUE_NOW') score += 80;
+      else if (oemDueStatus === 'DUE_SOON') score += 40;
+      else if (oemDueStatus === 'UPCOMING') score += 20;
     }
   }
   
@@ -299,7 +315,8 @@ export async function generateRecommendations(
             item.maintenance_name,
             lastServiceOdometer,
             carfaxMatch.dateOfLastService,
-            currentMileage
+            currentMileage,
+            { miles: item.miles ?? undefined, months: item.months ?? undefined }  // Use OEM interval for accurate due calculation
           );
         }
         
