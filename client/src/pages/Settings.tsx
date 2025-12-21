@@ -34,8 +34,11 @@ import {
   Save,
   Package,
   Clock,
-  Upload
+  Upload,
+  Database,
+  ArrowRight,
 } from 'lucide-react';
+import { useLocation } from 'wouter';
 import { ObjectUploader } from '@/components/ObjectUploader';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
@@ -51,7 +54,7 @@ interface WorkflowStage {
   isEnabled?: boolean;
 }
 
-type SettingsTab = 'shop' | 'ro' | 'markups' | 'marketing' | 'branding' | 'workflows' | 'cannedjobs';
+type SettingsTab = 'shop' | 'ro' | 'markups' | 'marketing' | 'branding' | 'workflows' | 'cannedjobs' | 'import';
 
 export default function Settings() {
   const { data: locations = [], isLoading: locationsLoading } = useLocations();
@@ -114,7 +117,7 @@ export default function Settings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as SettingsTab)} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7 bg-slate-100 p-1 rounded-lg">
+        <TabsList className="grid w-full grid-cols-8 bg-slate-100 p-1 rounded-lg">
           <TabsTrigger value="shop" className="flex gap-2 data-[state=active]:bg-white" data-testid="tab-shop-profile">
             <Building2 className="w-4 h-4" />
             <span className="hidden sm:inline">Shop Profile</span>
@@ -142,6 +145,10 @@ export default function Settings() {
           <TabsTrigger value="workflows" className="flex gap-2 data-[state=active]:bg-white" data-testid="tab-workflows">
             <SettingsIcon className="w-4 h-4" />
             <span className="hidden sm:inline">Workflows</span>
+          </TabsTrigger>
+          <TabsTrigger value="import" className="flex gap-2 data-[state=active]:bg-white" data-testid="tab-import">
+            <Database className="w-4 h-4" />
+            <span className="hidden sm:inline">Import</span>
           </TabsTrigger>
         </TabsList>
 
@@ -192,6 +199,10 @@ export default function Settings() {
 
         <TabsContent value="workflows" className="space-y-6">
           <WorkflowsTab workflows={workflows} />
+        </TabsContent>
+
+        <TabsContent value="import" className="space-y-6">
+          <DataImportTab />
         </TabsContent>
       </Tabs>
     </AppLayout>
@@ -2626,5 +2637,44 @@ function CannedJobsTab({ locationId, settings }: { locationId: string; settings:
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function DataImportTab() {
+  const [, setLocation] = useLocation();
+  
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Data Import</CardTitle>
+          <CardDescription>
+            Import data from other shop management systems
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="border rounded-lg p-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                <Database className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-medium">Protractor</h3>
+                <p className="text-sm text-muted-foreground">
+                  Import customers, vehicles, and repair order history from Protractor
+                </p>
+              </div>
+            </div>
+            <Button 
+              onClick={() => setLocation('/import/protractor')}
+              data-testid="button-import-protractor"
+            >
+              Import
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
