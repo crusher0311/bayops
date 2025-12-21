@@ -2375,6 +2375,23 @@ export default function RepairOrderDetail() {
     });
   };
 
+  const handleDeleteJob = (jobId: string) => {
+    const jobToDelete = jobs.find(j => j.id === jobId);
+    const updatedJobs = jobs.filter(job => job.id !== jobId);
+    
+    updateRO.mutate({
+      id: ro.id,
+      updates: { jobs: updatedJobs as any },
+    }, {
+      onSuccess: () => {
+        toast({
+          title: 'Job removed',
+          description: `"${jobToDelete?.name || jobToDelete?.title || 'Job'}" has been removed from this repair order.`,
+        });
+      }
+    });
+  };
+
   const handleEditItem = (jobId: string, item: LineItem) => {
     setEditingItem({ jobId, item });
     setEditForm({
@@ -2892,6 +2909,16 @@ export default function RepairOrderDetail() {
                               data-testid={`button-add-part-${job.id}`}
                             >
                               <Plus className="w-3 h-3" /> Part
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-destructive hover:bg-destructive/10" 
+                              onClick={() => handleDeleteJob(job.id)}
+                              disabled={updateRO.isPending}
+                              data-testid={`button-delete-job-${job.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </div>
