@@ -37,6 +37,7 @@ import {
   Upload,
   Database,
   ArrowRight,
+  Plug,
 } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { ObjectUploader } from '@/components/ObjectUploader';
@@ -55,7 +56,7 @@ interface WorkflowStage {
   isEnabled?: boolean;
 }
 
-type SettingsTab = 'shop' | 'ro' | 'markups' | 'marketing' | 'branding' | 'workflows' | 'cannedjobs' | 'import';
+type SettingsTab = 'shop' | 'ro' | 'markups' | 'marketing' | 'branding' | 'workflows' | 'cannedjobs' | 'integrations' | 'import';
 
 export default function Settings() {
   const { data: locations = [], isLoading: locationsLoading } = useLocations();
@@ -118,7 +119,7 @@ export default function Settings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as SettingsTab)} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-8 bg-slate-100 p-1 rounded-lg">
+        <TabsList className="grid w-full grid-cols-9 bg-slate-100 p-1 rounded-lg">
           <TabsTrigger value="shop" className="flex gap-2 data-[state=active]:bg-white" data-testid="tab-shop-profile">
             <Building2 className="w-4 h-4" />
             <span className="hidden sm:inline">Shop Profile</span>
@@ -147,8 +148,12 @@ export default function Settings() {
             <SettingsIcon className="w-4 h-4" />
             <span className="hidden sm:inline">Workflows</span>
           </TabsTrigger>
+          <TabsTrigger value="integrations" className="flex gap-2 data-[state=active]:bg-white" data-testid="tab-integrations">
+            <Plug className="w-4 h-4" />
+            <span className="hidden sm:inline">Integrations</span>
+          </TabsTrigger>
           <TabsTrigger value="import" className="flex gap-2 data-[state=active]:bg-white" data-testid="tab-import">
-            <Database className="w-4 h-4" />
+            <Upload className="w-4 h-4" />
             <span className="hidden sm:inline">Import</span>
           </TabsTrigger>
         </TabsList>
@@ -200,6 +205,10 @@ export default function Settings() {
 
         <TabsContent value="workflows" className="space-y-6">
           <WorkflowsTab workflows={workflows} />
+        </TabsContent>
+
+        <TabsContent value="integrations" className="space-y-6">
+          <IntegrationsTab locationId={selectedLocationId} />
         </TabsContent>
 
         <TabsContent value="import" className="space-y-6">
@@ -2641,34 +2650,121 @@ function CannedJobsTab({ locationId, settings }: { locationId: string; settings:
   );
 }
 
-function DataImportTab({ locationId }: { locationId: string }) {
-  const [, setLocation] = useLocation();
+// Available integration types
+const AVAILABLE_INTEGRATIONS = [
+  { id: 'protractor', name: 'Protractor', description: 'Import customers, vehicles, and repair orders from Protractor' },
+  // Future integrations can be added here:
+  // { id: 'quickbooks', name: 'QuickBooks', description: 'Sync invoices and payments' },
+  // { id: 'carfax', name: 'CARFAX', description: 'Service history integration' },
+];
+
+function IntegrationsTab({ locationId }: { locationId: string }) {
   const { data: locations = [] } = useLocations();
   const currentLocation = locations.find(l => l.id === locationId);
+  const [selectedIntegration, setSelectedIntegration] = useState<string>('protractor');
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  
+  // For now, Protractor is the only available integration
+  const activeIntegrations = ['protractor'];
+  const availableToAdd = AVAILABLE_INTEGRATIONS.filter(i => !activeIntegrations.includes(i.id));
+  
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Plug className="w-5 h-5" />
+                Integrations
+              </CardTitle>
+              <CardDescription>
+                Connect external systems and services to enhance your shop management.
+              </CardDescription>
+            </div>
+            <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" data-testid="button-add-integration">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Integration
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add Integration</DialogTitle>
+                </DialogHeader>
+                <div className="py-4">
+                  {availableToAdd.length > 0 ? (
+                    <div className="space-y-3">
+                      {availableToAdd.map(integration => (
+                        <div 
+                          key={integration.id}
+                          className="border rounded-lg p-4 cursor-pointer hover:bg-slate-50"
+                          onClick={() => {
+                            // Handle adding integration
+                            setAddDialogOpen(false);
+                          }}
+                        >
+                          <h4 className="font-medium">{integration.name}</h4>
+                          <p className="text-sm text-muted-foreground">{integration.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-center py-8">
+                      All available integrations are already configured.
+                    </p>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {activeIntegrations.length > 1 && (
+            <div className="mb-4">
+              <Label>Select Integration</Label>
+              <Select value={selectedIntegration} onValueChange={setSelectedIntegration}>
+                <SelectTrigger className="w-[300px] mt-1" data-testid="select-integration">
+                  <SelectValue placeholder="Select an integration" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeIntegrations.map(id => {
+                    const integration = AVAILABLE_INTEGRATIONS.find(i => i.id === id);
+                    return (
+                      <SelectItem key={id} value={id}>
+                        {integration?.name || id}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
+          {selectedIntegration === 'protractor' && (
+            <ProtractorIntegration 
+              locationId={locationId}
+              locationName={currentLocation?.name || 'Current Location'}
+            />
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function DataImportTab({ locationId }: { locationId: string }) {
+  const [, setLocation] = useLocation();
   
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Database className="w-5 h-5" />
-            Data Integrations
+            <Upload className="w-5 h-5" />
+            One-Time Migration
           </CardTitle>
-          <CardDescription>
-            Connect external systems to import historical data.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <ProtractorIntegration 
-            locationId={locationId}
-            locationName={currentLocation?.name || 'Current Location'}
-          />
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>One-Time Migration</CardTitle>
           <CardDescription>
             Import all historical data at once from another system
           </CardDescription>
