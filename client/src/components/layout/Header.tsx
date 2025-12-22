@@ -31,14 +31,14 @@ export function Header() {
 
   const currentLocation = locations.find(l => l.id === currentLocationId);
   
-  // Get organization branding/name
-  const { data: branding } = useQuery({
-    queryKey: ['org-branding'],
-    queryFn: () => apiRequest('/api/settings/branding'),
-    enabled: !!user,
+  // Get organization details
+  const { data: organization } = useQuery({
+    queryKey: ['organization', user?.orgId],
+    queryFn: () => apiRequest(`/api/organizations/${user?.orgId}`),
+    enabled: !!user?.orgId,
   });
   
-  const orgName = branding?.name || currentLocation?.name || 'BayOPS';
+  const orgName = organization?.name || currentLocation?.name || 'BayOPS';
 
   const handleLogout = async () => {
     await logout();

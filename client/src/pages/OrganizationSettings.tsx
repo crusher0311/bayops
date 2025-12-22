@@ -14,14 +14,16 @@ import {
   Check,
   Store,
   Loader2,
-  Database
+  Database,
+  Save
 } from 'lucide-react';
 import { ProtractorIntegration } from '@/components/ProtractorIntegration';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 
 export default function OrganizationSettings() {
   const { user } = useAuthStore();
@@ -31,6 +33,63 @@ export default function OrganizationSettings() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  
+  // Fetch organization data
+  const { data: organization, isLoading: orgLoading } = useQuery({
+    queryKey: ['organization', user?.orgId],
+    queryFn: () => apiRequest(`/api/organizations/${user?.orgId}`),
+    enabled: !!user?.orgId,
+  });
+  
+  // Local state for editable fields
+  const [orgName, setOrgName] = useState('');
+  const [billingEmail, setBillingEmail] = useState('');
+  const [hasChanges, setHasChanges] = useState(false);
+  
+  // Sync local state with fetched data
+  useEffect(() => {
+    if (organization) {
+      setOrgName(organization.name || '');
+      setBillingEmail(organization.billingEmail || '');
+    }
+  }, [organization]);
+  
+  // Track changes
+  useEffect(() => {
+    if (organization) {
+      setHasChanges(
+        orgName !== organization.name || 
+        billingEmail !== organization.billingEmail
+      );
+    }
+  }, [orgName, billingEmail, organization]);
+  
+  // Update organization mutation
+  const updateOrgMutation = useMutation({
+    mutationFn: async (data: { name: string; billingEmail: string }) => {
+      const res = await fetch(`/api/organizations/${user?.orgId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to update organization');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organization'] });
+      queryClient.invalidateQueries({ queryKey: ['org-branding'] });
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+      toast({ title: 'Organization updated', description: 'Your changes have been saved.' });
+      setHasChanges(false);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
 
   const createLocationMutation = useMutation({
     mutationFn: async (name: string) => {
@@ -70,7 +129,7 @@ export default function OrganizationSettings() {
   const activeLocations = locations.filter(l => l.isActive).length;
   const estimatedBill = activeLocations * 199;
 
-  if (locationsLoading) {
+  if (locationsLoading || orgLoading) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-64">
@@ -137,18 +196,43 @@ export default function OrganizationSettings() {
               <Building2 className="w-5 h-5 text-primary" />
               Organization Profile
             </CardTitle>
-            <CardDescription>General settings for Apex Automotive Group.</CardDescription>
+            <CardDescription>General settings for {organization?.name || 'your organization'}.</CardDescription>
           </CardHeader>
           <CardContent>
              <div className="space-y-4">
                <div className="grid gap-1">
                  <label className="text-sm font-medium">Organization Name</label>
-                 <Input value="Apex Automotive Group" readOnly />
+                 <Input 
+                   value={orgName} 
+                   onChange={(e) => setOrgName(e.target.value)}
+                   placeholder="Your organization name"
+                   data-testid="input-org-name"
+                 />
                </div>
                <div className="grid gap-1">
                  <label className="text-sm font-medium">Billing Email</label>
-                 <Input value="billing@apexauto.com" readOnly />
+                 <Input 
+                   value={billingEmail} 
+                   onChange={(e) => setBillingEmail(e.target.value)}
+                   placeholder="billing@yourcompany.com"
+                   type="email"
+                   data-testid="input-billing-email"
+                 />
                </div>
+               {hasChanges && (
+                 <Button 
+                   className="w-full gap-2" 
+                   onClick={() => updateOrgMutation.mutate({ name: orgName, billingEmail })}
+                   disabled={updateOrgMutation.isPending}
+                   data-testid="button-save-org"
+                 >
+                   {updateOrgMutation.isPending ? (
+                     <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
+                   ) : (
+                     <><Save className="w-4 h-4" /> Save Changes</>
+                   )}
+                 </Button>
+               )}
                <div className="pt-2">
                  <p className="text-xs text-muted-foreground">
                    Organization ID: <span className="font-mono bg-muted px-1 py-0.5 rounded" data-testid="text-org-id">{user?.orgId}</span>
