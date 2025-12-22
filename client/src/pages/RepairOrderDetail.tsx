@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRoute, Link } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -49,6 +49,7 @@ import {
   Copy,
   Check,
   ClipboardCheck,
+  ClipboardList,
   ExternalLink,
   Wrench,
   ShoppingCart,
@@ -347,8 +348,113 @@ function PartstechDialog({ isOpen, onClose, vehicle, onSelect, jobName }: Partst
   const [manualDescription, setManualDescription] = useState('');
   const [manualBrand, setManualBrand] = useState('');
   const [manualPrice, setManualPrice] = useState('');
+  const [manualSupplier, setManualSupplier] = useState('');
+  const [manualQuantity, setManualQuantity] = useState('1');
+  const [addedParts, setAddedParts] = useState<string[]>([]);
+  const partNumberRef = useRef<HTMLInputElement>(null);
   const partstechSearch = usePartstechSearch();
   const { data: ptStatus } = usePartstechStatus();
+  
+  // Focus on part number field when dialog opens
+  useEffect(() => {
+    if (isOpen && partNumberRef.current) {
+      setTimeout(() => partNumberRef.current?.focus(), 100);
+    }
+    if (!isOpen) {
+      setAddedParts([]);
+    }
+  }, [isOpen]);
+  
+  // Parse a single line of part info
+  const parsePartLine = (text: string): { partNumber?: string; brand?: string; description?: string; price?: string } | null => {
+    // Try pattern: "PartNumber - Brand - Description - $Price"
+    const dashPattern = /^([A-Z0-9-]+)\s*[-–]\s*([^-–]+)\s*[-–]\s*(.+?)\s*[-–]?\s*\$?([\d,.]+)?$/i;
+    const dashMatch = text.match(dashPattern);
+    if (dashMatch) {
+      return {
+        partNumber: dashMatch[1].trim(),
+        brand: dashMatch[2].trim(),
+        description: dashMatch[3].trim(),
+        price: dashMatch[4]?.replace(',', ''),
+      };
+    }
+    
+    // Try pattern: labeled fields "Part: X | Brand: Y | ..."
+    const labeledPattern = /part[:#\s]*([A-Z0-9-]+)/i;
+    const brandPattern = /brand[:#\s]*([^|,\n]+)/i;
+    const descPattern = /desc(?:ription)?[:#\s]*([^|,\n]+)/i;
+    const pricePattern = /(?:price|cost)[:#\s]*\$?([\d,.]+)/i;
+    
+    const partMatch = text.match(labeledPattern);
+    const brandMatch = text.match(brandPattern);
+    const descMatch = text.match(descPattern);
+    const priceMatch = text.match(pricePattern);
+    
+    if (partMatch || brandMatch || descMatch || priceMatch) {
+      return {
+        partNumber: partMatch?.[1].trim(),
+        brand: brandMatch?.[1].trim(),
+        description: descMatch?.[1].trim(),
+        price: priceMatch?.[1].replace(',', ''),
+      };
+    }
+    
+    return null;
+  };
+  
+  // Smart paste parser - triggered by paste event only
+  const handlePasteEvent = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData.getData('text');
+    if (!text) return;
+    
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    
+    // If multiple lines, try to add each as a separate part
+    if (lines.length > 1) {
+      const parsedParts: PartstechPart[] = [];
+      
+      for (const line of lines) {
+        const parsed = parsePartLine(line);
+        if (parsed && parsed.partNumber && parsed.description) {
+          parsedParts.push({
+            partNumber: parsed.partNumber,
+            description: parsed.description,
+            brand: parsed.brand || 'Unknown',
+            price: parsed.price ? parseFloat(parsed.price) : undefined,
+            supplier: manualSupplier || undefined, // Use selected supplier for all bulk items
+            quantity: 1,
+          });
+        }
+      }
+      
+      // If we parsed multiple parts, add them all and show confirmation
+      if (parsedParts.length > 0) {
+        e.preventDefault();
+        parsedParts.forEach(part => onSelect(part));
+        // Update added parts list to show confirmation in the dialog
+        setAddedParts(prev => [...prev, ...parsedParts.map(p => `${p.partNumber} - ${p.description}`)]);
+        // Clear form fields after bulk add
+        setManualPartNumber('');
+        setManualDescription('');
+        setManualBrand('');
+        setManualPrice('');
+        return;
+      }
+      // If we couldn't parse multi-line, allow default paste behavior
+      return;
+    }
+    
+    // Single line - fill the form
+    const parsed = parsePartLine(text);
+    if (parsed) {
+      e.preventDefault();
+      if (parsed.partNumber) setManualPartNumber(parsed.partNumber);
+      if (parsed.brand) setManualBrand(parsed.brand);
+      if (parsed.description) setManualDescription(parsed.description);
+      if (parsed.price) setManualPrice(parsed.price);
+    }
+    // If no pattern matched, allow default paste
+  };
   
   const handleSearch = async () => {
     if (!searchTerm.trim()) return;
@@ -399,22 +505,47 @@ function PartstechDialog({ isOpen, onClose, vehicle, onSelect, jobName }: Partst
     }
   };
 
-  const handleManualPartAdd = () => {
+  const handleManualPartAdd = (keepOpen = false) => {
     if (!manualPartNumber.trim() || !manualDescription.trim()) return;
     
+    const qty = parseInt(manualQuantity) || 1;
+    
+    // Create part with quantity - onSelect handles creating the line item with proper quantity
     const part: PartstechPart = {
       partNumber: manualPartNumber.trim(),
       description: manualDescription.trim(),
       brand: manualBrand.trim() || 'Unknown',
       price: manualPrice ? parseFloat(manualPrice) : undefined,
+      supplier: manualSupplier || undefined,
+      quantity: qty,
     };
-    
     onSelect(part);
+    
+    // Track added parts for confirmation
+    setAddedParts(prev => [...prev, `${manualPartNumber} - ${manualDescription} (x${qty})`]);
+    
+    // Clear form for next entry
     setManualPartNumber('');
     setManualDescription('');
     setManualBrand('');
     setManualPrice('');
-    onClose();
+    setManualQuantity('1');
+    
+    if (!keepOpen) {
+      onClose();
+    } else {
+      // Focus back to part number for rapid entry
+      setTimeout(() => partNumberRef.current?.focus(), 50);
+    }
+  };
+  
+  const handleFormKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (manualPartNumber.trim() && manualDescription.trim()) {
+        handleManualPartAdd(true); // Keep dialog open for more parts
+      }
+    }
   };
 
   if (!ptStatus?.configured) {
@@ -456,19 +587,29 @@ function PartstechDialog({ isOpen, onClose, vehicle, onSelect, jobName }: Partst
 
             <Separator />
 
-            <div>
-              <h4 className="font-medium mb-3 flex items-center gap-2">
-                <Plus className="w-4 h-4" />
-                Add Part to Repair Order
-              </h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
+            <div onKeyDown={handleFormKeyDown}>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  Add Part to Repair Order
+                </h4>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <ClipboardList className="w-3 h-3" />
+                  <span>Paste from PartsTech to auto-fill</span>
+                  <span className="mx-1">|</span>
+                  <span>Enter to add & continue</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-3">
+                <div className="col-span-2 space-y-1.5">
                   <Label htmlFor="partNumber" className="text-xs">Part Number *</Label>
                   <Input
+                    ref={partNumberRef}
                     id="partNumber"
-                    placeholder="e.g. BP-12345"
+                    placeholder='e.g. BP-12345 (paste "CRK4233 - PowerStop - Brake Kit - $858")'
                     value={manualPartNumber}
                     onChange={(e) => setManualPartNumber(e.target.value)}
+                    onPaste={handlePasteEvent}
                     data-testid="input-manual-part-number"
                   />
                 </div>
@@ -482,7 +623,23 @@ function PartstechDialog({ isOpen, onClose, vehicle, onSelect, jobName }: Partst
                     data-testid="input-manual-brand"
                   />
                 </div>
-                <div className="col-span-2 space-y-1.5">
+                <div className="space-y-1.5">
+                  <Label htmlFor="partSupplier" className="text-xs">Supplier</Label>
+                  <Select value={manualSupplier} onValueChange={setManualSupplier}>
+                    <SelectTrigger data-testid="select-supplier">
+                      <SelectValue placeholder="Select..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="autozone">AutoZone</SelectItem>
+                      <SelectItem value="worldpac">Worldpac</SelectItem>
+                      <SelectItem value="oreilly">O'Reilly</SelectItem>
+                      <SelectItem value="napa">NAPA</SelectItem>
+                      <SelectItem value="advance">Advance Auto</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="col-span-3 space-y-1.5">
                   <Label htmlFor="partDescription" className="text-xs">Description *</Label>
                   <Input
                     id="partDescription"
@@ -490,6 +647,17 @@ function PartstechDialog({ isOpen, onClose, vehicle, onSelect, jobName }: Partst
                     value={manualDescription}
                     onChange={(e) => setManualDescription(e.target.value)}
                     data-testid="input-manual-description"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="partQty" className="text-xs">Qty</Label>
+                  <Input
+                    id="partQty"
+                    type="number"
+                    min="1"
+                    value={manualQuantity}
+                    onChange={(e) => setManualQuantity(e.target.value)}
+                    data-testid="input-manual-qty"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -504,23 +672,53 @@ function PartstechDialog({ isOpen, onClose, vehicle, onSelect, jobName }: Partst
                     data-testid="input-manual-price"
                   />
                 </div>
-                <div className="flex items-end">
+                <div className="col-span-3 flex items-end gap-2">
                   <Button 
-                    onClick={handleManualPartAdd}
+                    onClick={() => handleManualPartAdd(true)}
                     disabled={!manualPartNumber.trim() || !manualDescription.trim()}
-                    className="w-full"
-                    data-testid="button-add-manual-part"
+                    variant="outline"
+                    className="flex-1"
+                    data-testid="button-add-another-part"
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    Add Part
+                    Add & Continue
+                  </Button>
+                  <Button 
+                    onClick={() => handleManualPartAdd(false)}
+                    disabled={!manualPartNumber.trim() || !manualDescription.trim()}
+                    className="flex-1"
+                    data-testid="button-add-manual-part"
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    Add & Close
                   </Button>
                 </div>
               </div>
+              
+              {/* Show recently added parts */}
+              {addedParts.length > 0 && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-green-700 text-sm font-medium mb-2">
+                    <Check className="w-4 h-4" />
+                    Parts Added ({addedParts.length})
+                  </div>
+                  <ul className="text-xs text-green-600 space-y-1">
+                    {addedParts.slice(-5).map((part, idx) => (
+                      <li key={idx}>{part}</li>
+                    ))}
+                    {addedParts.length > 5 && (
+                      <li className="text-green-500">...and {addedParts.length - 5} more</li>
+                    )}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={onClose}>Close</Button>
+            <Button variant="outline" onClick={onClose}>
+              {addedParts.length > 0 ? 'Done' : 'Close'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -2146,12 +2344,13 @@ export default function RepairOrderDetail() {
     
     const partCost = part.price || 0;
     const partPrice = applyPartsMatrix(partCost);
+    const qty = part.quantity || 1;
     
     const newItem: LineItem = {
       id: `li-${Date.now()}`,
       type: 'PART',
       description: part.description,
-      quantity: 1,
+      quantity: qty,
       unitCost: partCost,
       unitPrice: partPrice,
       approved: true,
@@ -2171,9 +2370,8 @@ export default function RepairOrderDetail() {
       updates: { jobs: updatedJobs as any },
     });
     
-    setIsPartstechOpen(false);
-    setPartstechJobId(null);
-    toast({ title: 'Part added', description: `${part.description} added to job` });
+    // Toast notification - dialog manages its own close via onClose prop
+    toast({ title: 'Part added', description: `${part.description} (x${qty}) added to job` });
   };
 
   // AI Service Writer functions
