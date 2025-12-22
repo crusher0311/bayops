@@ -114,6 +114,95 @@ interface PartsMatrix {
   markupPercent: string;
 }
 
+// Parts supplier metadata for the visual supplier bar
+const PARTS_SUPPLIERS = [
+  { id: 'autozone', name: 'AutoZone', shortName: 'AZ', color: '#CC0000', bgColor: 'bg-red-600' },
+  { id: 'worldpac', name: 'Worldpac', shortName: 'WP', color: '#1E3A8A', bgColor: 'bg-blue-900' },
+  { id: 'oreilly', name: "O'Reilly", shortName: 'OR', color: '#16A34A', bgColor: 'bg-green-600' },
+  { id: 'napa', name: 'NAPA', shortName: 'NP', color: '#1E40AF', bgColor: 'bg-blue-800' },
+  { id: 'advance', name: 'Advance Auto', shortName: 'AA', color: '#DC2626', bgColor: 'bg-red-700' },
+];
+
+// Supplier bar component for job cards
+function SupplierBar({ 
+  job, 
+  onSearchParts,
+  disabled 
+}: { 
+  job: ServiceJob; 
+  onSearchParts: () => void;
+  disabled?: boolean;
+}) {
+  // Count parts by supplier
+  const supplierCounts = job.lineItems
+    .filter(item => item.type === 'PART' && item.supplier)
+    .reduce((acc, item) => {
+      const supplierId = item.supplier?.toLowerCase().replace(/[^a-z]/g, '') || 'unknown';
+      acc[supplierId] = (acc[supplierId] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+  const totalParts = job.lineItems.filter(item => item.type === 'PART').length;
+  const partsWithSupplier = Object.values(supplierCounts).reduce((a, b) => a + b, 0);
+
+  return (
+    <div className="border-t bg-slate-50/50 px-4 py-3">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground font-medium">Parts Suppliers:</span>
+          <div className="flex items-center gap-1.5">
+            {PARTS_SUPPLIERS.map(supplier => {
+              const count = supplierCounts[supplier.id] || 0;
+              const hasPartsFromSupplier = count > 0;
+              
+              return (
+                <TooltipProvider key={supplier.id}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div 
+                        className={cn(
+                          "w-8 h-6 rounded flex items-center justify-center text-[10px] font-bold transition-all",
+                          hasPartsFromSupplier 
+                            ? `${supplier.bgColor} text-white shadow-sm` 
+                            : "bg-slate-200 text-slate-400"
+                        )}
+                      >
+                        {supplier.shortName}
+                        {hasPartsFromSupplier && count > 1 && (
+                          <span className="ml-0.5 text-[8px]">{count}</span>
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{supplier.name}{hasPartsFromSupplier ? `: ${count} part${count > 1 ? 's' : ''}` : ''}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              );
+            })}
+          </div>
+          {totalParts > 0 && (
+            <Badge variant="outline" className="text-[10px] ml-2">
+              {partsWithSupplier}/{totalParts} sourced
+            </Badge>
+          )}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-700 border-orange-500/20"
+          onClick={onSearchParts}
+          disabled={disabled}
+          data-testid={`button-supplier-search-${job.id}`}
+        >
+          <Search className="w-3 h-3" />
+          Search Parts
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function LaborGuideDialog({ isOpen, onClose, vehicle, onSelect }: LaborGuideDialogProps) {
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -241,11 +330,19 @@ interface PartstechDialogProps {
   onClose: () => void;
   vehicle: { vin?: string; year?: number; make?: string; model?: string } | null;
   onSelect: (part: PartstechPart) => void;
+  jobName?: string; // Job context for pre-filtering parts search
 }
 
-function PartstechDialog({ isOpen, onClose, vehicle, onSelect }: PartstechDialogProps) {
-  const [searchTerm, setSearchTerm] = useState('');
+function PartstechDialog({ isOpen, onClose, vehicle, onSelect, jobName }: PartstechDialogProps) {
+  const [searchTerm, setSearchTerm] = useState(jobName || '');
   const [searchResults, setSearchResults] = useState<PartstechPart[]>([]);
+  
+  // Reset search term when job changes
+  useEffect(() => {
+    if (isOpen && jobName) {
+      setSearchTerm(jobName);
+    }
+  }, [isOpen, jobName]);
   const [manualPartNumber, setManualPartNumber] = useState('');
   const [manualDescription, setManualDescription] = useState('');
   const [manualBrand, setManualBrand] = useState('');
@@ -276,11 +373,20 @@ function PartstechDialog({ isOpen, onClose, vehicle, onSelect }: PartstechDialog
 
   const openPartstechPopup = () => {
     const baseUrl = 'https://app.partstech.com';
-    let url = baseUrl;
+    const params = new URLSearchParams();
     
+    // Add VIN for vehicle context
     if (vehicle?.vin) {
-      url = `${baseUrl}/search?vin=${encodeURIComponent(vehicle.vin)}`;
+      params.set('vin', vehicle.vin);
     }
+    
+    // Add job name as search keyword for pre-filtering
+    if (jobName) {
+      params.set('keyword', jobName);
+    }
+    
+    const queryString = params.toString();
+    const url = queryString ? `${baseUrl}/search?${queryString}` : baseUrl;
     
     const popup = window.open(
       url,
@@ -1888,6 +1994,7 @@ export default function RepairOrderDetail() {
   // PartsTech state
   const [isPartstechOpen, setIsPartstechOpen] = useState(false);
   const [partstechJobId, setPartstechJobId] = useState<string | null>(null);
+  const [partstechJobName, setPartstechJobName] = useState<string | undefined>(undefined);
   
   // Canned Jobs / Service Packages state
   const [isPackageDialogOpen, setIsPackageDialogOpen] = useState(false);
