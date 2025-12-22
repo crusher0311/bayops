@@ -1,6 +1,8 @@
 import { useAuthStore } from '@/lib/authStore';
 import { useShopStore } from '@/lib/store';
 import { useLocations } from '@/lib/hooks';
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import { 
   Bell, 
   Search, 
@@ -28,6 +30,15 @@ export function Header() {
   const [, navigate] = useLocation();
 
   const currentLocation = locations.find(l => l.id === currentLocationId);
+  
+  // Get organization branding/name
+  const { data: branding } = useQuery({
+    queryKey: ['org-branding'],
+    queryFn: () => apiRequest('/api/settings/branding'),
+    enabled: !!user,
+  });
+  
+  const orgName = branding?.name || currentLocation?.name || 'BayOPS';
 
   const handleLogout = async () => {
     await logout();
@@ -38,7 +49,7 @@ export function Header() {
     <header className="h-16 border-b bg-card px-6 flex items-center justify-between">
       <div className="flex items-center gap-8">
         <div className="flex items-center gap-2">
-          <h2 className="font-semibold text-lg">Apex Automotive</h2>
+          <h2 className="font-semibold text-lg">{orgName}</h2>
           <span className="text-muted-foreground">/</span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
