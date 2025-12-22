@@ -2652,20 +2652,92 @@ function CannedJobsTab({ locationId, settings }: { locationId: string; settings:
 
 // Available integration types
 const AVAILABLE_INTEGRATIONS = [
-  { id: 'protractor', name: 'Protractor', description: 'Import customers, vehicles, and repair orders from Protractor' },
+  { id: 'partstech', name: 'PartsTech', description: 'Parts ordering and supplier integration', icon: 'package' },
+  { id: 'protractor', name: 'Protractor', description: 'Import customers, vehicles, and repair orders from Protractor', icon: 'database' },
   // Future integrations can be added here:
   // { id: 'quickbooks', name: 'QuickBooks', description: 'Sync invoices and payments' },
   // { id: 'carfax', name: 'CARFAX', description: 'Service history integration' },
 ];
 
+// PartsTech integration card component
+function PartstechIntegrationCard() {
+  return (
+    <div className="border rounded-lg p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+            <Package className="w-5 h-5 text-orange-600" />
+          </div>
+          <div>
+            <h3 className="font-semibold">PartsTech Integration</h3>
+            <p className="text-sm text-muted-foreground">Parts ordering and supplier management</p>
+          </div>
+        </div>
+        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+          Active
+        </Badge>
+      </div>
+      
+      <div className="bg-slate-50 rounded-lg p-4 text-sm">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center shrink-0 mt-0.5">
+            <span className="text-orange-600 text-xs font-bold">PT</span>
+          </div>
+          <div>
+            <h4 className="font-medium text-slate-900">How It Works</h4>
+            <p className="text-slate-600 mt-1">
+              PartsTech opens in a popup window directly from your repair orders. 
+              Log in with your existing PartsTech shop account to search parts, 
+              check availability, and place orders with your connected suppliers.
+            </p>
+            <ul className="mt-3 space-y-1.5 text-slate-600">
+              <li className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-green-600" />
+                Search parts with vehicle VIN context
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-green-600" />
+                View real-time pricing from your suppliers
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-green-600" />
+                Place orders directly from repair orders
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-green-600" />
+                Browser remembers your login session
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t pt-4">
+        <p className="text-xs text-muted-foreground">
+          Need a PartsTech account? Visit{' '}
+          <a 
+            href="https://www.partstech.com" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-orange-600 hover:underline"
+          >
+            partstech.com
+          </a>
+          {' '}to sign up and connect your parts suppliers.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function IntegrationsTab({ locationId }: { locationId: string }) {
   const { data: locations = [] } = useLocations();
   const currentLocation = locations.find(l => l.id === locationId);
-  const [selectedIntegration, setSelectedIntegration] = useState<string>('protractor');
+  const [selectedIntegration, setSelectedIntegration] = useState<string>('partstech');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   
-  // For now, Protractor is the only available integration
-  const activeIntegrations = ['protractor'];
+  // Active integrations (PartsTech and Protractor are built-in)
+  const activeIntegrations = ['partstech', 'protractor'];
   const availableToAdd = AVAILABLE_INTEGRATIONS.filter(i => !activeIntegrations.includes(i.id));
   
   return (
@@ -2740,6 +2812,10 @@ function IntegrationsTab({ locationId }: { locationId: string }) {
                 </SelectContent>
               </Select>
             </div>
+          )}
+          
+          {selectedIntegration === 'partstech' && (
+            <PartstechIntegrationCard />
           )}
           
           {selectedIntegration === 'protractor' && (

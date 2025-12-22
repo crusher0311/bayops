@@ -2135,8 +2135,9 @@ export default function RepairOrderDetail() {
   };
 
   // PartsTech handlers
-  const openPartstechSearch = (jobId: string) => {
+  const openPartstechSearch = (jobId: string, jobName?: string) => {
     setPartstechJobId(jobId);
+    setPartstechJobName(jobName);
     setIsPartstechOpen(true);
   };
 
@@ -2991,7 +2992,7 @@ export default function RepairOrderDetail() {
                               variant="secondary" 
                               size="sm" 
                               className="gap-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-700 border-orange-500/20" 
-                              onClick={() => openPartstechSearch(job.id)}
+                              onClick={() => openPartstechSearch(job.id, job.name || job.title)}
                               disabled={updateRO.isPending}
                               data-testid={`button-partstech-${job.id}`}
                             >
@@ -3094,6 +3095,12 @@ export default function RepairOrderDetail() {
                             </tbody>
                           </table>
                         </div>
+                        {/* Supplier Bar */}
+                        <SupplierBar 
+                          job={job}
+                          onSearchParts={() => openPartstechSearch(job.id, job.name || job.title)}
+                          disabled={updateRO.isPending}
+                        />
                       </CardContent>
                     </Card>
                   ))
@@ -3443,9 +3450,11 @@ export default function RepairOrderDetail() {
         onClose={() => {
           setIsPartstechOpen(false);
           setPartstechJobId(null);
+          setPartstechJobName(undefined);
         }}
         vehicle={vehicle}
         onSelect={handleAddFromPartstech}
+        jobName={partstechJobName}
       />
 
       {/* AI Service Writer Dialog */}
