@@ -138,10 +138,16 @@ import {
   type InsertServiceQueueEntry,
   conversations,
   messages,
+  partsSessions,
+  partsSessionItems,
   type Conversation,
   type InsertConversation,
   type Message,
   type InsertMessage,
+  type PartsSession,
+  type InsertPartsSession,
+  type PartsSessionItem,
+  type InsertPartsSessionItem,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray, desc, sql } from "drizzle-orm";
@@ -450,6 +456,21 @@ export interface IStorage {
   createMessage(message: InsertMessage): Promise<Message>;
   updateMessage(id: string, updates: Partial<InsertMessage>): Promise<Message | undefined>;
   markConversationAsRead(conversationId: string, orgId: string): Promise<void>;
+
+  // ==========================================
+  // PARTS SESSIONS (Chrome Extension)
+  // ==========================================
+  getPartsSession(id: string, orgId: string): Promise<PartsSession | undefined>;
+  getPartsSessionByJob(jobId: string, orgId: string): Promise<PartsSession | undefined>;
+  getPartsSessionsByRO(repairOrderId: string, orgId: string): Promise<PartsSession[]>;
+  getPartsSessionWithItems(id: string, orgId: string): Promise<(PartsSession & { items: PartsSessionItem[] }) | undefined>;
+  createPartsSession(session: InsertPartsSession): Promise<PartsSession>;
+  updatePartsSession(id: string, orgId: string, updates: Partial<InsertPartsSession>): Promise<PartsSession | undefined>;
+  deletePartsSession(id: string, orgId: string): Promise<boolean>;
+  
+  createPartsSessionItem(item: InsertPartsSessionItem): Promise<PartsSessionItem>;
+  deletePartsSessionItem(id: string): Promise<boolean>;
+  syncPartsSessionItems(sessionId: string, items: { partNumber: string; description?: string; brand?: string; supplier?: string; quantity?: number; price?: number }[]): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2000,6 +2021,92 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(conversations.lastMessageAt))
       .limit(1);
     return conversation || undefined;
+  }
+
+  // ==========================================
+  // PARTS SESSIONS (Chrome Extension)
+  // ==========================================
+
+  async getPartsSession(id: string, orgId: string): Promise<PartsSession | undefined> {
+    const [session] = await db.select().from(partsSessions)
+      .where(and(eq(partsSessions.id, id), eq(partsSessions.orgId, orgId)));
+    return session || undefined;
+  }
+
+  async getPartsSessionByJob(jobId: string, orgId: string): Promise<PartsSession | undefined> {
+    const [session] = await db.select().from(partsSessions)
+      .where(and(eq(partsSessions.jobId, jobId), eq(partsSessions.orgId, orgId)));
+    return session || undefined;
+  }
+
+  async getPartsSessionsByRO(repairOrderId: string, orgId: string): Promise<PartsSession[]> {
+    return db.select().from(partsSessions)
+      .where(and(eq(partsSessions.repairOrderId, repairOrderId), eq(partsSessions.orgId, orgId)));
+  }
+
+  async getPartsSessionWithItems(id: string, orgId: string): Promise<(PartsSession & { items: PartsSessionItem[] }) | undefined> {
+    const session = await this.getPartsSession(id, orgId);
+    if (!session) return undefined;
+    
+    const items = await db.select().from(partsSessionItems)
+      .where(eq(partsSessionItems.sessionId, id));
+    
+    return { ...session, items };
+  }
+
+  async createPartsSession(session: InsertPartsSession): Promise<PartsSession> {
+    const [created] = await db.insert(partsSessions).values(session).returning();
+    return created;
+  }
+
+  async updatePartsSession(id: string, orgId: string, updates: Partial<InsertPartsSession>): Promise<PartsSession | undefined> {
+    const [updated] = await db.update(partsSessions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(partsSessions.id, id), eq(partsSessions.orgId, orgId)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deletePartsSession(id: string, orgId: string): Promise<boolean> {
+    const result = await db.delete(partsSessions)
+      .where(and(eq(partsSessions.id, id), eq(partsSessions.orgId, orgId)));
+    return true;
+  }
+
+  async createPartsSessionItem(item: InsertPartsSessionItem): Promise<PartsSessionItem> {
+    const [created] = await db.insert(partsSessionItems).values(item).returning();
+    return created;
+  }
+
+  async deletePartsSessionItem(id: string): Promise<boolean> {
+    await db.delete(partsSessionItems).where(eq(partsSessionItems.id, id));
+    return true;
+  }
+
+  async syncPartsSessionItems(sessionId: string, items: { partNumber: string; description?: string; brand?: string; supplier?: string; quantity?: number; price?: number }[]): Promise<void> {
+    // Delete existing items
+    await db.delete(partsSessionItems).where(eq(partsSessionItems.sessionId, sessionId));
+    
+    // Insert new items
+    if (items.length > 0) {
+      await db.insert(partsSessionItems).values(
+        items.map(item => ({
+          sessionId,
+          partNumber: item.partNumber,
+          description: item.description,
+          brand: item.brand,
+          supplier: item.supplier,
+          quantity: item.quantity || 1,
+          unitCost: item.price?.toString(),
+        }))
+      );
+    }
+    
+    // Update session total
+    const total = items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
+    await db.update(partsSessions)
+      .set({ totalCost: total.toString(), updatedAt: new Date() })
+      .where(eq(partsSessions.id, sessionId));
   }
 }
 

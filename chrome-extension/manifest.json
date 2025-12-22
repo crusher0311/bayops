@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "BayOPS Parts Connector",
+  "version": "1.0.0",
+  "description": "Connect BayOPS repair orders with PartsTech for seamless parts ordering",
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://app.partstech.com/*",
+    "https://*.partstech.com/*",
+    "http://localhost:5000/*",
+    "https://*.replit.app/*",
+    "https://*.replit.dev/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://app.partstech.com/*", "https://*.partstech.com/*"],
+      "js": ["content-partstech.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["http://localhost:5000/*", "https://*.replit.app/*", "https://*.replit.dev/*"],
+      "js": ["content-bayops.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "externally_connectable": {
+    "matches": ["http://localhost:5000/*", "https://*.replit.app/*", "https://*.replit.dev/*"]
+  }
+}

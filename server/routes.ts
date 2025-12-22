@@ -3823,6 +3823,185 @@ export async function registerRoutes(
   });
 
   // ==========================================
+  // PARTS SESSIONS (Chrome Extension Integration)
+  // ==========================================
+
+  // Get parts session for a job
+  app.get("/api/parts-sessions/job/:jobId", requireAuth, async (req, res) => {
+    try {
+      const session = await storage.getPartsSessionByJob(req.params.jobId, req.user!.orgId);
+      res.json(session);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get parts session by RO
+  app.get("/api/parts-sessions/ro/:roId", requireAuth, async (req, res) => {
+    try {
+      const sessions = await storage.getPartsSessionsByRO(req.params.roId, req.user!.orgId);
+      res.json(sessions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Zod schema for parts session request
+  const partsSessionItemSchema = z.object({
+    partNumber: z.string().min(1),
+    description: z.string().optional(),
+    brand: z.string().optional(),
+    supplier: z.string().optional(),
+    quantity: z.coerce.number().int().min(1).default(1),
+    price: z.coerce.number().min(0).optional(),
+    unitCost: z.string().optional(),
+  });
+  
+  const partsSessionRequestSchema = z.object({
+    jobId: z.string().min(1, "jobId is required"),
+    repairOrderId: z.string().min(1, "repairOrderId is required"),
+    roNumber: z.string().optional(),
+    vehicleInfo: z.string().optional(),
+    items: z.array(partsSessionItemSchema).optional(),
+  });
+  
+  // Create or update parts session
+  app.post("/api/parts-sessions", requireAuth, async (req, res) => {
+    try {
+      // Validate request with Zod
+      const parseResult = partsSessionRequestSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: "Validation error",
+          errors: parseResult.error.flatten().fieldErrors 
+        });
+      }
+      
+      const { jobId, repairOrderId, roNumber, vehicleInfo, items } = parseResult.data;
+      
+      // Verify repair order belongs to user's org and get locationId from RO
+      const repairOrder = await storage.getRepairOrder(repairOrderId, req.user!.orgId);
+      if (!repairOrder) {
+        return res.status(404).json({ message: "Repair order not found or access denied" });
+      }
+      
+      // Check if session exists
+      let session = await storage.getPartsSessionByJob(jobId, req.user!.orgId);
+      
+      if (session) {
+        // Update existing session
+        session = await storage.updatePartsSession(session.id, req.user!.orgId, {
+          roNumber: roNumber || repairOrder.roNumber,
+          vehicleInfo,
+        });
+        
+        // Update items if provided
+        if (items && Array.isArray(items)) {
+          await storage.syncPartsSessionItems(session!.id, items);
+        }
+      } else {
+        // Create new session using locationId from the repair order
+        session = await storage.createPartsSession({
+          orgId: req.user!.orgId,
+          locationId: repairOrder.locationId,
+          repairOrderId,
+          jobId,
+          roNumber: roNumber || repairOrder.roNumber,
+          vehicleInfo,
+        });
+        
+        // Add items if provided (already validated by Zod)
+        if (items && items.length > 0) {
+          for (const item of items) {
+            await storage.createPartsSessionItem({
+              sessionId: session.id,
+              partNumber: item.partNumber,
+              description: item.description,
+              brand: item.brand,
+              supplier: item.supplier,
+              quantity: item.quantity,
+              unitCost: item.price != null ? item.price.toFixed(2) : item.unitCost,
+            });
+          }
+        }
+      }
+      
+      // Fetch with items
+      const fullSession = await storage.getPartsSessionWithItems(session!.id, req.user!.orgId);
+      res.json(fullSession);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Add item to session
+  app.post("/api/parts-sessions/:sessionId/items", requireAuth, async (req, res) => {
+    try {
+      const session = await storage.getPartsSession(req.params.sessionId, req.user!.orgId);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      const item = await storage.createPartsSessionItem({
+        sessionId: session.id,
+        partNumber: req.body.partNumber,
+        description: req.body.description,
+        brand: req.body.brand,
+        supplier: req.body.supplier,
+        quantity: req.body.quantity || 1,
+        unitCost: req.body.price?.toString() || req.body.unitCost,
+      });
+      
+      res.status(201).json(item);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Remove item from session
+  app.delete("/api/parts-sessions/:sessionId/items/:itemId", requireAuth, async (req, res) => {
+    try {
+      const session = await storage.getPartsSession(req.params.sessionId, req.user!.orgId);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      await storage.deletePartsSessionItem(req.params.itemId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Mark session as ordered
+  app.post("/api/parts-sessions/:sessionId/order", requireAuth, async (req, res) => {
+    try {
+      const session = await storage.updatePartsSession(req.params.sessionId, req.user!.orgId, {
+        status: 'ORDERED',
+        orderedAt: new Date(),
+      });
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      res.json(session);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Clear/delete session
+  app.delete("/api/parts-sessions/:sessionId", requireAuth, async (req, res) => {
+    try {
+      await storage.deletePartsSession(req.params.sessionId, req.user!.orgId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==========================================
   // WHOLESALE / B2B ROUTES
   // ==========================================
 

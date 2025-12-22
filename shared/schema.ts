@@ -2143,3 +2143,83 @@ export const insertCarfaxCacheSchema = createInsertSchema(carfaxCache).omit({
 
 export type CarfaxCache = typeof carfaxCache.$inferSelect;
 export type InsertCarfaxCache = z.infer<typeof insertCarfaxCacheSchema>;
+
+// ============================================================================
+// PartsTech Integration - Parts Session Tracking
+// ============================================================================
+
+// Parts Session Status Enum
+export const partsSessionStatusEnum = pgEnum('parts_session_status', ['DRAFT', 'ORDERED', 'CANCELLED']);
+
+// Parts Sessions - Track parts shopping sessions per job
+export const partsSessions = pgTable("parts_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  repairOrderId: varchar("repair_order_id").notNull().references(() => repairOrders.id, { onDelete: 'cascade' }),
+  jobId: varchar("job_id").notNull(),
+  roNumber: text("ro_number"),
+  vehicleInfo: text("vehicle_info"),
+  status: partsSessionStatusEnum("status").notNull().default('DRAFT'),
+  totalCost: decimal("total_cost", { precision: 10, scale: 2 }).default('0'),
+  orderedAt: timestamp("ordered_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const partsSessionsRelations = relations(partsSessions, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [partsSessions.orgId],
+    references: [organizations.id],
+  }),
+  location: one(locations, {
+    fields: [partsSessions.locationId],
+    references: [locations.id],
+  }),
+  repairOrder: one(repairOrders, {
+    fields: [partsSessions.repairOrderId],
+    references: [repairOrders.id],
+  }),
+  items: many(partsSessionItems),
+}));
+
+// Parts Session Items - Individual parts in a session
+export const partsSessionItems = pgTable("parts_session_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => partsSessions.id, { onDelete: 'cascade' }),
+  partNumber: text("part_number").notNull(),
+  description: text("description"),
+  brand: text("brand"),
+  supplier: text("supplier"),
+  quantity: integer("quantity").notNull().default(1),
+  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }),
+  source: text("source").default('partstech'),
+  addedAt: timestamp("added_at").notNull().defaultNow(),
+});
+
+export const partsSessionItemsRelations = relations(partsSessionItems, ({ one }) => ({
+  session: one(partsSessions, {
+    fields: [partsSessionItems.sessionId],
+    references: [partsSessions.id],
+  }),
+}));
+
+// Insert schemas for PartsTech sessions
+export const insertPartsSessionSchema = createInsertSchema(partsSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPartsSessionItemSchema = createInsertSchema(partsSessionItems).omit({
+  id: true,
+  addedAt: true,
+});
+
+// Types for PartsTech sessions
+export type PartsSession = typeof partsSessions.$inferSelect;
+export type InsertPartsSession = z.infer<typeof insertPartsSessionSchema>;
+
+export type PartsSessionItem = typeof partsSessionItems.$inferSelect;
+export type InsertPartsSessionItem = z.infer<typeof insertPartsSessionItemSchema>;
