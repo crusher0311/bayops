@@ -7,7 +7,11 @@ window.addEventListener('message', async (event) => {
   if (event.source !== window) return;
   
   const message = event.data;
-  if (!message || !message.type || !message.type.startsWith('BAYOPS_')) return;
+  if (!message || !message.type) return;
+  
+  // Accept messages that start with BAYOPS_ OR are known extension commands
+  const knownCommands = ['OPEN_PARTSTECH', 'GET_SESSION', 'GET_ALL_SESSIONS', 'ADD_PART', 'REMOVE_PART', 'CLEAR_SESSION', 'MARK_ORDERED'];
+  if (!message.type.startsWith('BAYOPS_') && !knownCommands.includes(message.type)) return;
   
   console.log('BayOPS Extension: Received message from page:', message.type);
   
