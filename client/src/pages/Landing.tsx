@@ -20,6 +20,9 @@ import {
   ClipboardCheck
 } from 'lucide-react';
 import { Link } from 'wouter';
+import dashboardImage from '@assets/generated_images/shop_management_dashboard_ui.png';
+import repairOrderImage from '@assets/generated_images/repair_order_detail_ui.png';
+import inspectionImage from '@assets/generated_images/vehicle_inspection_interface_ui.png';
 
 export default function Landing() {
   const features = [
@@ -135,6 +138,75 @@ export default function Landing() {
               <p className="text-sm font-medium text-slate-700">{benefit.text}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Screenshots Showcase Section */}
+      <section className="bg-slate-100 py-20">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-12">
+            <Badge className="mb-4 bg-blue-100 text-blue-700 hover:bg-blue-100">
+              See It In Action
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              Powerful, Intuitive Interface
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Designed by shop owners, for shop owners. Clean layouts that make sense from day one.
+            </p>
+          </div>
+          
+          <div className="space-y-12">
+            <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+              <div className="bg-slate-800 px-4 py-3 flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-500" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                  <div className="w-3 h-3 rounded-full bg-green-500" />
+                </div>
+                <span className="text-slate-400 text-sm ml-2">Dashboard Overview</span>
+              </div>
+              <img 
+                src={dashboardImage} 
+                alt="BayOPS Dashboard showing repair orders, revenue stats, and technician status" 
+                className="w-full"
+              />
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                <div className="bg-slate-800 px-4 py-3 flex items-center gap-2">
+                  <div className="flex gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                  </div>
+                  <span className="text-slate-400 text-sm ml-2">Repair Order Detail</span>
+                </div>
+                <img 
+                  src={repairOrderImage} 
+                  alt="Repair order detail screen with jobs, parts, and labor" 
+                  className="w-full"
+                />
+              </div>
+              
+              <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                <div className="bg-slate-800 px-4 py-3 flex items-center gap-2">
+                  <div className="flex gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                  </div>
+                  <span className="text-slate-400 text-sm ml-2">Digital Vehicle Inspection</span>
+                </div>
+                <img 
+                  src={inspectionImage} 
+                  alt="Digital vehicle inspection with color-coded status indicators" 
+                  className="w-full"
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
