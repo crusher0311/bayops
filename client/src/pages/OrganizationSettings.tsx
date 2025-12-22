@@ -14,10 +14,8 @@ import {
   Check,
   Store,
   Loader2,
-  Database,
   Save
 } from 'lucide-react';
-import { ProtractorIntegration } from '@/components/ProtractorIntegration';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useState, useEffect } from 'react';
@@ -351,34 +349,6 @@ export default function OrganizationSettings() {
         </CardContent>
       </Card>
 
-      {/* Data Integrations */}
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="w-5 h-5" />
-            Data Integrations
-          </CardTitle>
-          <CardDescription>
-            Connect external systems to import historical data.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-            {locations.map((loc) => (
-              <ProtractorIntegration 
-                key={loc.id}
-                locationId={loc.id}
-                locationName={loc.name}
-              />
-            ))}
-            {locations.length === 0 && (
-              <p className="text-muted-foreground text-sm">
-                Add a location first to configure data integrations.
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </AppLayout>
   );
 }

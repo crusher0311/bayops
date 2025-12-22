@@ -44,6 +44,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { ProtractorIntegration } from '@/components/ProtractorIntegration';
 
 interface WorkflowStage {
   id: string;
@@ -202,7 +203,7 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="import" className="space-y-6">
-          <DataImportTab />
+          <DataImportTab locationId={selectedLocationId} />
         </TabsContent>
       </Tabs>
     </AppLayout>
@@ -2640,16 +2641,36 @@ function CannedJobsTab({ locationId, settings }: { locationId: string; settings:
   );
 }
 
-function DataImportTab() {
+function DataImportTab({ locationId }: { locationId: string }) {
   const [, setLocation] = useLocation();
+  const { data: locations = [] } = useLocations();
+  const currentLocation = locations.find(l => l.id === locationId);
   
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Data Import</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="w-5 h-5" />
+            Data Integrations
+          </CardTitle>
           <CardDescription>
-            Import data from other shop management systems
+            Connect external systems to import historical data.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ProtractorIntegration 
+            locationId={locationId}
+            locationName={currentLocation?.name || 'Current Location'}
+          />
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>One-Time Migration</CardTitle>
+          <CardDescription>
+            Import all historical data at once from another system
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -2659,9 +2680,9 @@ function DataImportTab() {
                 <Database className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <h3 className="font-medium">Protractor</h3>
+                <h3 className="font-medium">Protractor Migration Wizard</h3>
                 <p className="text-sm text-muted-foreground">
-                  Import customers, vehicles, and repair order history from Protractor
+                  Full migration of customers, vehicles, and repair order history
                 </p>
               </div>
             </div>
@@ -2669,7 +2690,7 @@ function DataImportTab() {
               onClick={() => setLocation('/import/protractor')}
               data-testid="button-import-protractor"
             >
-              Import
+              Start Migration
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
