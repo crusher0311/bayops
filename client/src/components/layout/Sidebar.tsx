@@ -28,14 +28,17 @@ export function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuthStore();
   
+  // Get the user's primary location ID
+  const userLocationId = user?.locationIds?.[0];
+  
   const { data: settings } = useQuery({
-    queryKey: ['settings'],
-    queryFn: () => apiRequest('/api/settings'),
-    enabled: !!user,
+    queryKey: ['settings', userLocationId],
+    queryFn: () => apiRequest(`/api/settings/all/${userLocationId}`),
+    enabled: !!user && !!userLocationId,
   });
   
   const logoUrl = settings?.orgBranding?.logoUrl;
-  const shopName = settings?.shopProfile?.shopName || 'BayOPS';
+  const shopName = settings?.location?.name || 'BayOPS';
   
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
