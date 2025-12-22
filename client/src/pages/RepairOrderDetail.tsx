@@ -365,37 +365,48 @@ function PartstechDialog({ isOpen, onClose, vehicle, onSelect, jobName }: Partst
     }
   }, [isOpen]);
   
-  // Parse a single line of part info
+  // Parse a single line of part info from PartsTech or similar
   const parsePartLine = (text: string): { partNumber?: string; brand?: string; description?: string; price?: string } | null => {
-    // Try pattern: "PartNumber - Brand - Description - $Price"
-    const dashPattern = /^([A-Z0-9-]+)\s*[-–]\s*([^-–]+)\s*[-–]\s*(.+?)\s*[-–]?\s*\$?([\d,.]+)?$/i;
-    const dashMatch = text.match(dashPattern);
-    if (dashMatch) {
-      return {
-        partNumber: dashMatch[1].trim(),
-        brand: dashMatch[2].trim(),
-        description: dashMatch[3].trim(),
-        price: dashMatch[4]?.replace(',', ''),
-      };
+    // Extract price anywhere in the text (e.g., "$858.83" or "858.83")
+    const priceMatch = text.match(/\$?([\d,]+\.?\d*)/);
+    const price = priceMatch?.[1]?.replace(',', '');
+    
+    // Remove price from text for cleaner parsing
+    let cleanText = text.replace(/\$?[\d,]+\.?\d*/g, '').trim();
+    
+    // Try to find part number pattern (alphanumeric with optional dashes, typically 4+ chars)
+    // Common patterns: CRK4233, BP-12345, 15-12345, etc.
+    const partNumMatch = cleanText.match(/\b([A-Z]{1,4}[\d-]{2,}[A-Z0-9-]*|[\d]{2,}-[\d-]+)\b/i);
+    const partNumber = partNumMatch?.[1];
+    
+    // Known brand names to look for
+    const knownBrands = ['PowerStop', 'ACDelco', 'Bosch', 'Motorcraft', 'Denso', 'NGK', 'Monroe', 'Moog', 'Wagner', 'Raybestos', 'Centric', 'StopTech', 'EBC', 'Hawk', 'Brembo', 'Gates', 'Dayco', 'Continental', 'Dorman', 'Standard', 'Delphi', 'TRW', 'ATE', 'Bendix', 'Akebono', 'NTK'];
+    let brand: string | undefined;
+    for (const b of knownBrands) {
+      if (cleanText.toLowerCase().includes(b.toLowerCase())) {
+        brand = b;
+        break;
+      }
     }
     
-    // Try pattern: labeled fields "Part: X | Brand: Y | ..."
-    const labeledPattern = /part[:#\s]*([A-Z0-9-]+)/i;
-    const brandPattern = /brand[:#\s]*([^|,\n]+)/i;
-    const descPattern = /desc(?:ription)?[:#\s]*([^|,\n]+)/i;
-    const pricePattern = /(?:price|cost)[:#\s]*\$?([\d,.]+)/i;
+    // The description is everything else after removing part number and brand
+    let description = cleanText;
+    if (partNumber) {
+      description = description.replace(new RegExp(partNumber.replace(/[-]/g, '\\-'), 'gi'), '').trim();
+    }
+    if (brand) {
+      description = description.replace(new RegExp(brand, 'gi'), '').trim();
+    }
+    // Clean up extra dashes and whitespace
+    description = description.replace(/^[-–\s]+|[-–\s]+$/g, '').replace(/\s+/g, ' ').trim();
     
-    const partMatch = text.match(labeledPattern);
-    const brandMatch = text.match(brandPattern);
-    const descMatch = text.match(descPattern);
-    const priceMatch = text.match(pricePattern);
-    
-    if (partMatch || brandMatch || descMatch || priceMatch) {
+    // If we found anything useful, return it
+    if (partNumber || brand || description || price) {
       return {
-        partNumber: partMatch?.[1].trim(),
-        brand: brandMatch?.[1].trim(),
-        description: descMatch?.[1].trim(),
-        price: priceMatch?.[1].replace(',', ''),
+        partNumber: partNumber || undefined,
+        brand: brand || undefined,
+        description: description || undefined,
+        price,
       };
     }
     
