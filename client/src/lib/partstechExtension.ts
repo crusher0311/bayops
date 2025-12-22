@@ -38,8 +38,48 @@ export interface PartsSession {
   updatedAt: number;
 }
 
+// Check if extension is installed - also looks for the extension-ready event flag
 export function isExtensionInstalled(): boolean {
-  return typeof window !== 'undefined' && !!window.BayOPSExtension?.isInstalled;
+  if (typeof window === 'undefined') return false;
+  
+  // Check if extension bridge is available
+  if (window.BayOPSExtension?.isInstalled) return true;
+  
+  // Check if extension ready event was dispatched (stored on window)
+  return !!(window as any).__bayopsExtensionReady;
+}
+
+// Wait for extension to be ready (useful on initial page load)
+export function waitForExtension(timeoutMs: number = 2000): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (isExtensionInstalled()) {
+      resolve(true);
+      return;
+    }
+    
+    const checkInterval = setInterval(() => {
+      if (isExtensionInstalled()) {
+        clearInterval(checkInterval);
+        clearTimeout(timeout);
+        resolve(true);
+      }
+    }, 100);
+    
+    const timeout = setTimeout(() => {
+      clearInterval(checkInterval);
+      resolve(false);
+    }, timeoutMs);
+    
+    // Also listen for the ready event
+    const handler = () => {
+      (window as any).__bayopsExtensionReady = true;
+      clearInterval(checkInterval);
+      clearTimeout(timeout);
+      window.removeEventListener('bayops-extension-ready', handler);
+      resolve(true);
+    };
+    window.addEventListener('bayops-extension-ready', handler);
+  });
 }
 
 export async function openPartsTech(

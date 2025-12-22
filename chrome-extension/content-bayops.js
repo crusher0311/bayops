@@ -220,7 +220,8 @@ script.textContent = `
     }
   });
   
-  // Dispatch event to let BayOPS know extension is ready
+  // Set flag and dispatch event to let BayOPS know extension is ready
+  window.__bayopsExtensionReady = true;
   window.dispatchEvent(new CustomEvent('bayops-extension-ready'));
   console.log('BayOPS Parts Connector: Extension bridge ready');
 `;

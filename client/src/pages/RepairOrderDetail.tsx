@@ -67,6 +67,7 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   isExtensionInstalled, 
   openPartsTech,
+  waitForExtension,
   subscribeToSessionUpdates,
   type PartsSession 
 } from '@/lib/partstechExtension';
@@ -2351,8 +2352,11 @@ export default function RepairOrderDetail() {
 
   // PartsTech handlers - use Chrome extension if installed, otherwise fallback to popup
   const openPartstechSearch = async (jobId: string, jobName?: string) => {
+    // Wait briefly for extension to be ready (in case page just loaded)
+    const extensionReady = await waitForExtension(500);
+    
     // Try Chrome extension first
-    if (isExtensionInstalled() && ro?.id) {
+    if (extensionReady && isExtensionInstalled() && ro?.id) {
       const vehicleInfo = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : '';
       const result = await openPartsTech(jobId, ro.id, ro.roNumber?.toString() || '', vehicleInfo, jobName);
       
@@ -2362,6 +2366,9 @@ export default function RepairOrderDetail() {
           description: 'Add parts to your cart and they will sync automatically.',
         });
         return;
+      } else {
+        // Extension failed, show error but continue to fallback
+        console.log('Extension openPartsTech failed:', result.error);
       }
     }
     
