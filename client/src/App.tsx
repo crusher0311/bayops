@@ -36,6 +36,7 @@ import PrintRO from "@/pages/PrintRO";
 import PrintInvoice from "@/pages/PrintInvoice";
 import Messages from "@/pages/Messages";
 import ProtractorMigration from "@/pages/ProtractorMigration";
+import Landing from "@/pages/Landing";
 
 function ProtectedRouter() {
   const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
@@ -106,6 +107,7 @@ function App() {
       <TooltipProvider>
         <Toaster />
         <Switch>
+          <Route path="/landing" component={Landing} />
           <Route path="/inspection/:token" component={InspectionReport} />
           <Route path="/authorize/:token" component={CustomerAuthorization} />
           <Route path="/checkin/:locationId/:token" component={SelfCheckIn} />
