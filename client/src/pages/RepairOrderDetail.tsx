@@ -64,6 +64,12 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  isExtensionInstalled, 
+  openPartsTech,
+  subscribeToSessionUpdates,
+  type PartsSession 
+} from '@/lib/partstechExtension';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -2343,8 +2349,23 @@ export default function RepairOrderDetail() {
     setIsLaborGuideOpen(true);
   };
 
-  // PartsTech handlers
-  const openPartstechSearch = (jobId: string, jobName?: string) => {
+  // PartsTech handlers - use Chrome extension if installed, otherwise fallback to popup
+  const openPartstechSearch = async (jobId: string, jobName?: string) => {
+    // Try Chrome extension first
+    if (isExtensionInstalled() && ro?.id) {
+      const vehicleInfo = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : '';
+      const result = await openPartsTech(jobId, ro.id, ro.roNumber?.toString() || '', vehicleInfo, jobName);
+      
+      if (result.success) {
+        toast({
+          title: result.reused ? 'PartsTech tab focused' : 'PartsTech opened',
+          description: 'Add parts to your cart and they will sync automatically.',
+        });
+        return;
+      }
+    }
+    
+    // Fallback to popup dialog
     setPartstechJobId(jobId);
     setPartstechJobName(jobName);
     setIsPartstechOpen(true);
