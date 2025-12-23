@@ -2414,6 +2414,91 @@ export default function RepairOrderDetail() {
     similarJobSearch || undefined
   );
   
+  // Job Approvals state
+  const [approvalDialogJob, setApprovalDialogJob] = useState<string | null>(null);
+  const [approvalMethod, setApprovalMethod] = useState<'PHONE' | 'IN_PERSON' | 'TEXT' | 'VIRTUAL_SIGNATURE' | null>(null);
+  const [declineReason, setDeclineReason] = useState('');
+  const [signaturePhoneNumber, setSignaturePhoneNumber] = useState('');
+  
+  // Fetch job approvals for this RO
+  const { data: jobApprovals = [] } = useQuery<any[]>({
+    queryKey: ['job-approvals', roId],
+    queryFn: async () => {
+      const res = await fetch(`/api/repair-orders/${roId}/approvals`, { credentials: 'include' });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!roId,
+  });
+  
+  // Get approval status for a job
+  const getJobApproval = (jobId: string) => {
+    return jobApprovals.find((a: any) => a.jobId === jobId);
+  };
+  
+  // Mutation to approve/decline a job
+  const approveJobMutation = useMutation({
+    mutationFn: async ({ jobId, status, method, declinedReason }: { 
+      jobId: string; 
+      status: 'APPROVED' | 'DECLINED'; 
+      method?: string; 
+      declinedReason?: string;
+    }) => {
+      const res = await fetch(`/api/repair-orders/${roId}/jobs/${jobId}/approval`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, method, declinedReason }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to update approval');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['job-approvals', roId] });
+      queryClient.invalidateQueries({ queryKey: ['repair-order', roId] });
+      setApprovalDialogJob(null);
+      setApprovalMethod(null);
+      setDeclineReason('');
+      toast({ title: 'Job approval updated' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+  
+  // Mutation to send signature request
+  const sendSignatureRequestMutation = useMutation({
+    mutationFn: async ({ jobId, phoneNumber, customerName }: { jobId: string; phoneNumber: string; customerName?: string }) => {
+      const res = await fetch(`/api/repair-orders/${roId}/jobs/${jobId}/send-signature-request`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber, customerName }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to send signature request');
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['job-approvals', roId] });
+      setApprovalDialogJob(null);
+      setApprovalMethod(null);
+      setSignaturePhoneNumber('');
+      toast({ 
+        title: 'Signature Request Sent',
+        description: data.signatureUrl ? `Link: ${data.signatureUrl}` : data.message,
+      });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+  
   // Fetch canned job templates
   const { data: cannedJobTemplates = [] } = useQuery<any[]>({
     queryKey: ['canned-jobs', ro?.locationId],
@@ -3671,6 +3756,108 @@ export default function RepairOrderDetail() {
                       </div>
                     </DialogContent>
                   </Dialog>
+                  
+                  {/* Decline Job Dialog */}
+                  <Dialog open={approvalDialogJob !== null && approvalMethod === null} onOpenChange={(open) => {
+                    if (!open) {
+                      setApprovalDialogJob(null);
+                      setDeclineReason('');
+                    }
+                  }}>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Decline Job</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label>Reason for Declining</Label>
+                          <Textarea 
+                            placeholder="Customer declined due to cost, waiting for next service, etc..."
+                            value={declineReason}
+                            onChange={(e) => setDeclineReason(e.target.value)}
+                            data-testid="input-decline-reason"
+                          />
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <Button variant="outline" onClick={() => {
+                            setApprovalDialogJob(null);
+                            setDeclineReason('');
+                          }}>
+                            Cancel
+                          </Button>
+                          <Button 
+                            variant="destructive"
+                            onClick={() => {
+                              if (approvalDialogJob) {
+                                approveJobMutation.mutate({ 
+                                  jobId: approvalDialogJob, 
+                                  status: 'DECLINED', 
+                                  declinedReason: declineReason 
+                                });
+                              }
+                            }}
+                            disabled={approveJobMutation.isPending}
+                            data-testid="button-confirm-decline"
+                          >
+                            {approveJobMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Decline Job'}
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  
+                  {/* Virtual Signature Request Dialog */}
+                  <Dialog open={approvalDialogJob !== null && approvalMethod === 'VIRTUAL_SIGNATURE'} onOpenChange={(open) => {
+                    if (!open) {
+                      setApprovalDialogJob(null);
+                      setApprovalMethod(null);
+                      setSignaturePhoneNumber('');
+                    }
+                  }}>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Send Signature Request</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <p className="text-sm text-muted-foreground">
+                          Send a secure link to the customer's phone for them to digitally sign and authorize this work.
+                        </p>
+                        <div className="space-y-2">
+                          <Label>Customer Phone Number</Label>
+                          <Input 
+                            placeholder="+1234567890"
+                            value={signaturePhoneNumber}
+                            onChange={(e) => setSignaturePhoneNumber(e.target.value)}
+                            data-testid="input-signature-phone"
+                          />
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <Button variant="outline" onClick={() => {
+                            setApprovalDialogJob(null);
+                            setApprovalMethod(null);
+                            setSignaturePhoneNumber('');
+                          }}>
+                            Cancel
+                          </Button>
+                          <Button 
+                            onClick={() => {
+                              if (approvalDialogJob && signaturePhoneNumber) {
+                                sendSignatureRequestMutation.mutate({
+                                  jobId: approvalDialogJob,
+                                  phoneNumber: signaturePhoneNumber,
+                                  customerName: customer ? `${customer.firstName} ${customer.lastName}` : undefined,
+                                });
+                              }
+                            }}
+                            disabled={sendSignatureRequestMutation.isPending || !signaturePhoneNumber}
+                            data-testid="button-send-signature"
+                          >
+                            {sendSignatureRequestMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send Link via SMS'}
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
 
                 {jobs.length === 0 ? (
@@ -3758,6 +3945,103 @@ export default function RepairOrderDetail() {
                           >
                             <Plus className="w-3 h-3" /> Part
                           </Button>
+                        </div>
+                        {/* Job Approval Status & Actions */}
+                        <div className="flex items-center justify-between pt-2 border-t">
+                          {(() => {
+                            const approval = getJobApproval(job.id);
+                            const allApproved = (job.lineItems || []).every((li: any) => li.approved);
+                            
+                            if (approval?.status === 'APPROVED' || allApproved) {
+                              return (
+                                <div className="flex items-center gap-2 text-green-600">
+                                  <CheckCircle2 className="w-4 h-4" />
+                                  <span className="text-sm font-medium">Approved</span>
+                                  {approval?.method && (
+                                    <Badge variant="outline" className="text-xs bg-green-500/5 border-green-500/20">
+                                      via {approval.method.replace('_', ' ').toLowerCase()}
+                                    </Badge>
+                                  )}
+                                </div>
+                              );
+                            }
+                            
+                            if (approval?.status === 'DECLINED') {
+                              return (
+                                <div className="flex items-center gap-2 text-red-600">
+                                  <X className="w-4 h-4" />
+                                  <span className="text-sm font-medium">Declined</span>
+                                  {approval?.declinedReason && (
+                                    <span className="text-xs text-muted-foreground">- {approval.declinedReason}</span>
+                                  )}
+                                </div>
+                              );
+                            }
+                            
+                            if (approval?.status === 'PENDING' && approval?.method === 'VIRTUAL_SIGNATURE') {
+                              return (
+                                <div className="flex items-center gap-2 text-amber-600">
+                                  <Clock className="w-4 h-4" />
+                                  <span className="text-sm font-medium">Awaiting Signature</span>
+                                </div>
+                              );
+                            }
+                            
+                            return (
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <AlertCircle className="w-4 h-4" />
+                                <span className="text-sm">Pending Approval</span>
+                              </div>
+                            );
+                          })()}
+                          
+                          <div className="flex items-center gap-2">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="gap-1.5 text-green-600 border-green-500/30 hover:bg-green-500/10"
+                                  disabled={approveJobMutation.isPending}
+                                  data-testid={`button-approve-job-${job.id}`}
+                                >
+                                  <CheckCircle2 className="w-3 h-3" /> Approve
+                                  <ChevronDown className="w-3 h-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => approveJobMutation.mutate({ jobId: job.id, status: 'APPROVED', method: 'PHONE' })}>
+                                  <span className="mr-2">📞</span> Phone Authorization
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => approveJobMutation.mutate({ jobId: job.id, status: 'APPROVED', method: 'IN_PERSON' })}>
+                                  <span className="mr-2">🤝</span> In-Person Authorization
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => approveJobMutation.mutate({ jobId: job.id, status: 'APPROVED', method: 'TEXT' })}>
+                                  <span className="mr-2">💬</span> Text Authorization
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  setApprovalDialogJob(job.id);
+                                  setApprovalMethod('VIRTUAL_SIGNATURE');
+                                  setSignaturePhoneNumber(customer?.phone || customer?.cellPhone || '');
+                                }}>
+                                  <span className="mr-2">✍️</span> Send Virtual Signature Link
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="gap-1.5 text-red-600 border-red-500/30 hover:bg-red-500/10"
+                              onClick={() => {
+                                setApprovalDialogJob(job.id);
+                                setApprovalMethod(null);
+                              }}
+                              disabled={approveJobMutation.isPending}
+                              data-testid={`button-decline-job-${job.id}`}
+                            >
+                              <X className="w-3 h-3" /> Decline
+                            </Button>
+                          </div>
                         </div>
                       </CardHeader>
                       <CardContent className="p-0">

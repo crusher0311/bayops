@@ -449,6 +449,85 @@ export type RoJob = typeof roJobs.$inferSelect;
 export type InsertRoJobLine = z.infer<typeof insertRoJobLineSchema>;
 export type RoJobLine = typeof roJobLines.$inferSelect;
 
+// Job Approval Method Enum
+export const jobApprovalMethodEnum = pgEnum('job_approval_method', ['PHONE', 'IN_PERSON', 'TEXT', 'VIRTUAL_SIGNATURE']);
+export const jobApprovalStatusEnum = pgEnum('job_approval_status', ['PENDING', 'APPROVED', 'DECLINED']);
+
+// Job Approvals Table - tracks approval history for each job
+export const jobApprovals = pgTable("job_approvals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  repairOrderId: varchar("repair_order_id").notNull().references(() => repairOrders.id, { onDelete: 'cascade' }),
+  jobId: text("job_id").notNull(), // References job.id in the jobs JSONB array
+  status: jobApprovalStatusEnum("status").notNull().default('PENDING'),
+  method: jobApprovalMethodEnum("method"),
+  approvedByUserId: varchar("approved_by_user_id").references(() => users.id, { onDelete: 'set null' }),
+  approvedAt: timestamp("approved_at"),
+  declinedReason: text("declined_reason"),
+  signatureTokenId: varchar("signature_token_id"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const jobApprovalsRelations = relations(jobApprovals, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [jobApprovals.orgId],
+    references: [organizations.id],
+  }),
+  repairOrder: one(repairOrders, {
+    fields: [jobApprovals.repairOrderId],
+    references: [repairOrders.id],
+  }),
+  approvedByUser: one(users, {
+    fields: [jobApprovals.approvedByUserId],
+    references: [users.id],
+  }),
+}));
+
+export const insertJobApprovalSchema = createInsertSchema(jobApprovals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertJobApproval = z.infer<typeof insertJobApprovalSchema>;
+export type JobApproval = typeof jobApprovals.$inferSelect;
+
+// Signature Tokens - for virtual signature authorization links
+export const signatureTokens = pgTable("signature_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  repairOrderId: varchar("repair_order_id").notNull().references(() => repairOrders.id, { onDelete: 'cascade' }),
+  jobId: text("job_id").notNull(), // References job.id in the jobs JSONB array
+  token: text("token").notNull().unique(), // Short unique token for URL
+  expiresAt: timestamp("expires_at").notNull(),
+  signedAt: timestamp("signed_at"),
+  signerName: text("signer_name"),
+  signerContact: text("signer_contact"),
+  signatureImageUrl: text("signature_image_url"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const signatureTokensRelations = relations(signatureTokens, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [signatureTokens.orgId],
+    references: [organizations.id],
+  }),
+  repairOrder: one(repairOrders, {
+    fields: [signatureTokens.repairOrderId],
+    references: [repairOrders.id],
+  }),
+}));
+
+export const insertSignatureTokenSchema = createInsertSchema(signatureTokens).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertSignatureToken = z.infer<typeof insertSignatureTokenSchema>;
+export type SignatureToken = typeof signatureTokens.$inferSelect;
+
 // Inventory Items
 export const inventoryItems = pgTable("inventory_items", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

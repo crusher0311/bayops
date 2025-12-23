@@ -929,6 +929,321 @@ export async function registerRoutes(
     }
   });
 
+  // ==========================================
+  // JOB APPROVALS
+  // ==========================================
+  
+  // Get all approvals for a repair order
+  app.get("/api/repair-orders/:id/approvals", requireAuth, async (req, res) => {
+    try {
+      const ro = await storage.getRepairOrder(req.params.id, req.user!.orgId);
+      if (!ro) {
+        return res.status(404).json({ message: "Repair order not found" });
+      }
+      const approvals = await storage.getJobApprovalsByRO(req.params.id);
+      res.json(approvals);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Approve or decline a job
+  app.post("/api/repair-orders/:id/jobs/:jobId/approval", requireAuth, async (req, res) => {
+    try {
+      const { status, method, declinedReason, notes } = req.body;
+      
+      if (!status || !['APPROVED', 'DECLINED'].includes(status)) {
+        return res.status(400).json({ message: "status must be 'APPROVED' or 'DECLINED'" });
+      }
+      
+      if (status === 'APPROVED' && !method) {
+        return res.status(400).json({ message: "method is required for approval" });
+      }
+      
+      const ro = await storage.getRepairOrder(req.params.id, req.user!.orgId);
+      if (!ro) {
+        return res.status(404).json({ message: "Repair order not found" });
+      }
+      
+      // Check if job exists in the RO
+      const jobs = (ro.jobs as any[]) || [];
+      const job = jobs.find(j => j.id === req.params.jobId);
+      if (!job) {
+        return res.status(404).json({ message: "Job not found in repair order" });
+      }
+      
+      // Check for existing approval
+      let approval = await storage.getJobApprovalByJob(req.params.id, req.params.jobId);
+      
+      if (approval) {
+        // Update existing approval
+        approval = await storage.updateJobApproval(approval.id, {
+          status,
+          method: status === 'APPROVED' ? method : null,
+          approvedAt: status === 'APPROVED' ? new Date() : null,
+          declinedReason: status === 'DECLINED' ? declinedReason : null,
+          approvedByUserId: req.user!.id,
+          notes,
+        });
+      } else {
+        // Create new approval
+        approval = await storage.createJobApproval({
+          orgId: req.user!.orgId,
+          repairOrderId: req.params.id,
+          jobId: req.params.jobId,
+          status,
+          method: status === 'APPROVED' ? method : null,
+          approvedAt: status === 'APPROVED' ? new Date() : null,
+          declinedReason: status === 'DECLINED' ? declinedReason : null,
+          approvedByUserId: req.user!.id,
+          notes,
+        });
+      }
+      
+      // Also update the lineItems.approved flag in the RO jobs array
+      const updatedJobs = jobs.map(j => {
+        if (j.id === req.params.jobId) {
+          return {
+            ...j,
+            lineItems: (j.lineItems || []).map((li: any) => ({
+              ...li,
+              approved: status === 'APPROVED',
+            })),
+          };
+        }
+        return j;
+      });
+      
+      await storage.updateRepairOrder(req.params.id, req.user!.orgId, { jobs: updatedJobs as any });
+      
+      res.json(approval);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Send virtual signature request via SMS
+  app.post("/api/repair-orders/:id/jobs/:jobId/send-signature-request", requireAuth, async (req, res) => {
+    try {
+      const { phoneNumber, customerName } = req.body;
+      
+      if (!phoneNumber) {
+        return res.status(400).json({ message: "phoneNumber is required" });
+      }
+      
+      const ro = await storage.getRepairOrder(req.params.id, req.user!.orgId);
+      if (!ro) {
+        return res.status(404).json({ message: "Repair order not found" });
+      }
+      
+      const jobs = (ro.jobs as any[]) || [];
+      const job = jobs.find(j => j.id === req.params.jobId);
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      
+      // Generate unique token
+      const token = `sig_${Date.now()}_${Math.random().toString(36).substring(2, 12)}`;
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+      
+      // Create signature token
+      const sigToken = await storage.createSignatureToken({
+        orgId: req.user!.orgId,
+        repairOrderId: req.params.id,
+        jobId: req.params.jobId,
+        token,
+        expiresAt,
+        signerName: customerName,
+        signerContact: phoneNumber,
+      });
+      
+      // Create or update job approval as pending signature
+      let approval = await storage.getJobApprovalByJob(req.params.id, req.params.jobId);
+      if (approval) {
+        await storage.updateJobApproval(approval.id, {
+          status: 'PENDING',
+          method: 'VIRTUAL_SIGNATURE',
+          signatureTokenId: sigToken.id,
+        });
+      } else {
+        await storage.createJobApproval({
+          orgId: req.user!.orgId,
+          repairOrderId: req.params.id,
+          jobId: req.params.jobId,
+          status: 'PENDING',
+          method: 'VIRTUAL_SIGNATURE',
+          signatureTokenId: sigToken.id,
+          approvedByUserId: req.user!.id,
+        });
+      }
+      
+      // Build the signature URL
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+      const signatureUrl = `${baseUrl}/sign/${token}`;
+      
+      // Calculate job total for the message
+      const jobTotal = (job.lineItems || []).reduce((sum: number, li: any) => 
+        sum + (parseFloat(li.quantity) || 1) * (parseFloat(li.unitPrice) || 0), 0
+      );
+      
+      // Try to send SMS via Telnyx
+      if (process.env.TELNYX_API_KEY && process.env.TELNYX_PHONE_NUMBER) {
+        try {
+          const Telnyx = require('telnyx');
+          const telnyx = Telnyx(process.env.TELNYX_API_KEY);
+          
+          await telnyx.messages.create({
+            from: process.env.TELNYX_PHONE_NUMBER,
+            to: phoneNumber,
+            text: `Please approve your repair: ${job.name} ($${jobTotal.toFixed(2)}). Click to sign: ${signatureUrl}`,
+          });
+          
+          res.json({ 
+            success: true, 
+            message: "Signature request sent via SMS",
+            signatureUrl,
+            tokenId: sigToken.id,
+          });
+        } catch (smsError: any) {
+          console.error('SMS send error:', smsError);
+          res.json({
+            success: true,
+            message: "Signature link created but SMS failed to send",
+            signatureUrl,
+            tokenId: sigToken.id,
+            smsError: smsError.message,
+          });
+        }
+      } else {
+        res.json({
+          success: true,
+          message: "Signature link created (SMS not configured)",
+          signatureUrl,
+          tokenId: sigToken.id,
+        });
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Public endpoint - get signature page data (no auth required)
+  app.get("/api/public/signature/:token", async (req, res) => {
+    try {
+      const sigToken = await storage.getSignatureTokenByToken(req.params.token);
+      if (!sigToken) {
+        return res.status(404).json({ message: "Signature link not found or expired" });
+      }
+      
+      if (new Date() > sigToken.expiresAt) {
+        return res.status(410).json({ message: "Signature link has expired" });
+      }
+      
+      if (sigToken.signedAt) {
+        return res.status(410).json({ message: "This authorization has already been signed" });
+      }
+      
+      // Get RO and job details
+      const ro = await storage.getRepairOrderById(sigToken.repairOrderId);
+      if (!ro) {
+        return res.status(404).json({ message: "Repair order not found" });
+      }
+      
+      const jobs = (ro.jobs as any[]) || [];
+      const job = jobs.find(j => j.id === sigToken.jobId);
+      
+      // Get customer and vehicle info
+      const customer = await storage.getCustomerById(ro.customerId);
+      const vehicle = await storage.getVehicleById(ro.vehicleId);
+      
+      // Get organization for branding
+      const org = await storage.getOrganization(sigToken.orgId);
+      
+      res.json({
+        jobName: job?.name || 'Service',
+        jobDescription: job?.description,
+        lineItems: job?.lineItems || [],
+        total: (job?.lineItems || []).reduce((sum: number, li: any) => 
+          sum + (parseFloat(li.quantity) || 1) * (parseFloat(li.unitPrice) || 0), 0
+        ),
+        customerName: customer ? `${customer.firstName} ${customer.lastName}` : sigToken.signerName,
+        vehicleInfo: vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : null,
+        roNumber: ro.roNumber,
+        shopName: org?.name || 'Auto Shop',
+        expiresAt: sigToken.expiresAt,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Public endpoint - submit signature (no auth required)
+  app.post("/api/public/signature/:token", async (req, res) => {
+    try {
+      const { signatureData, signerName } = req.body;
+      
+      if (!signatureData) {
+        return res.status(400).json({ message: "signatureData is required" });
+      }
+      
+      const sigToken = await storage.getSignatureTokenByToken(req.params.token);
+      if (!sigToken) {
+        return res.status(404).json({ message: "Signature link not found" });
+      }
+      
+      if (new Date() > sigToken.expiresAt) {
+        return res.status(410).json({ message: "Signature link has expired" });
+      }
+      
+      if (sigToken.signedAt) {
+        return res.status(410).json({ message: "Already signed" });
+      }
+      
+      // Update signature token
+      await storage.updateSignatureToken(sigToken.id, {
+        signedAt: new Date(),
+        signerName: signerName || sigToken.signerName,
+        signatureImageUrl: signatureData, // Base64 data URL
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'] || null,
+      });
+      
+      // Update job approval to approved
+      const approval = await storage.getJobApprovalByJob(sigToken.repairOrderId, sigToken.jobId);
+      if (approval) {
+        await storage.updateJobApproval(approval.id, {
+          status: 'APPROVED',
+          approvedAt: new Date(),
+        });
+      }
+      
+      // Update the RO jobs to mark line items as approved
+      const ro = await storage.getRepairOrderById(sigToken.repairOrderId);
+      if (ro) {
+        const jobs = (ro.jobs as any[]) || [];
+        const updatedJobs = jobs.map(j => {
+          if (j.id === sigToken.jobId) {
+            return {
+              ...j,
+              lineItems: (j.lineItems || []).map((li: any) => ({
+                ...li,
+                approved: true,
+              })),
+            };
+          }
+          return j;
+        });
+        await storage.updateRepairOrder(sigToken.repairOrderId, sigToken.orgId, { jobs: updatedJobs as any });
+      }
+      
+      res.json({ success: true, message: "Authorization signed successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Inventory
   app.get("/api/inventory", requireAuth, async (req, res) => {
     try {

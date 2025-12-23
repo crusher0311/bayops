@@ -140,6 +140,8 @@ import {
   messages,
   partsSessions,
   partsSessionItems,
+  jobApprovals,
+  signatureTokens,
   type Conversation,
   type InsertConversation,
   type Message,
@@ -148,6 +150,10 @@ import {
   type InsertPartsSession,
   type PartsSessionItem,
   type InsertPartsSessionItem,
+  type JobApproval,
+  type InsertJobApproval,
+  type SignatureToken,
+  type InsertSignatureToken,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray, desc, sql } from "drizzle-orm";
@@ -216,6 +222,19 @@ export interface IStorage {
   getDashboardRepairOrders(locationId: string, orgId: string, limit?: number): Promise<Array<RepairOrder & { customer?: { firstName: string; lastName: string } | null; vehicle?: { year: string; make: string; model: string } | null }>>;
   createRepairOrder(ro: InsertRepairOrder): Promise<RepairOrder>;
   updateRepairOrder(id: string, orgId: string, updates: Partial<InsertRepairOrder>): Promise<RepairOrder | undefined>;
+
+  // Job Approvals
+  getJobApproval(id: string): Promise<JobApproval | undefined>;
+  getJobApprovalsByRO(repairOrderId: string): Promise<JobApproval[]>;
+  getJobApprovalByJob(repairOrderId: string, jobId: string): Promise<JobApproval | undefined>;
+  createJobApproval(approval: InsertJobApproval): Promise<JobApproval>;
+  updateJobApproval(id: string, updates: Partial<InsertJobApproval>): Promise<JobApproval | undefined>;
+
+  // Signature Tokens
+  getSignatureToken(id: string): Promise<SignatureToken | undefined>;
+  getSignatureTokenByToken(token: string): Promise<SignatureToken | undefined>;
+  createSignatureToken(token: InsertSignatureToken): Promise<SignatureToken>;
+  updateSignatureToken(id: string, updates: Partial<InsertSignatureToken>): Promise<SignatureToken | undefined>;
 
   // Inventory
   getInventoryItem(id: string, orgId: string): Promise<InventoryItem | undefined>;
@@ -867,6 +886,57 @@ export class DatabaseStorage implements IStorage {
       
       return ro || undefined;
     });
+  }
+
+  // Job Approvals
+  async getJobApproval(id: string): Promise<JobApproval | undefined> {
+    const [approval] = await db.select().from(jobApprovals).where(eq(jobApprovals.id, id));
+    return approval || undefined;
+  }
+
+  async getJobApprovalsByRO(repairOrderId: string): Promise<JobApproval[]> {
+    return db.select().from(jobApprovals).where(eq(jobApprovals.repairOrderId, repairOrderId));
+  }
+
+  async getJobApprovalByJob(repairOrderId: string, jobId: string): Promise<JobApproval | undefined> {
+    const [approval] = await db.select().from(jobApprovals).where(
+      and(eq(jobApprovals.repairOrderId, repairOrderId), eq(jobApprovals.jobId, jobId))
+    );
+    return approval || undefined;
+  }
+
+  async createJobApproval(approval: InsertJobApproval): Promise<JobApproval> {
+    const [created] = await db.insert(jobApprovals).values(approval).returning();
+    return created;
+  }
+
+  async updateJobApproval(id: string, updates: Partial<InsertJobApproval>): Promise<JobApproval | undefined> {
+    const [updated] = await db.update(jobApprovals).set({
+      ...updates,
+      updatedAt: new Date(),
+    }).where(eq(jobApprovals.id, id)).returning();
+    return updated || undefined;
+  }
+
+  // Signature Tokens
+  async getSignatureToken(id: string): Promise<SignatureToken | undefined> {
+    const [token] = await db.select().from(signatureTokens).where(eq(signatureTokens.id, id));
+    return token || undefined;
+  }
+
+  async getSignatureTokenByToken(token: string): Promise<SignatureToken | undefined> {
+    const [sigToken] = await db.select().from(signatureTokens).where(eq(signatureTokens.token, token));
+    return sigToken || undefined;
+  }
+
+  async createSignatureToken(token: InsertSignatureToken): Promise<SignatureToken> {
+    const [created] = await db.insert(signatureTokens).values(token).returning();
+    return created;
+  }
+
+  async updateSignatureToken(id: string, updates: Partial<InsertSignatureToken>): Promise<SignatureToken | undefined> {
+    const [updated] = await db.update(signatureTokens).set(updates).where(eq(signatureTokens.id, id)).returning();
+    return updated || undefined;
   }
 
   // Inventory

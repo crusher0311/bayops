@@ -37,6 +37,7 @@ import PrintInvoice from "@/pages/PrintInvoice";
 import Messages from "@/pages/Messages";
 import ProtractorMigration from "@/pages/ProtractorMigration";
 import Landing from "@/pages/Landing";
+import SignaturePage from "@/pages/SignaturePage";
 
 function ProtectedRouter() {
   const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
@@ -111,6 +112,7 @@ function App() {
           <Route path="/inspection/:token" component={InspectionReport} />
           <Route path="/authorize/:token" component={CustomerAuthorization} />
           <Route path="/checkin/:locationId/:token" component={SelfCheckIn} />
+          <Route path="/sign/:token" component={SignaturePage} />
           <Route path="/signup" component={Signup} />
           <Route component={ProtectedRouter} />
         </Switch>
