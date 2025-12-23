@@ -1022,6 +1022,66 @@ export async function registerRoutes(
       
       await storage.updateRepairOrder(req.params.id, req.user!.orgId, { jobs: updatedJobs as any });
       
+      // If job was declined, create deferred work for future follow-up
+      if (status === 'DECLINED') {
+        try {
+          // Calculate totals from job line items
+          const lineItems = job.lineItems || [];
+          let estimatedPrice = 0;
+          let laborHours = 0;
+          
+          for (const li of lineItems) {
+            const qty = parseFloat(li.quantity) || 1;
+            const price = parseFloat(li.unitPrice) || 0;
+            estimatedPrice += qty * price;
+            
+            if (li.type === 'LABOR') {
+              laborHours += qty;
+            }
+          }
+          
+          // Check if deferred work already exists for this job on this vehicle
+          const existingDeferred = await storage.getDeferredWorkByVehicle(ro.vehicleId, req.user!.orgId);
+          const existingEntry = existingDeferred.find(d => 
+            d.originalRoId === ro.id && 
+            d.serviceName.toLowerCase() === (job.name || '').toLowerCase() &&
+            d.status === 'PENDING'
+          );
+          
+          if (existingEntry) {
+            // Update existing deferred work
+            await storage.updateDeferredWork(existingEntry.id, req.user!.orgId, {
+              reason: declinedReason || 'Customer declined',
+              estimatedPrice: estimatedPrice.toFixed(2),
+              laborHours: laborHours.toFixed(2),
+              declinedAt: new Date(),
+              notes: notes || existingEntry.notes,
+            });
+          } else {
+            // Create new deferred work entry
+            await storage.createDeferredWork({
+              orgId: req.user!.orgId,
+              locationId: ro.locationId,
+              vehicleId: ro.vehicleId,
+              customerId: ro.customerId,
+              originalRoId: ro.id,
+              serviceName: job.name || 'Service',
+              serviceDescription: job.description || `Declined from RO #${ro.roNumber}`,
+              estimatedPrice: estimatedPrice.toFixed(2),
+              laborHours: laborHours > 0 ? laborHours.toFixed(2) : null,
+              priority: 'NORMAL',
+              reason: declinedReason || 'Customer declined',
+              notes: notes || null,
+              status: 'PENDING',
+              declinedAt: new Date(),
+            });
+          }
+        } catch (deferredError: any) {
+          console.error('Failed to create deferred work:', deferredError);
+          // Don't fail the main approval - deferred work is secondary
+        }
+      }
+      
       res.json(approval);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
