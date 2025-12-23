@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useCustomers, useVehicles, useWorkflows, useCreateCustomer, useCreateVehicle, useCreateRepairOrder } from '@/lib/hooks';
 import { useShopStore } from '@/lib/store';
@@ -27,8 +27,13 @@ import {
   Car, 
   FileText,
   Loader2,
-  Check
+  Check,
+  Search,
+  ChevronsUpDown,
+  X
 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Link } from 'wouter';
 
 export default function NewRepairOrder() {
@@ -58,6 +63,8 @@ export default function NewRepairOrder() {
   // Customer state
   const [customerTab, setCustomerTab] = useState<'existing' | 'new'>('existing');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [customerSearchOpen, setCustomerSearchOpen] = useState(false);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
   const [newCustomer, setNewCustomer] = useState({
     firstName: '',
     lastName: '',
@@ -65,6 +72,17 @@ export default function NewRepairOrder() {
     phone: '',
     address: '',
   });
+  
+  // Filter customers based on search query
+  const filteredCustomers = useMemo(() => {
+    if (!customerSearchQuery.trim()) return customers;
+    const query = customerSearchQuery.toLowerCase();
+    return customers.filter(c => 
+      `${c.firstName} ${c.lastName}`.toLowerCase().includes(query) ||
+      c.phone?.toLowerCase().includes(query) ||
+      c.email?.toLowerCase().includes(query)
+    );
+  }, [customers, customerSearchQuery]);
 
   // Vehicle state
   const [vehicleTab, setVehicleTab] = useState<'existing' | 'new'>('existing');
@@ -292,25 +310,112 @@ export default function NewRepairOrder() {
                 <TabsContent value="existing" className="space-y-4">
                   <div className="space-y-2">
                     <Label>Search Customers</Label>
-                    <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                      <SelectTrigger data-testid="select-customer">
-                        <SelectValue placeholder="Select a customer..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {customers.map((customer) => (
-                          <SelectItem key={customer.id} value={customer.id}>
-                            {customer.firstName} {customer.lastName} - {customer.phone}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={customerSearchOpen} onOpenChange={setCustomerSearchOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={customerSearchOpen}
+                          className="w-full justify-between h-auto min-h-[40px] font-normal"
+                          data-testid="select-customer"
+                        >
+                          {selectedCustomer ? (
+                            <div className="flex flex-col items-start text-left">
+                              <span className="font-medium">{selectedCustomer.firstName} {selectedCustomer.lastName}</span>
+                              <span className="text-xs text-muted-foreground">{selectedCustomer.phone}</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">Search by name, phone, or email...</span>
+                          )}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[400px] p-0" align="start">
+                        <Command shouldFilter={false}>
+                          <CommandInput 
+                            placeholder="Type to search customers..." 
+                            value={customerSearchQuery}
+                            onValueChange={setCustomerSearchQuery}
+                            data-testid="input-customer-search"
+                          />
+                          <CommandList>
+                            <CommandEmpty>
+                              <div className="py-4 text-center">
+                                <p className="text-sm text-muted-foreground">No customers found</p>
+                                <Button 
+                                  variant="link" 
+                                  size="sm" 
+                                  className="mt-2"
+                                  onClick={() => {
+                                    setCustomerSearchOpen(false);
+                                    setCustomerTab('new');
+                                  }}
+                                >
+                                  <Plus className="w-4 h-4 mr-1" />
+                                  Create New Customer
+                                </Button>
+                              </div>
+                            </CommandEmpty>
+                            <CommandGroup heading={`${filteredCustomers.length} customer${filteredCustomers.length !== 1 ? 's' : ''} found`}>
+                              {filteredCustomers.slice(0, 50).map((customer) => (
+                                <CommandItem
+                                  key={customer.id}
+                                  value={customer.id}
+                                  onSelect={() => {
+                                    setSelectedCustomerId(customer.id);
+                                    setCustomerSearchOpen(false);
+                                    setCustomerSearchQuery('');
+                                  }}
+                                  className="cursor-pointer"
+                                  data-testid={`customer-item-${customer.id}`}
+                                >
+                                  <div className="flex items-center justify-between w-full">
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">{customer.firstName} {customer.lastName}</span>
+                                      <span className="text-xs text-muted-foreground">{customer.phone}</span>
+                                    </div>
+                                    {selectedCustomerId === customer.id && (
+                                      <Check className="w-4 h-4 text-primary" />
+                                    )}
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    {selectedCustomerId && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-muted-foreground"
+                        onClick={() => {
+                          setSelectedCustomerId('');
+                          setCustomerSearchQuery('');
+                        }}
+                      >
+                        <X className="w-3 h-3 mr-1" />
+                        Clear selection
+                      </Button>
+                    )}
                   </div>
 
                   {selectedCustomer && (
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                      <p className="font-medium">{selectedCustomer.firstName} {selectedCustomer.lastName}</p>
-                      <p className="text-sm text-muted-foreground">{selectedCustomer.phone}</p>
-                      <p className="text-sm text-muted-foreground">{selectedCustomer.email}</p>
+                    <div className="p-4 bg-muted/50 rounded-lg border">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium">{selectedCustomer.firstName} {selectedCustomer.lastName}</p>
+                          <p className="text-sm text-muted-foreground">{selectedCustomer.phone}</p>
+                          <p className="text-sm text-muted-foreground">{selectedCustomer.email}</p>
+                          {selectedCustomer.address && (
+                            <p className="text-sm text-muted-foreground mt-1">{selectedCustomer.address}</p>
+                          )}
+                        </div>
+                        <div className="p-2 bg-primary/10 rounded-full">
+                          <User className="w-5 h-5 text-primary" />
+                        </div>
+                      </div>
                     </div>
                   )}
 
