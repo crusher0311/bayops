@@ -3443,24 +3443,68 @@ export default function RepairOrderDetail() {
                                   </td>
                                   <td className="px-4 py-3 text-center">{item.quantity}</td>
                                   <td className="px-4 py-3 text-right">
-                                    <span className={item.type === 'PART' && item.unitPrice <= 0 ? 'text-red-600' : item.type === 'PART' && (item.unitCost || 0) <= 0 ? 'text-amber-500' : ''}>
-                                      ${item.unitPrice.toFixed(2)}
-                                    </span>
-                                    {item.type === 'PART' && item.unitPrice <= 0 && (
-                                      <span className="ml-1 inline-flex items-center text-red-600" title={(item.unitCost || 0) > 0 ? "Sale price is $0 - customer will not be charged for this part" : "Part needs pricing - use Search Parts to source"}>
-                                        <AlertTriangle className="w-3.5 h-3.5" />
-                                      </span>
-                                    )}
-                                    {item.type === 'PART' && item.unitPrice > 0 && (item.unitCost || 0) <= 0 && (
-                                      <span className="ml-1 inline-flex items-center text-amber-500" title="Missing cost data - gross profit will be inaccurate">
-                                        <AlertTriangle className="w-3.5 h-3.5" />
-                                      </span>
-                                    )}
+                                    {(() => {
+                                      const cost = item.unitCost || 0;
+                                      const price = item.unitPrice || 0;
+                                      const isPart = item.type === 'PART';
+                                      
+                                      // Determine warning state for parts
+                                      let colorClass = '';
+                                      let showWarning = false;
+                                      let warningColor = '';
+                                      let tooltip = '';
+                                      
+                                      if (isPart) {
+                                        if (price < cost) {
+                                          // Negative gross profit - red
+                                          colorClass = 'text-red-600';
+                                          showWarning = true;
+                                          warningColor = 'text-red-600';
+                                          tooltip = 'Negative gross profit - sale is less than cost';
+                                        } else if (cost <= 0 && price <= 0) {
+                                          // Both missing - red
+                                          colorClass = 'text-red-600';
+                                          showWarning = true;
+                                          warningColor = 'text-red-600';
+                                          tooltip = 'Part needs pricing - use Search Parts to source';
+                                        } else if (cost <= 0) {
+                                          // Missing cost - yellow
+                                          colorClass = 'text-amber-500';
+                                          showWarning = true;
+                                          warningColor = 'text-amber-500';
+                                          tooltip = 'Missing cost data - gross profit will be inaccurate';
+                                        }
+                                      }
+                                      
+                                      return (
+                                        <>
+                                          <span className={colorClass}>${price.toFixed(2)}</span>
+                                          {showWarning && (
+                                            <span className={`ml-1 inline-flex items-center ${warningColor}`} title={tooltip}>
+                                              <AlertTriangle className="w-3.5 h-3.5" />
+                                            </span>
+                                          )}
+                                        </>
+                                      );
+                                    })()}
                                   </td>
                                   <td className="px-4 py-3 text-right font-medium">
-                                    <span className={item.type === 'PART' && item.unitPrice <= 0 ? 'text-red-600' : item.type === 'PART' && (item.unitCost || 0) <= 0 ? 'text-amber-500' : ''}>
-                                      ${(item.unitPrice * item.quantity).toFixed(2)}
-                                    </span>
+                                    {(() => {
+                                      const cost = item.unitCost || 0;
+                                      const price = item.unitPrice || 0;
+                                      const isPart = item.type === 'PART';
+                                      let colorClass = '';
+                                      
+                                      if (isPart) {
+                                        if (price < cost || (cost <= 0 && price <= 0)) {
+                                          colorClass = 'text-red-600';
+                                        } else if (cost <= 0) {
+                                          colorClass = 'text-amber-500';
+                                        }
+                                      }
+                                      
+                                      return <span className={colorClass}>${(price * item.quantity).toFixed(2)}</span>;
+                                    })()}
                                   </td>
                                   <td className="px-4 py-3 text-center">
                                     <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
