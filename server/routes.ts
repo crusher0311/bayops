@@ -3894,14 +3894,35 @@ export async function registerRoutes(
           const job = jobs[jobIndex];
           const existingLineItems = job.lineItems || [];
           
-          // Convert parts session items to line items
-          const newLineItems = items.map((item, idx) => {
+          // Normalize part number for comparison (trim whitespace, uppercase)
+          const normalizePartNumber = (pn: string | undefined) => (pn || '').trim().toUpperCase();
+          
+          // Build set of existing part numbers (normalized)
+          const existingPartNumbers = new Set(
+            existingLineItems
+              .map((li: any) => normalizePartNumber(li.partNumber))
+              .filter((pn: string) => pn.length > 0)
+          );
+          
+          // Filter out duplicates and convert to line items
+          const uniqueNewItems: any[] = [];
+          for (const item of items) {
+            const normalizedPN = normalizePartNumber(item.partNumber);
+            
+            // Skip if already exists
+            if (existingPartNumbers.has(normalizedPN)) {
+              continue;
+            }
+            
+            // Mark as added to prevent future duplicates in this batch
+            existingPartNumbers.add(normalizedPN);
+            
             const partCost = item.price ?? (item.unitCost ? parseFloat(item.unitCost) : 0);
             // Apply basic markup (1.5x) if no parts matrix configured
             const partPrice = Math.round(partCost * 1.5 * 100) / 100;
             
-            return {
-              id: `li-${Date.now()}-${idx}`,
+            uniqueNewItems.push({
+              id: `li-${Date.now()}-${uniqueNewItems.length}`,
               type: 'PART',
               description: item.description || item.partNumber,
               quantity: item.quantity || 1,
@@ -3911,12 +3932,8 @@ export async function registerRoutes(
               partNumber: item.partNumber,
               manufacturer: item.brand,
               supplier: item.supplier || 'PartsTech',
-            };
-          });
-          
-          // Merge with existing line items (avoid duplicates by part number)
-          const existingPartNumbers = new Set(existingLineItems.map((li: any) => li.partNumber).filter(Boolean));
-          const uniqueNewItems = newLineItems.filter(li => !existingPartNumbers.has(li.partNumber));
+            });
+          }
           
           if (uniqueNewItems.length > 0) {
             job.lineItems = [...existingLineItems, ...uniqueNewItems];
@@ -3931,6 +3948,7 @@ export async function registerRoutes(
             success: true, 
             message: `Added ${uniqueNewItems.length} part(s) to job`,
             appliedItems: uniqueNewItems,
+            skippedDuplicates: items.length - uniqueNewItems.length,
             repairOrderId,
             jobId
           });

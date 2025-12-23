@@ -154,6 +154,7 @@ export function useRepairOrder(id: string) {
     queryKey: ['repair-orders', id],
     queryFn: () => api.getRepairOrder(id),
     enabled: !!id,
+    refetchInterval: 3000, // Auto-refresh every 3 seconds for PartsTech sync
   });
 }
 
