@@ -3452,7 +3452,7 @@ export default function RepairOrderDetail() {
                                       </span>
                                     )}
                                     {item.type === 'PART' && item.unitPrice > 0 && (item.unitCost || 0) <= 0 && (
-                                      <span className="ml-1 inline-flex items-center text-amber-500" title="Part has $0 cost - no profit margin">
+                                      <span className="ml-1 inline-flex items-center text-amber-500" title="Missing cost data - gross profit will be inaccurate">
                                         <AlertTriangle className="w-3.5 h-3.5" />
                                       </span>
                                     )}
