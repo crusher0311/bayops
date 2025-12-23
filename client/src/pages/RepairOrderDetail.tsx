@@ -3723,15 +3723,34 @@ export default function RepairOrderDetail() {
                                               {job.similarity}% match
                                             </Badge>
                                           </TooltipTrigger>
-                                          <TooltipContent side="top" className="max-w-xs">
-                                            <div className="text-xs space-y-1">
-                                              <p className="font-medium">Vehicle Match Score:</p>
-                                              <ul className="text-muted-foreground space-y-0.5">
-                                                <li>• 50% base: Same make & model</li>
-                                                <li>• {job.exactYearMatch ? '+30%' : job.vehicleYear && vehicle ? 
-                                                  (Math.abs(job.vehicleYear - vehicle.year) <= 2 ? '+20%' : '+10%') : '+0%'}: Year match ({job.vehicleYear})</li>
-                                                <li>• {job.engineMatch === true ? '+20%' : job.engineMatch === false ? '-10%' : '+0%'}: Engine {job.engineMatch === true ? 'matches' : job.engineMatch === false ? 'differs' : 'N/A'}</li>
-                                              </ul>
+                                          <TooltipContent side="top" className="p-3 bg-slate-900 text-white border-0">
+                                            <div className="space-y-2">
+                                              <p className="font-semibold text-sm">Vehicle Match Score</p>
+                                              <div className="space-y-1.5 text-sm">
+                                                <div className="flex justify-between gap-4">
+                                                  <span className="text-slate-300">Same make & model</span>
+                                                  <span className="font-medium text-green-400">+50%</span>
+                                                </div>
+                                                <div className="flex justify-between gap-4">
+                                                  <span className="text-slate-300">Year: {job.vehicleYear}</span>
+                                                  <span className="font-medium text-green-400">
+                                                    {job.exactYearMatch ? '+30%' : job.vehicleYear && vehicle ? 
+                                                      (Math.abs(job.vehicleYear - vehicle.year) <= 2 ? '+20%' : '+10%') : '+0%'}
+                                                  </span>
+                                                </div>
+                                                {job.engineMatch !== null && (
+                                                  <div className="flex justify-between gap-4">
+                                                    <span className="text-slate-300">Engine</span>
+                                                    <span className={cn("font-medium", job.engineMatch ? "text-green-400" : "text-red-400")}>
+                                                      {job.engineMatch ? '+20%' : '-10%'}
+                                                    </span>
+                                                  </div>
+                                                )}
+                                                <div className="border-t border-slate-700 pt-1.5 flex justify-between gap-4">
+                                                  <span className="font-medium">Total</span>
+                                                  <span className="font-bold text-white">{job.similarity}%</span>
+                                                </div>
+                                              </div>
                                             </div>
                                           </TooltipContent>
                                         </Tooltip>
