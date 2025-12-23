@@ -211,7 +211,119 @@ async function updateCartCount() {
   }
 }
 
-// Intercept "Add to cart" clicks to capture part data
+// Intercept fetch requests to capture AddItemToCart GraphQL mutations
+function setupNetworkInterceptor() {
+  // Wrap fetch to intercept PartsTech GraphQL requests
+  const originalFetch = window.fetch;
+  
+  window.fetch = async function(...args) {
+    const [url, options] = args;
+    
+    // Call original fetch first
+    const response = await originalFetch.apply(this, args);
+    
+    // Check if this is a GraphQL request with AddItemToCart
+    if (options?.body && typeof options.body === 'string') {
+      try {
+        const body = JSON.parse(options.body);
+        
+        if (body.operationName === 'AddItemToCart' && body.variables?.item) {
+          const item = body.variables.item;
+          
+          console.log('BayOPS: Intercepted AddItemToCart:', item);
+          
+          // Extract part data from the GraphQL mutation
+          const partData = {
+            partNumber: item.partNumber || '',
+            description: item.partName || '',
+            brand: extractBrandFromName(item.partName || ''),
+            supplier: 'PartsTech',
+            price: 0, // Price not in mutation, will need to get from DOM
+            quantity: item.quantity || 1,
+            vin: item.vin || '',
+            partNumberId: item.partNumberId || ''
+          };
+          
+          // Try to get price from the page
+          const priceFromPage = findPriceForPart(item.partNumber);
+          if (priceFromPage) {
+            partData.price = priceFromPage;
+          }
+          
+          if (partData.partNumber && currentJobContext) {
+            // Send to background to add to session
+            chrome.runtime.sendMessage({
+              type: 'ADD_PART',
+              jobId: currentJobContext.jobId,
+              part: partData
+            }, (resp) => {
+              if (resp?.success) {
+                updateCartCount();
+                showToast(`Added: ${partData.partNumber}`);
+              }
+            });
+          }
+        }
+      } catch (e) {
+        // Not JSON or parse error, ignore
+      }
+    }
+    
+    return response;
+  };
+  
+  console.log('BayOPS: Network interceptor set up');
+}
+
+// Extract brand from part name
+function extractBrandFromName(name) {
+  const knownBrands = ['PowerStop', 'AC Delco', 'ACDelco', 'Motorcraft', 'Bosch', 'Denso', 'NGK', 
+                       'Gates', 'Dayco', 'Moog', 'TRW', 'Monroe', 'KYB', 'Bilstein',
+                       'Wagner', 'Bendix', 'Raybestos', 'Centric', 'StopTech',
+                       'Dorman', 'Standard', 'BWD', 'Cardone', 'Beck Arnley', 'Duralast',
+                       'AutoZone', 'O\'Reilly', 'NAPA', 'Carquest', 'FelPro', 'Fel-Pro'];
+  
+  for (const brand of knownBrands) {
+    if (name.toLowerCase().includes(brand.toLowerCase())) {
+      return brand;
+    }
+  }
+  
+  // Try to extract first word as brand
+  const firstWord = name.split(/\s+/)[0];
+  if (firstWord && firstWord.length > 2) {
+    return firstWord;
+  }
+  
+  return '';
+}
+
+// Find price for a part number on the current page
+function findPriceForPart(partNumber) {
+  // Look for price near the part number on the page
+  const pageText = document.body.innerText;
+  
+  // Find the part number and look for nearby price
+  const partIndex = pageText.indexOf(partNumber);
+  if (partIndex >= 0) {
+    // Get surrounding text (500 chars around part number)
+    const surrounding = pageText.substring(Math.max(0, partIndex - 200), partIndex + 300);
+    
+    // Find all prices in surrounding text
+    const priceMatches = surrounding.match(/\$\s*([\d,]+\.?\d*)/g);
+    if (priceMatches && priceMatches.length > 0) {
+      // Take the smallest price (usually wholesale/cost)
+      const prices = priceMatches.map(p => parseFloat(p.replace(/[$,\s]/g, ''))).filter(p => p > 0);
+      if (prices.length > 0) {
+        return Math.min(...prices);
+      }
+    }
+  }
+  
+  return 0;
+}
+
+// Fallback: Intercept "Add to cart" clicks to capture part data
 function setupAddToCartInterceptor() {
   document.addEventListener('click', (e) => {
     const target = e.target;
@@ -225,32 +337,12 @@ function setupAddToCartInterceptor() {
                         button.getAttribute('aria-label')?.toLowerCase().includes('add');
     
     if (isAddToCart && currentJobContext) {
-      // Find the product container (go up the DOM tree)
-      const productCard = button.closest('[class*="product"], [class*="Part"], [class*="item"], [class*="result"], [class*="card"]') ||
-                          button.parentElement?.parentElement?.parentElement;
-      
-      if (productCard) {
-        const partData = extractPartFromProductCard(productCard);
-        if (partData.partNumber) {
-          console.log('BayOPS: Captured part from Add to Cart:', partData);
-          
-          // Send to background to add to session
-          chrome.runtime.sendMessage({
-            type: 'ADD_PART',
-            jobId: currentJobContext.jobId,
-            part: partData
-          }, (response) => {
-            if (response?.success) {
-              updateCartCount();
-              showToast(`Added: ${partData.partNumber}`);
-            }
-          });
-        }
-      }
+      // The network interceptor should handle this, but log for debugging
+      console.log('BayOPS: Add to Cart button clicked');
     }
   }, true);
   
-  console.log('BayOPS: Add to Cart interceptor set up');
+  console.log('BayOPS: Click interceptor set up');
 }
 
 // Extract part data from a product card/listing
@@ -429,9 +521,49 @@ function setupCartObserver() {
   console.log('BayOPS: Cart observer set up');
 }
 
+// Inject page script to intercept fetch requests
+function injectPageScript() {
+  const script = document.createElement('script');
+  script.src = chrome.runtime.getURL('injected-partstech.js');
+  script.onload = function() {
+    this.remove();
+  };
+  (document.head || document.documentElement).appendChild(script);
+  console.log('BayOPS: Injected PartsTech page script');
+}
+
+// Listen for parts added via fetch interception
+function setupPartAddedListener() {
+  window.addEventListener('bayops-part-added', (event) => {
+    const partData = event.detail;
+    console.log('BayOPS: Received part from page:', partData);
+    
+    if (partData.partNumber && currentJobContext) {
+      chrome.runtime.sendMessage({
+        type: 'ADD_PART',
+        jobId: currentJobContext.jobId,
+        part: partData
+      }, (response) => {
+        if (response?.success) {
+          updateCartCount();
+          showToast(`Added: ${partData.partNumber}`);
+        }
+      });
+    }
+  });
+  
+  console.log('BayOPS: Part added listener set up');
+}
+
 // Initialize
 function init() {
-  console.log('BayOPS Parts Connector: PartsTech content script loaded v1.6.0');
+  console.log('BayOPS Parts Connector: PartsTech content script loaded v1.7.0');
+  
+  // Inject page script for fetch interception
+  injectPageScript();
+  
+  // Listen for parts added from page script
+  setupPartAddedListener();
   
   // Check if we have a stored job context for this tab
   chrome.runtime.sendMessage({ type: 'GET_TAB_CONTEXT' }, (response) => {
@@ -441,7 +573,7 @@ function init() {
     }
   });
   
-  // Set up "Add to Cart" button interceptor immediately
+  // Set up "Add to Cart" button interceptor as fallback
   setupAddToCartInterceptor();
   
   // Set up cart monitoring after page settles

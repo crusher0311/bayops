@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BayOPS Parts Connector",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Connect BayOPS repair orders with PartsTech for seamless parts ordering",
   "permissions": [
     "storage",
@@ -51,6 +51,10 @@
     {
       "resources": ["injected-bayops.js"],
       "matches": ["http://localhost:5000/*", "https://*.replit.app/*", "https://*.replit.dev/*"]
+    },
+    {
+      "resources": ["injected-partstech.js"],
+      "matches": ["https://*.partstech.com/*"]
     }
   ]
 }
