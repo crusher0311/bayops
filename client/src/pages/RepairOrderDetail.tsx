@@ -3708,17 +3708,34 @@ export default function RepairOrderDetail() {
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
                                       <p className="font-medium truncate">{job.name}</p>
-                                      <Badge 
-                                        variant={job.similarity >= 80 ? 'default' : job.similarity >= 60 ? 'secondary' : 'outline'}
-                                        className={cn(
-                                          'shrink-0 text-xs',
-                                          job.similarity >= 80 && 'bg-green-500/10 text-green-700 border-green-500/20',
-                                          job.similarity >= 60 && job.similarity < 80 && 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20',
-                                          job.similarity < 60 && 'bg-red-500/10 text-red-700 border-red-500/20'
-                                        )}
-                                      >
-                                        {job.similarity}% match
-                                      </Badge>
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Badge 
+                                              variant={job.similarity >= 80 ? 'default' : job.similarity >= 60 ? 'secondary' : 'outline'}
+                                              className={cn(
+                                                'shrink-0 text-xs cursor-help',
+                                                job.similarity >= 80 && 'bg-green-500/10 text-green-700 border-green-500/20',
+                                                job.similarity >= 60 && job.similarity < 80 && 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20',
+                                                job.similarity < 60 && 'bg-red-500/10 text-red-700 border-red-500/20'
+                                              )}
+                                            >
+                                              {job.similarity}% match
+                                            </Badge>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="top" className="max-w-xs">
+                                            <div className="text-xs space-y-1">
+                                              <p className="font-medium">Vehicle Match Score:</p>
+                                              <ul className="text-muted-foreground space-y-0.5">
+                                                <li>• 50% base: Same make & model</li>
+                                                <li>• {job.exactYearMatch ? '+30%' : job.vehicleYear && vehicle ? 
+                                                  (Math.abs(job.vehicleYear - vehicle.year) <= 2 ? '+20%' : '+10%') : '+0%'}: Year match ({job.vehicleYear})</li>
+                                                <li>• {job.engineMatch === true ? '+20%' : job.engineMatch === false ? '-10%' : '+0%'}: Engine {job.engineMatch === true ? 'matches' : job.engineMatch === false ? 'differs' : 'N/A'}</li>
+                                              </ul>
+                                            </div>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
                                     </div>
                                     <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mt-1">
                                       <span>RO #{job.roNumber}</span>
