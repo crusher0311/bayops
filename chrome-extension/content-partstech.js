@@ -431,7 +431,7 @@ function setupCartObserver() {
 
 // Initialize
 function init() {
-  console.log('BayOPS Parts Connector: PartsTech content script loaded v1.5.0');
+  console.log('BayOPS Parts Connector: PartsTech content script loaded v1.6.0');
   
   // Check if we have a stored job context for this tab
   chrome.runtime.sendMessage({ type: 'GET_TAB_CONTEXT' }, (response) => {

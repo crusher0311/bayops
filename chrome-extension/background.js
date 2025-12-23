@@ -157,12 +157,13 @@ async function handleMessage(message, sender) {
         status: 'draft'
       });
       
-      // Build PartsTech URL - note: PartsTech doesn't support VIN in URL params
-      // Vehicle must be selected manually in PartsTech
+      // Build PartsTech URL with VIN for vehicle auto-selection
       let url = 'https://app.partstech.com/';
       
-      // Just open PartsTech home - search requires vehicle selection first
-      // The BayOPS banner will show RO/vehicle context for reference
+      // Add VIN to URL if provided - PartsTech will auto-select the vehicle
+      if (vin && vin.length === 17) {
+        url = `https://app.partstech.com/searchresult?vin=${encodeURIComponent(vin)}`;
+      }
       
       // Check if we already have a PartsTech tab for this job
       const sessions = await getSessions();
