@@ -3447,7 +3447,7 @@ export default function RepairOrderDetail() {
                                       ${item.unitPrice.toFixed(2)}
                                     </span>
                                     {item.type === 'PART' && item.unitPrice <= 0 && (
-                                      <span className="ml-1 inline-flex items-center text-red-600" title="Part needs pricing - use Search Parts to source">
+                                      <span className="ml-1 inline-flex items-center text-red-600" title={(item.unitCost || 0) > 0 ? "Sale price is $0 - customer will not be charged for this part" : "Part needs pricing - use Search Parts to source"}>
                                         <AlertTriangle className="w-3.5 h-3.5" />
                                       </span>
                                     )}
