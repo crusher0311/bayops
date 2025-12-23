@@ -8,6 +8,26 @@ BayOPS is a multi-tenant SaaS shop management system designed for automotive bus
 - Keep UI clean and professional for automotive industry
 - White-label capabilities for enterprise organizations
 
+## Git Workflow & Version Control
+**Repository:** https://github.com/crusher0311/bayops.git
+
+**Branch Structure:**
+| Branch | Purpose | Protection |
+|--------|---------|------------|
+| `main` | Production - stable releases | Protected (requires PR + approval) |
+| `qa` | QA testing before production | None |
+| `develop` | Active development from Replit | None |
+
+**Deployment Flow:**
+1. **Replit** → `develop` (active work, push with `git push origin main:develop`)
+2. **develop** → `qa` (PR for QA testing)
+3. **qa** → `main` (PR with required approval for production)
+
+**Version Tags:** Follow semantic versioning (v1.0.0-beta, v1.0.0-rc.1, v1.0.0)
+
+**Key Files:**
+- `CHANGELOG.md` - Track all version changes
+
 ## System Architecture
 BayOPS utilizes a modern web stack with **React 19** for the frontend, employing **Wouter** for routing, **TanStack Query** for data fetching, **React Hook Form**, **Tailwind CSS v4** for styling, and **Radix UI** components. The backend is powered by **Express.js** with **PostgreSQL** and **Drizzle ORM** for data persistence, and **Passport.js** for authentication. **Zustand** is used for minimal state management, primarily for authentication.
 
