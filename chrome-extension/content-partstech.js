@@ -554,7 +554,7 @@ function setupPartAddedListener() {
 
 // Initialize
 function init() {
-  console.log('BayOPS Parts Connector: PartsTech content script loaded v1.9.1');
+  console.log('BayOPS Parts Connector: PartsTech content script loaded v1.9.2');
   
   // Inject page script for fetch interception
   injectPageScript();

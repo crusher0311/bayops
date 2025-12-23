@@ -66,20 +66,12 @@ async function addItemToSession(jobId, item) {
     return null;
   }
   
-  // Check for duplicates by part number
-  const existingIndex = session.items.findIndex(i => i.partNumber === item.partNumber);
-  
-  if (existingIndex >= 0) {
-    // Update quantity if exists
-    session.items[existingIndex].quantity += item.quantity || 1;
-    session.items[existingIndex].updatedAt = Date.now();
-  } else {
-    // Add new item
-    session.items.push({
-      ...item,
-      addedAt: Date.now()
-    });
-  }
+  // For auto-sync mode, don't accumulate in session - just sync the part directly
+  // Clear previous items and add the new one (session is just for current sync)
+  session.items = [{
+    ...item,
+    addedAt: Date.now()
+  }];
   
   session.updatedAt = Date.now();
   await saveSessions(sessions);

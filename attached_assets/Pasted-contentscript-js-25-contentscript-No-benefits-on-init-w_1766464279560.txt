@@ -1,0 +1,45 @@
+contentscript.js:25 [contentscript] No benefits on init, will wait for fetch
+main.js:1 Object
+content-partstech.js:557 BayOPS Parts Connector: PartsTech content script loaded v1.9.1
+content-partstech.js:529 BayOPS: Injected PartsTech page script
+content-partstech.js:552 BayOPS: Part added listener set up
+content-partstech.js:334 BayOPS: Click interceptor set up
+console.js:36 BayOPS: PartsTech page script injected
+console.js:36 BayOPS: Fetch interceptor installed
+console.js:36 [LaunchDarkly] The waitForInitialization function was called without a timeout specified. In a future version a default timeout will be applied.
+(anonymous) @ console.js:36
+console.js:36 [LaunchDarkly] LaunchDarkly client initialized
+us-communication.js:588 SyntaxError: "[object Object]" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at _ (us-communication.js:624:187)
+    at n._receiveMessage (us-communication.js:743:17)
+content-partstech.js:17 BayOPS: Job context set: Object
+content-partstech.js:518 BayOPS: Cart observer set up
+console.js:36 [Meta Pixel] - Duplicate Pixel ID: 1866450626862852.
+(anonymous) @ console.js:36
+/searchresult?part_t…ilability%5B%5D=1:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+/searchresult?part_t…ilability%5B%5D=1:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+/searchresult?part_t…ilability%5B%5D=1:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+/searchresult?part_t…ilability%5B%5D=1:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+/searchresult?part_t…ilability%5B%5D=1:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+/searchresult?part_t…ilability%5B%5D=1:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+/searchresult?part_t…ilability%5B%5D=1:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+Unchecked runtime.lastError: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+Unchecked runtime.lastError: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+Unchecked runtime.lastError: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+Unchecked runtime.lastError: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+Unchecked runtime.lastError: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+Unchecked runtime.lastError: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+/searchresult?part_t…ilability%5B%5D=1:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+/searchresult?part_t…ilability%5B%5D=1:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+/searchresult?part_t…ilability%5B%5D=1:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+/searchresult?part_t…ilability%5B%5D=1:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+/searchresult?part_t…ilability%5B%5D=1:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+/searchresult?part_t…ilability%5B%5D=1:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+/searchresult?part_t…ilability%5B%5D=1:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+/searchresult?part_t…ilability%5B%5D=1:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+/searchresult?part_t…ilability%5B%5D=1:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+content-partstech.js:330 BayOPS: Add to Cart button clicked
+console.js:36 BayOPS: Intercepted AddItemToCart - Full variables: {"item":{"accountId":"256221","lineCardId":"155984","origin":"SEARCH","partName":"Pronto Filters Air Filter","partNumber":"PA5043","partNumberId":"PR11-PA5043","partTypeId":"6192","quantity":2,"searchedPartNumber":null,"searchResultPosition":1,"storeId":"160267","vehicleId":"70192","vin":"1FDXE45F72HA44954"}}
+console.js:36 BayOPS: Item quantity from request: 2
+content-partstech.js:536 BayOPS: Received part from page: Object
