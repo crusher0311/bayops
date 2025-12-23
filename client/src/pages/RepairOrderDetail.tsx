@@ -3465,7 +3465,10 @@ export default function RepairOrderDetail() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-sm text-muted-foreground mb-2 uppercase tracking-wider">Vehicle</h3>
-                    <div className="font-medium text-lg">{vehicle?.year} {vehicle?.make} {vehicle?.model}</div>
+                    <div className="font-medium text-lg">
+                      {vehicle?.year} {vehicle?.make} {vehicle?.model}
+                      {vehicle?.trim && <span className="text-muted-foreground ml-1">{vehicle.trim}</span>}
+                    </div>
                     <div className="text-sm text-muted-foreground flex items-center gap-2">
                       VIN: {vehicle?.vin}
                       {vehicle?.vin && (
@@ -3483,6 +3486,20 @@ export default function RepairOrderDetail() {
                         </Button>
                       )}
                     </div>
+                    {(vehicle?.engineDisplacement || vehicle?.engineCylinders || vehicle?.fuelType) && (
+                      <div className="text-sm text-muted-foreground">
+                        Engine: {[
+                          vehicle?.engineDisplacement,
+                          vehicle?.engineCylinders ? `${vehicle.engineCylinders} cyl` : null,
+                          vehicle?.fuelType
+                        ].filter(Boolean).join(' • ')}
+                      </div>
+                    )}
+                    {(vehicle?.transmission || vehicle?.driveType) && (
+                      <div className="text-sm text-muted-foreground">
+                        {[vehicle?.transmission, vehicle?.driveType].filter(Boolean).join(' • ')}
+                      </div>
+                    )}
                     <div className="text-sm text-muted-foreground flex items-center gap-1">
                       Mileage: 
                       <input
