@@ -2212,6 +2212,18 @@ export default function RepairOrderDetail() {
   const [partstechJobId, setPartstechJobId] = useState<string | null>(null);
   const [partstechJobName, setPartstechJobName] = useState<string | undefined>(undefined);
   
+  // Fetch parts sessions for this RO
+  const { data: partsSessions = [], refetch: refetchPartsSessions } = useQuery<any[]>({
+    queryKey: ['parts-sessions', roId],
+    queryFn: async () => {
+      const res = await fetch(`/api/parts-sessions/ro/${roId}`, { credentials: 'include' });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!roId,
+    refetchInterval: 5000, // Poll every 5 seconds for updates from extension
+  });
+  
   // Canned Jobs / Service Packages state
   const [isPackageDialogOpen, setIsPackageDialogOpen] = useState(false);
   
@@ -2412,6 +2424,56 @@ export default function RepairOrderDetail() {
     
     // Toast notification - dialog manages its own close via onClose prop
     toast({ title: 'Part added', description: `${part.description} (x${qty}) added to job` });
+  };
+
+  // Apply parts from PartsTech session to job
+  const handleApplyPartsFromSession = async (sessionId: string, jobId: string, items: any[]) => {
+    if (!items || items.length === 0) return;
+    
+    const newLineItems: LineItem[] = items.map((item, index) => {
+      const partCost = parseFloat(item.unitCost) || 0;
+      const partPrice = item.unitPrice ? parseFloat(item.unitPrice) : applyPartsMatrix(partCost);
+      return {
+        id: `li-${Date.now()}-${index}`,
+        type: 'PART' as const,
+        description: item.description || item.partNumber,
+        quantity: item.quantity || 1,
+        unitCost: partCost,
+        unitPrice: partPrice,
+        approved: true,
+        partNumber: item.partNumber,
+        manufacturer: item.brand,
+        supplier: item.supplier || 'PartsTech',
+      };
+    });
+    
+    const updatedJobs = jobs.map(job => 
+      job.id === jobId 
+        ? { ...job, lineItems: [...job.lineItems, ...newLineItems] }
+        : job
+    );
+    
+    updateRO.mutate({
+      id: ro.id,
+      updates: { jobs: updatedJobs as any },
+    }, {
+      onSuccess: async () => {
+        // Delete the parts session after applying
+        try {
+          await fetch(`/api/parts-sessions/${sessionId}`, {
+            method: 'DELETE',
+            credentials: 'include',
+          });
+          refetchPartsSessions();
+        } catch (e) {
+          console.log('Failed to clear session', e);
+        }
+        toast({ 
+          title: 'Parts added to job', 
+          description: `Added ${items.length} part(s) from PartsTech` 
+        });
+      }
+    });
   };
 
   // AI Service Writer functions
@@ -3270,6 +3332,49 @@ export default function RepairOrderDetail() {
                         </div>
                       </CardHeader>
                       <CardContent className="p-0">
+                        {/* Pending PartsTech Parts Banner */}
+                        {(() => {
+                          const jobSession = partsSessions.find((s: any) => s.jobId === job.id);
+                          if (jobSession && jobSession.items?.length > 0) {
+                            return (
+                              <div className="m-4 p-4 bg-orange-50 border border-orange-200 rounded-lg" data-testid={`pending-parts-${job.id}`}>
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-2">
+                                    <Package className="w-5 h-5 text-orange-600" />
+                                    <span className="font-semibold text-orange-900">
+                                      {jobSession.items.length} Part{jobSession.items.length > 1 ? 's' : ''} from PartsTech
+                                    </span>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    className="bg-orange-600 hover:bg-orange-700"
+                                    onClick={() => handleApplyPartsFromSession(jobSession.id, job.id, jobSession.items)}
+                                    disabled={updateRO.isPending}
+                                    data-testid={`button-apply-parts-${job.id}`}
+                                  >
+                                    <Check className="w-4 h-4 mr-1" /> Apply to Job
+                                  </Button>
+                                </div>
+                                <div className="space-y-2">
+                                  {jobSession.items.map((item: any) => (
+                                    <div key={item.id} className="flex justify-between items-center text-sm bg-white p-2 rounded border border-orange-100">
+                                      <div>
+                                        <span className="font-medium">{item.partNumber}</span>
+                                        <span className="text-muted-foreground ml-2">{item.brand}</span>
+                                        <p className="text-xs text-muted-foreground truncate max-w-md">{item.description}</p>
+                                      </div>
+                                      <div className="text-right">
+                                        <span className="font-semibold">${parseFloat(item.unitCost || 0).toFixed(2)}</span>
+                                        <span className="text-xs text-muted-foreground ml-1">x{item.quantity}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                         <div className="overflow-x-auto">
                           <table className="w-full text-sm">
                             <thead className="bg-muted/50 text-muted-foreground font-medium">
