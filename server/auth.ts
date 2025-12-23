@@ -39,8 +39,13 @@ export function setupAuth(app: Express) {
     app.set("trust proxy", 1);
   }
 
+  const sessionSecret = process.env.SESSION_SECRET || process.env.REPL_ID || "bayops-dev-secret-change-in-production";
+  if (!process.env.SESSION_SECRET && process.env.NODE_ENV === "production") {
+    console.warn("[Auth] WARNING: SESSION_SECRET not set. Set this environment variable in production!");
+  }
+  
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.REPL_ID || "apex-auto-secret-key-dev",
+    secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
     cookie: {

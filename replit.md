@@ -88,3 +88,53 @@ The database is undergoing a three-phase refactor for enterprise-grade normalize
   - Matching logic to correlate CARFAX service history with OEM maintenance recommendations
   - Integration in repair order detail page's "Service History" tab
   - API routes: `/api/vehicles/:vehicleId/service-history`, `/api/vin/:vin/service-history`, `/api/carfax/status`
+
+## Self-Hosting (Railway, Docker, etc.)
+
+BayOPS is designed to work both on Replit and when self-hosted. The following services automatically adapt:
+
+**Automatic Fallbacks:**
+- **AI Service**: Uses Replit AI integration on Replit, falls back to `OPENAI_API_KEY` when self-hosting
+- **Object Storage**: Uses Replit Object Storage on Replit, falls back to local filesystem (`./uploads`) when self-hosting
+- **Session Secret**: Uses `SESSION_SECRET` env var (required for production)
+
+**Required Environment Variables for Self-Hosting:**
+```bash
+# Core (required)
+DATABASE_URL=postgresql://...       # PostgreSQL connection string
+SESSION_SECRET=your-secret-key      # Random string for session encryption
+APP_URL=https://your-domain.com     # Your app's public URL (for signature links)
+
+# AI Features
+OPENAI_API_KEY=sk-...               # OpenAI API key
+
+# File Storage (optional - defaults to ./uploads)
+PRIVATE_OBJECT_DIR=/path/to/storage # Persistent storage directory
+```
+
+**Optional Integrations:**
+```bash
+GEOAPIFY_API_KEY=                   # Address autocomplete
+VEHICLE_DATABASES_API_KEY=          # Labor pricing estimates
+RESEND_API_KEY=                     # Email sending
+PARTSTECH_API_KEY=                  # Parts ordering
+PARTSTECH_USERNAME=
+TWILIO_ACCOUNT_SID=                 # SMS via Twilio
+TWILIO_AUTH_TOKEN=
+TWILIO_PHONE_NUMBER=
+# OR
+TELNYX_API_KEY=                     # SMS via Telnyx
+TELNYX_PHONE_NUMBER=
+```
+
+**Build & Run Commands:**
+```bash
+npm install
+npm run build
+npm start
+```
+
+**Notes:**
+- Replit-specific Vite plugins are automatically skipped outside Replit
+- Object storage files are saved to local filesystem when not on Replit
+- For persistent file storage on Railway, mount a volume at the `PRIVATE_OBJECT_DIR` path

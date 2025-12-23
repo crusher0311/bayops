@@ -1323,10 +1323,11 @@ export async function registerRoutes(
         });
       }
       
-      // Build the signature URL
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+      // Build the signature URL - use APP_URL for self-hosting, or Replit domain
+      const baseUrl = process.env.APP_URL 
+        || (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : null)
+        || (process.env.REPL_SLUG && process.env.REPL_OWNER ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : null)
+        || 'http://localhost:5000';
       const signatureUrl = `${baseUrl}/sign/${token}`;
       
       // Calculate job total for the message
