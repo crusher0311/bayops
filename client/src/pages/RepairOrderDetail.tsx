@@ -3443,17 +3443,17 @@ export default function RepairOrderDetail() {
                                   </td>
                                   <td className="px-4 py-3 text-center">{item.quantity}</td>
                                   <td className="px-4 py-3 text-right">
-                                    <span className={item.type === 'PART' && item.unitPrice <= 0 ? 'text-amber-600' : ''}>
+                                    <span className={item.type === 'PART' && (item.unitPrice <= 0 || (item.unitCost || 0) <= 0) ? 'text-amber-600' : ''}>
                                       ${item.unitPrice.toFixed(2)}
                                     </span>
-                                    {item.type === 'PART' && item.unitPrice <= 0 && (
-                                      <span className="ml-1 inline-flex items-center text-amber-600" title="Part needs pricing - use Search Parts to source">
+                                    {item.type === 'PART' && (item.unitPrice <= 0 || (item.unitCost || 0) <= 0) && (
+                                      <span className="ml-1 inline-flex items-center text-amber-600" title={item.unitPrice <= 0 ? "Part needs pricing - use Search Parts to source" : "Part has $0 cost - no profit margin"}>
                                         <AlertTriangle className="w-3.5 h-3.5" />
                                       </span>
                                     )}
                                   </td>
                                   <td className="px-4 py-3 text-right font-medium">
-                                    <span className={item.type === 'PART' && item.unitPrice <= 0 ? 'text-amber-600' : ''}>
+                                    <span className={item.type === 'PART' && (item.unitPrice <= 0 || (item.unitCost || 0) <= 0) ? 'text-amber-600' : ''}>
                                       ${(item.unitPrice * item.quantity).toFixed(2)}
                                     </span>
                                   </td>
