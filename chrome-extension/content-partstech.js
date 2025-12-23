@@ -558,7 +558,7 @@ function setupPartAddedListener() {
 
 // Initialize
 function init() {
-  console.log('BayOPS Parts Connector: PartsTech content script loaded v1.9.0');
+  console.log('BayOPS Parts Connector: PartsTech content script loaded v1.9.1');
   
   // Inject page script for fetch interception
   injectPageScript();
@@ -580,8 +580,6 @@ function init() {
   // Set up cart monitoring after page settles
   setTimeout(() => {
     setupCartObserver();
-    // Initial cart parse
-    parseAndSyncCart();
   }, 3000);
 }
 
