@@ -36,6 +36,7 @@ import {
   Plus, 
   Trash2, 
   Edit,
+  X,
   CheckCircle2, 
   AlertCircle,
   FileText,
