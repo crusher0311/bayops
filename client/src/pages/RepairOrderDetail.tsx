@@ -3148,7 +3148,23 @@ export default function RepairOrderDetail() {
                         </Button>
                       )}
                     </div>
-                    <div className="text-sm text-muted-foreground">Mileage: {ro.odometerIn?.toLocaleString()} mi</div>
+                    <div className="text-sm text-muted-foreground flex items-center gap-2">
+                      Mileage: 
+                      <Input
+                        type="number"
+                        value={ro.odometerIn || ''}
+                        onChange={(e) => {
+                          const newMileage = e.target.value ? parseInt(e.target.value) : null;
+                          updateRO.mutate({
+                            id: ro.id,
+                            updates: { odometerIn: newMileage },
+                          });
+                        }}
+                        className="w-24 h-7 text-sm inline-block"
+                        data-testid="input-mileage"
+                      />
+                      mi
+                    </div>
                     {vehicle?.vin && (
                       <Button
                         variant="outline"
@@ -3684,13 +3700,13 @@ export default function RepairOrderDetail() {
             </Card>
 
             {ro.notes && (
-              <Card className="bg-muted/30 border-dashed">
+              <Card className="bg-amber-50 border-amber-300 border-l-4 border-l-amber-500">
                 <CardContent className="p-4">
                   <div className="flex gap-3 items-start">
-                    <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                    <Car className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                     <div className="space-y-1">
-                      <p className="text-sm font-medium">Notes</p>
-                      <p className="text-xs text-muted-foreground">{ro.notes}</p>
+                      <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Reason Vehicle Here</p>
+                      <p className="text-sm font-medium text-amber-900">{ro.notes}</p>
                     </div>
                   </div>
                 </CardContent>
