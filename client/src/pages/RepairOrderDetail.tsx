@@ -1910,7 +1910,10 @@ export default function RepairOrderDetail() {
     queryFn: async () => {
       const res = await fetch(`/api/settings/all/${ro?.locationId}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch settings');
-      return res.json() as Promise<{ partsMatrices: PartsMatrix[] }>;
+      return res.json() as Promise<{ 
+        partsMatrices: PartsMatrix[];
+        laborRates: Array<{ id: string; name: string; rate: string; isDefault: boolean }>;
+      }>;
     },
     enabled: !!ro?.locationId,
   });
@@ -2604,7 +2607,12 @@ export default function RepairOrderDetail() {
       return 'FEE';
     };
     
+    // Get current default labor rate from settings
+    const defaultLaborRate = settings?.laborRates?.find(r => r.isDefault);
+    const laborRate = defaultLaborRate ? parseFloat(defaultLaborRate.rate) : 0;
+    
     const lineItems: LineItem[] = [];
+    let partsNeedSourcing = false;
     
     if (deferredItem.laborHours && parseFloat(deferredItem.laborHours) > 0) {
       lineItems.push({
@@ -2613,17 +2621,19 @@ export default function RepairOrderDetail() {
         description: deferredItem.serviceName,
         quantity: parseFloat(deferredItem.laborHours),
         unitCost: 0,
-        unitPrice: parseFloat(deferredItem.estimatedPrice || 0) / parseFloat(deferredItem.laborHours || 1),
+        unitPrice: laborRate, // Use current labor rate
         approved: false,
       });
     } else if (deferredItem.estimatedPrice) {
+      // If no labor hours, estimate based on price / rate
+      const estimatedHours = laborRate > 0 ? parseFloat(deferredItem.estimatedPrice) / laborRate : 1;
       lineItems.push({
         id: `li-${Date.now()}-labor`,
         type: 'LABOR',
         description: deferredItem.serviceName,
-        quantity: 1,
+        quantity: Math.round(estimatedHours * 10) / 10, // Round to 1 decimal
         unitCost: 0,
-        unitPrice: parseFloat(deferredItem.estimatedPrice || 0),
+        unitPrice: laborRate,
         approved: false,
       });
     }
@@ -2632,16 +2642,39 @@ export default function RepairOrderDetail() {
       try {
         const parsed = JSON.parse(deferredItem.notes);
         if (Array.isArray(parsed)) {
-          return parsed.map((item: any, idx: number): LineItem => ({
-            id: `li-${Date.now()}-${idx}`,
-            type: normalizeType(item.type),
-            description: item.description || item.name || '',
-            quantity: parseFloat(item.quantity) || 1,
-            unitCost: parseFloat(item.unitCost) || 0,
-            unitPrice: parseFloat(item.unitPrice) || parseFloat(item.total) || 0,
-            approved: false,
-            partNumber: item.partNumber || '',
-          }));
+          return parsed.map((item: any, idx: number): LineItem => {
+            const itemType = normalizeType(item.type);
+            const unitCost = parseFloat(item.unitCost) || 0;
+            
+            // Check if part has no cost - needs re-sourcing
+            if (itemType === 'PART' && unitCost <= 0) {
+              partsNeedSourcing = true;
+            }
+            
+            // For labor items, use current labor rate
+            if (itemType === 'LABOR') {
+              return {
+                id: `li-${Date.now()}-${idx}`,
+                type: itemType,
+                description: item.description || item.name || '',
+                quantity: parseFloat(item.quantity) || 1,
+                unitCost: 0,
+                unitPrice: laborRate,
+                approved: false,
+              };
+            }
+            
+            return {
+              id: `li-${Date.now()}-${idx}`,
+              type: itemType,
+              description: item.description || item.name || '',
+              quantity: parseFloat(item.quantity) || 1,
+              unitCost: unitCost,
+              unitPrice: parseFloat(item.unitPrice) || parseFloat(item.total) || 0,
+              approved: false,
+              partNumber: item.partNumber || '',
+            };
+          });
         }
         return [];
       } catch {
@@ -2658,7 +2691,7 @@ export default function RepairOrderDetail() {
         description: deferredItem.serviceName,
         quantity: 1,
         unitCost: 0,
-        unitPrice: 0,
+        unitPrice: laborRate,
         approved: false,
       });
     }
@@ -2681,10 +2714,21 @@ export default function RepairOrderDetail() {
           id: deferredItem.id,
           updates: { status: 'CONVERTED', convertedRoId: ro.id },
         });
-        toast({
-          title: 'Deferred service added',
-          description: `"${deferredItem.serviceName}" has been added to this repair order.`,
-        });
+        
+        // Show appropriate toast based on whether parts need re-sourcing
+        if (partsNeedSourcing) {
+          toast({
+            title: 'Deferred service added - Parts need pricing',
+            description: `"${deferredItem.serviceName}" added. Some parts have $0 cost and need to be re-sourced with current pricing.`,
+            variant: 'default',
+            duration: 6000,
+          });
+        } else {
+          toast({
+            title: 'Deferred service added',
+            description: `"${deferredItem.serviceName}" has been added with current labor rates.`,
+          });
+        }
       },
       onError: () => {
         toast({
