@@ -55,8 +55,9 @@ function showJobBanner() {
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
         <span id="bayops-cart-count" style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 12px; font-size: 12px;">
-          0 parts
+          0 parts synced
         </span>
+        <span style="opacity: 0.8; font-size: 11px;">Parts auto-sync when added to cart</span>
         <button id="bayops-add-btn" style="
           background: #22c55e;
           border: none;
@@ -66,16 +67,7 @@ function showJobBanner() {
           cursor: pointer;
           font-size: 12px;
           font-weight: 500;
-        ">+ Add Part</button>
-        <button id="bayops-sync-btn" style="
-          background: rgba(255,255,255,0.2);
-          border: none;
-          color: white;
-          padding: 4px 12px;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 12px;
-        ">Sync to BayOPS</button>
+        ">+ Manual Entry</button>
       </div>
     </div>
     <div id="bayops-add-form" style="
@@ -166,10 +158,6 @@ function showJobBanner() {
     });
   });
   
-  // Sync button handler
-  document.getElementById('bayops-sync-btn').addEventListener('click', () => {
-    syncToBayOPS();
-  });
 }
 
 // Show a toast notification
@@ -206,7 +194,8 @@ async function updateCartCount() {
   if (response?.session?.items) {
     const countEl = document.getElementById('bayops-cart-count');
     if (countEl) {
-      countEl.textContent = `${response.session.items.length} parts`;
+      const count = response.session.items.length;
+      countEl.textContent = `${count} part${count !== 1 ? 's' : ''} synced`;
     }
   }
 }
@@ -259,7 +248,7 @@ function setupNetworkInterceptor() {
             }, (resp) => {
               if (resp?.success) {
                 updateCartCount();
-                showToast(`Added: ${partData.partNumber}`);
+                showToast(`Synced to BayOPS: ${partData.partNumber}`);
               }
             });
           }
@@ -558,7 +547,7 @@ function setupPartAddedListener() {
       }, (response) => {
         if (response?.success) {
           updateCartCount();
-          showToast(`Added: ${partData.partNumber}`);
+          showToast(`Synced to BayOPS: ${partData.partNumber}`);
         }
       });
     }
@@ -569,7 +558,7 @@ function setupPartAddedListener() {
 
 // Initialize
 function init() {
-  console.log('BayOPS Parts Connector: PartsTech content script loaded v1.8.0');
+  console.log('BayOPS Parts Connector: PartsTech content script loaded v1.9.0');
   
   // Inject page script for fetch interception
   injectPageScript();
