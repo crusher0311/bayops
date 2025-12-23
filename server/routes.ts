@@ -7709,14 +7709,22 @@ function setupMessagingRoutes(app: Express) {
       
       const zip = new AdmZip();
       
-      const files = fs.readdirSync(extensionDir);
-      for (const file of files) {
-        const filePath = path.join(extensionDir, file);
-        const stat = fs.statSync(filePath);
-        if (stat.isFile()) {
-          zip.addLocalFile(filePath);
+      // Recursively add all files and directories
+      function addDirToZip(dirPath: string, zipPath: string) {
+        const items = fs.readdirSync(dirPath);
+        for (const item of items) {
+          const fullPath = path.join(dirPath, item);
+          const stat = fs.statSync(fullPath);
+          if (stat.isFile()) {
+            zip.addLocalFile(fullPath, zipPath);
+          } else if (stat.isDirectory()) {
+            const newZipPath = zipPath ? `${zipPath}/${item}` : item;
+            addDirToZip(fullPath, newZipPath);
+          }
         }
       }
+      
+      addDirToZip(extensionDir, "");
       
       const zipBuffer = zip.toBuffer();
       
