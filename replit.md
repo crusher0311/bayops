@@ -138,3 +138,41 @@ npm start
 - Replit-specific Vite plugins are automatically skipped outside Replit
 - Object storage files are saved to local filesystem when not on Replit
 - For persistent file storage on Railway, mount a volume at the `PRIVATE_OBJECT_DIR` path
+
+## Self-Hosting with Supabase (Recommended)
+
+For production self-hosting, Supabase provides a complete backend solution:
+
+**Supabase Setup:**
+1. Create a Supabase project at https://supabase.com
+2. Get your project credentials from Settings > API
+3. Create a storage bucket called `uploads` (Settings > Storage)
+
+**Environment Variables for Supabase:**
+```bash
+# Database (use Supabase connection string)
+DATABASE_URL=postgresql://postgres:[password]@db.[project-ref].supabase.co:5432/postgres
+
+# Or use Supabase-specific vars
+SUPABASE_DB_URL=postgresql://...    # Alternative database connection
+
+# Supabase Services
+SUPABASE_URL=https://[project-ref].supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJhbG... # Service role key (keep secret!)
+SUPABASE_STORAGE_BUCKET=uploads     # Storage bucket name (default: uploads)
+
+# App Configuration
+SESSION_SECRET=your-secret-key
+APP_URL=https://your-domain.com
+OPENAI_API_KEY=sk-...
+```
+
+**How it works:**
+- **Database**: Supabase uses PostgreSQL, fully compatible with existing Drizzle schema
+- **Storage**: File uploads go to Supabase Storage buckets instead of local filesystem
+- **Auth**: Uses existing Passport.js session-based auth (Supabase Auth can be added later)
+
+**Detection Priority:**
+1. If `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` are set → Supabase mode
+2. If `REPL_ID` is set → Replit mode
+3. Otherwise → Self-hosted with filesystem storage

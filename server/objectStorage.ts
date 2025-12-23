@@ -2,6 +2,7 @@ import { Response } from "express";
 import { randomUUID } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
+import { config } from "./config";
 
 export class ObjectNotFoundError extends Error {
   constructor() {
@@ -11,17 +12,10 @@ export class ObjectNotFoundError extends Error {
   }
 }
 
-type StorageMode = 'replit' | 'filesystem';
-
-function getStorageMode(): StorageMode {
-  if (process.env.REPL_ID && process.env.REPLIT_DEV_DOMAIN) {
-    return 'replit';
-  }
-  return 'filesystem';
-}
+type StorageMode = 'replit' | 'supabase' | 'filesystem';
 
 function getLocalStorageDir(): string {
-  const dir = process.env.PRIVATE_OBJECT_DIR || './uploads';
+  const dir = config.storage.localDir || './uploads';
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -31,13 +25,34 @@ function getLocalStorageDir(): string {
 export class ObjectStorageService {
   private mode: StorageMode;
   private replitClient: any = null;
+  private supabaseClient: any = null;
+  private supabaseBucket: string;
+  private initPromise: Promise<void>;
+  private initialized = false;
 
   constructor() {
-    this.mode = getStorageMode();
+    this.mode = config.storage.type;
+    this.supabaseBucket = config.storage.supabaseBucket || 'uploads';
     console.log(`[ObjectStorage] Using ${this.mode} storage mode`);
     
+    this.initPromise = this.initialize();
+  }
+
+  private async initialize(): Promise<void> {
+    if (this.initialized) return;
+
     if (this.mode === 'replit') {
-      this.initReplitClient();
+      await this.initReplitClient();
+    } else if (this.mode === 'supabase') {
+      await this.initSupabaseClient();
+    }
+    
+    this.initialized = true;
+  }
+
+  private async ensureInitialized(): Promise<void> {
+    if (!this.initialized) {
+      await this.initPromise;
     }
   }
 
@@ -45,18 +60,47 @@ export class ObjectStorageService {
     try {
       const { Client } = await import("@replit/object-storage");
       this.replitClient = new Client();
+      console.log('[ObjectStorage] Replit client initialized');
     } catch (error) {
       console.warn('[ObjectStorage] Failed to initialize Replit client, falling back to filesystem');
       this.mode = 'filesystem';
     }
   }
 
+  private async initSupabaseClient() {
+    try {
+      if (config.storage.supabaseUrl && config.storage.supabaseKey) {
+        const { createClient } = await import("@supabase/supabase-js");
+        this.supabaseClient = createClient(
+          config.storage.supabaseUrl,
+          config.storage.supabaseKey
+        );
+        console.log(`[ObjectStorage] Supabase client initialized for bucket: ${this.supabaseBucket}`);
+      } else {
+        console.warn('[ObjectStorage] Supabase credentials not found, falling back to filesystem');
+        this.mode = 'filesystem';
+      }
+    } catch (error) {
+      console.warn('[ObjectStorage] Failed to initialize Supabase client, falling back to filesystem');
+      this.mode = 'filesystem';
+    }
+  }
+
   async uploadFile(file: Buffer, contentType: string): Promise<string> {
+    await this.ensureInitialized();
+    
     const ext = this.getExtensionFromContentType(contentType);
     const objectId = `uploads/${randomUUID()}${ext}`;
     
     if (this.mode === 'replit' && this.replitClient) {
       await this.replitClient.uploadFromBytes(objectId, file);
+    } else if (this.mode === 'supabase' && this.supabaseClient) {
+      const { error } = await this.supabaseClient.storage
+        .from(this.supabaseBucket)
+        .upload(objectId, file, { contentType, upsert: true });
+      if (error) {
+        throw new Error(`Supabase upload failed: ${error.message}`);
+      }
     } else {
       const localPath = path.join(getLocalStorageDir(), objectId);
       const dir = path.dirname(localPath);
@@ -84,6 +128,8 @@ export class ObjectStorageService {
   }
 
   async getObjectUrl(objectPath: string): Promise<string> {
+    await this.ensureInitialized();
+    
     if (!objectPath.startsWith("/objects/")) {
       throw new ObjectNotFoundError();
     }
@@ -93,6 +139,13 @@ export class ObjectStorageService {
     if (this.mode === 'replit' && this.replitClient) {
       const { ok } = await this.replitClient.exists(objectName);
       if (!ok) {
+        throw new ObjectNotFoundError();
+      }
+    } else if (this.mode === 'supabase' && this.supabaseClient) {
+      const { data, error } = await this.supabaseClient.storage
+        .from(this.supabaseBucket)
+        .list(path.dirname(objectName), { search: path.basename(objectName) });
+      if (error || !data || data.length === 0) {
         throw new ObjectNotFoundError();
       }
     } else {
@@ -106,6 +159,8 @@ export class ObjectStorageService {
   }
 
   async downloadObject(objectPath: string, res: Response) {
+    await this.ensureInitialized();
+    
     try {
       const objectName = objectPath.replace("/objects/", "");
       let data: Buffer;
@@ -117,6 +172,15 @@ export class ObjectStorageService {
           return;
         }
         data = Buffer.from(value);
+      } else if (this.mode === 'supabase' && this.supabaseClient) {
+        const { data: fileData, error } = await this.supabaseClient.storage
+          .from(this.supabaseBucket)
+          .download(objectName);
+        if (error || !fileData) {
+          res.status(404).json({ error: "File not found" });
+          return;
+        }
+        data = Buffer.from(await fileData.arrayBuffer());
       } else {
         const localPath = path.join(getLocalStorageDir(), objectName);
         if (!fs.existsSync(localPath)) {
@@ -156,6 +220,5 @@ export class ObjectStorageService {
 }
 
 export function isObjectStorageConfigured(): boolean {
-  const mode = getStorageMode();
-  return mode === 'filesystem' || (mode === 'replit' && !!process.env.REPL_ID);
+  return config.storage.type !== 'filesystem' || !!config.storage.localDir;
 }
