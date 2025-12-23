@@ -3925,7 +3925,7 @@ export async function registerRoutes(
               id: `li-${Date.now()}-${uniqueNewItems.length}`,
               type: 'PART',
               description: item.description || item.partNumber,
-              quantity: item.quantity || 1,
+              quantity: 1, // Always start with qty 1, user can adjust in BayOPS
               unitCost: partCost,
               unitPrice: partPrice,
               approved: true,
