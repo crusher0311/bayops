@@ -3442,9 +3442,20 @@ export default function RepairOrderDetail() {
                                     <Badge variant="outline" className="text-[10px]">{item.type}</Badge>
                                   </td>
                                   <td className="px-4 py-3 text-center">{item.quantity}</td>
-                                  <td className="px-4 py-3 text-right">${item.unitPrice.toFixed(2)}</td>
+                                  <td className="px-4 py-3 text-right">
+                                    <span className={item.type === 'PART' && item.unitPrice <= 0 ? 'text-amber-600' : ''}>
+                                      ${item.unitPrice.toFixed(2)}
+                                    </span>
+                                    {item.type === 'PART' && item.unitPrice <= 0 && (
+                                      <span className="ml-1 inline-flex items-center text-amber-600" title="Part needs pricing - use Search Parts to source">
+                                        <AlertTriangle className="w-3.5 h-3.5" />
+                                      </span>
+                                    )}
+                                  </td>
                                   <td className="px-4 py-3 text-right font-medium">
-                                    ${(item.unitPrice * item.quantity).toFixed(2)}
+                                    <span className={item.type === 'PART' && item.unitPrice <= 0 ? 'text-amber-600' : ''}>
+                                      ${(item.unitPrice * item.quantity).toFixed(2)}
+                                    </span>
                                   </td>
                                   <td className="px-4 py-3 text-center">
                                     <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
