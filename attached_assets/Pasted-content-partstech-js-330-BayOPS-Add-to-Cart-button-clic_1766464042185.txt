@@ -1,0 +1,21 @@
+content-partstech.js:330 BayOPS: Add to Cart button clicked
+pendo.js:126 BayOPS: Intercepted AddItemToCart - Full variables: {"item":{"accountId":"256221","lineCardId":"155984","origin":"SEARCH","partName":"Pronto Filters Air Filter","partNumber":"PA5043","partNumberId":"PR11-PA5043","partTypeId":"6192","quantity":2,"searchedPartNumber":null,"searchResultPosition":1,"storeId":"160267","vehicleId":"70192","vin":"1FDXE45F72HA44954"}}
+pendo.js:126 BayOPS: Item quantity from request: 2
+injected-partstech.js:60 BayOPS: Received part from page: {partNumber: 'PA5043', description: 'Pronto Filters Air Filter', brand: 'Pronto', supplier: 'PartsTech', price: 8.96, …}
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+content-partstech.js:495 Uncaught ReferenceError: parseAndSyncCart is not defined
+    at content-partstech.js:495:9
+(anonymous) @ content-partstech.js:495
+setTimeout
+debouncedSync @ content-partstech.js:491
+(anonymous) @ content-partstech.js:512
+childList
+updateCartCount @ content-partstech.js:198
+await in updateCartCount
+(anonymous) @ content-partstech.js:549

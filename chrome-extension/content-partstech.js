@@ -478,22 +478,18 @@ async function syncToBayOPS() {
   }
 }
 
-// Set up MutationObserver to watch for cart changes
+// Set up MutationObserver to watch for cart changes (updates banner count only)
 function setupCartObserver() {
   if (cartObserver) {
     cartObserver.disconnect();
   }
   
-  // Debounced sync function
-  let syncTimeout = null;
-  const debouncedSync = () => {
-    if (syncTimeout) clearTimeout(syncTimeout);
-    syncTimeout = setTimeout(() => {
-      const newState = JSON.stringify(parseCartItems());
-      if (newState !== lastCartState) {
-        lastCartState = newState;
-        parseAndSyncCart();
-      }
+  // Just update cart count when cart changes
+  let updateTimeout = null;
+  const debouncedUpdate = () => {
+    if (updateTimeout) clearTimeout(updateTimeout);
+    updateTimeout = setTimeout(() => {
+      updateCartCount();
     }, 1000);
   };
   
@@ -509,7 +505,7 @@ function setupCartObserver() {
     });
     
     if (isCartMutation) {
-      debouncedSync();
+      debouncedUpdate();
     }
   });
   
