@@ -23,7 +23,8 @@
         if (body.operationName === 'AddItemToCart' && body.variables?.item) {
           const item = body.variables.item;
           
-          console.log('BayOPS: Intercepted AddItemToCart:', item);
+          console.log('BayOPS: Intercepted AddItemToCart - Full variables:', JSON.stringify(body.variables));
+          console.log('BayOPS: Item quantity from request:', item.quantity);
           
           // Find price on page near this part number
           let price = 0;
