@@ -3148,19 +3148,25 @@ export default function RepairOrderDetail() {
                         </Button>
                       )}
                     </div>
-                    <div className="text-sm text-muted-foreground flex items-center gap-2">
+                    <div className="text-sm text-muted-foreground flex items-center gap-1">
                       Mileage: 
-                      <Input
-                        type="number"
-                        value={ro.odometerIn || ''}
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={ro.odometerIn?.toLocaleString() || ''}
                         onChange={(e) => {
-                          const newMileage = e.target.value ? parseInt(e.target.value) : null;
-                          updateRO.mutate({
-                            id: ro.id,
-                            updates: { odometerIn: newMileage },
-                          });
+                          const raw = e.target.value.replace(/,/g, '');
+                          if (raw === '' || /^\d+$/.test(raw)) {
+                            const newMileage = raw ? parseInt(raw) : null;
+                            updateRO.mutate({
+                              id: ro.id,
+                              updates: { odometerIn: newMileage },
+                            });
+                          }
                         }}
-                        className="w-24 h-7 text-sm inline-block"
+                        className="w-20 h-6 px-2 text-sm border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                        placeholder="0"
                         data-testid="input-mileage"
                       />
                       mi
