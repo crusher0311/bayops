@@ -351,3 +351,132 @@ export async function invalidateCache(vin: string): Promise<boolean> {
     return false;
   }
 }
+
+interface EngineSpecs {
+  displacement: number | null;
+  cylinders: number | null;
+  configuration: string | null;
+  fuelType: string | null;
+  rawEngine: string;
+}
+
+function parseEngineSpecs(engineString: string): EngineSpecs {
+  const raw = engineString || '';
+  
+  const displacementMatch = raw.match(/(\d+\.?\d*)\s*L/i);
+  const displacement = displacementMatch ? parseFloat(displacementMatch[1]) : null;
+  
+  const cylinderMatch = raw.match(/V(\d+)|I(\d+)|(\d+)\s*cyl/i);
+  let cylinders: number | null = null;
+  let configuration: string | null = null;
+  if (cylinderMatch) {
+    if (cylinderMatch[1]) {
+      cylinders = parseInt(cylinderMatch[1]);
+      configuration = 'V';
+    } else if (cylinderMatch[2]) {
+      cylinders = parseInt(cylinderMatch[2]);
+      configuration = 'I';
+    } else if (cylinderMatch[3]) {
+      cylinders = parseInt(cylinderMatch[3]);
+    }
+  }
+  
+  let fuelType: string | null = null;
+  if (/diesel/i.test(raw)) fuelType = 'Diesel';
+  else if (/hybrid/i.test(raw)) fuelType = 'Hybrid';
+  else if (/electric/i.test(raw)) fuelType = 'Electric';
+  else if (/flex\s*fuel/i.test(raw)) fuelType = 'Flex Fuel';
+  else if (/gas|gasoline/i.test(raw)) fuelType = 'Gasoline';
+  
+  return { displacement, cylinders, configuration, fuelType, rawEngine: raw };
+}
+
+export interface EngineCompatibility {
+  isCompatible: boolean;
+  score: number;
+  reason: string;
+  targetSpecs: EngineSpecs;
+  candidateSpecs: EngineSpecs;
+}
+
+export async function compareEnginesByVin(
+  targetVin: string,
+  candidateVin: string
+): Promise<EngineCompatibility> {
+  const [targetResult, candidateResult] = await Promise.all([
+    decodeVin(targetVin),
+    decodeVin(candidateVin),
+  ]);
+  
+  const targetEngine = targetResult.ok && targetResult.vehicle ? targetResult.vehicle.engine : '';
+  const candidateEngine = candidateResult.ok && candidateResult.vehicle ? candidateResult.vehicle.engine : '';
+  
+  const targetSpecs = parseEngineSpecs(targetEngine);
+  const candidateSpecs = parseEngineSpecs(candidateEngine);
+  
+  return compareEngineSpecs(targetSpecs, candidateSpecs);
+}
+
+export function compareEngineSpecs(
+  targetSpecs: EngineSpecs,
+  candidateSpecs: EngineSpecs
+): EngineCompatibility {
+  let score = 0;
+  const reasons: string[] = [];
+  
+  if (targetSpecs.displacement && candidateSpecs.displacement) {
+    const diff = Math.abs(targetSpecs.displacement - candidateSpecs.displacement);
+    if (diff === 0) {
+      score += 40;
+      reasons.push(`Exact displacement match (${targetSpecs.displacement}L)`);
+    } else if (diff <= 0.2) {
+      score += 30;
+      reasons.push(`Close displacement (${candidateSpecs.displacement}L vs ${targetSpecs.displacement}L)`);
+    } else if (diff <= 0.5) {
+      score += 15;
+      reasons.push(`Similar displacement range`);
+    }
+  }
+  
+  if (targetSpecs.cylinders && candidateSpecs.cylinders) {
+    if (targetSpecs.cylinders === candidateSpecs.cylinders) {
+      score += 30;
+      reasons.push(`Same cylinder count (${targetSpecs.cylinders})`);
+    }
+  }
+  
+  if (targetSpecs.configuration && candidateSpecs.configuration) {
+    if (targetSpecs.configuration === candidateSpecs.configuration) {
+      score += 15;
+      reasons.push(`Same engine configuration (${targetSpecs.configuration}${targetSpecs.cylinders || ''})`);
+    }
+  }
+  
+  if (targetSpecs.fuelType && candidateSpecs.fuelType) {
+    if (targetSpecs.fuelType === candidateSpecs.fuelType) {
+      score += 15;
+      reasons.push(`Same fuel type`);
+    } else if (
+      (targetSpecs.fuelType === 'Flex Fuel' && candidateSpecs.fuelType === 'Gasoline') ||
+      (targetSpecs.fuelType === 'Gasoline' && candidateSpecs.fuelType === 'Flex Fuel')
+    ) {
+      score += 10;
+      reasons.push(`Compatible fuel types`);
+    }
+  }
+  
+  const isCompatible = score >= 50;
+  const reason = reasons.length > 0 ? reasons.join('; ') : 'No matching engine characteristics';
+  
+  return {
+    isCompatible,
+    score,
+    reason,
+    targetSpecs,
+    candidateSpecs,
+  };
+}
+
+export function parseEngineFromString(engineString: string): EngineSpecs {
+  return parseEngineSpecs(engineString);
+}

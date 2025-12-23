@@ -25,6 +25,8 @@ import {
   triageMaintenanceItems,
   decodeVin,
   invalidateCache,
+  parseEngineFromString,
+  compareEngineSpecs,
 } from "./services/dataone";
 import {
   getServiceHistoryCached as getCarfaxServiceHistory,
@@ -762,6 +764,7 @@ export async function registerRoutes(
             year: vehicles.year,
             make: vehicles.make,
             model: vehicles.model,
+            vin: vehicles.vin,
             engineDisplacement: vehicles.engineDisplacement,
           },
         })
@@ -793,9 +796,11 @@ export async function registerRoutes(
         vehicleYear: number;
         vehicleMake: string;
         vehicleModel: string;
+        vehicleVin: string | null;
         vehicleEngine: string | null;
         exactYearMatch: boolean;
         engineMatch: boolean | null;
+        engineMatchReason?: string;
         exactJobNameMatch: boolean;
       }>();
       
@@ -833,13 +838,22 @@ export async function registerRoutes(
             vehicleScore += 5; // Within range
           }
           
-          // Engine matching (up to 10 more points)
+          // Engine matching using parsed specs (up to 10 more points)
           let engineMatch: boolean | null = null;
+          let engineMatchReason: string | undefined;
           if (targetEngine && vehicle.engineDisplacement) {
-            const vehicleEngine = vehicle.engineDisplacement.toLowerCase();
-            if (vehicleEngine.includes(targetEngine) || targetEngine.includes(vehicleEngine)) {
+            const targetSpecs = parseEngineFromString(targetEngine);
+            const candidateSpecs = parseEngineFromString(vehicle.engineDisplacement);
+            const comparison = compareEngineSpecs(targetSpecs, candidateSpecs);
+            
+            if (comparison.isCompatible) {
               vehicleScore += 10;
               engineMatch = true;
+              engineMatchReason = comparison.reason;
+            } else if (comparison.score > 0) {
+              vehicleScore += 5; // Partial match
+              engineMatch = true;
+              engineMatchReason = comparison.reason;
             } else {
               vehicleScore -= 5;
               engineMatch = false;
@@ -887,9 +901,11 @@ export async function registerRoutes(
               vehicleYear: vehicle.year,
               vehicleMake: vehicle.make,
               vehicleModel: vehicle.model,
+              vehicleVin: vehicle.vin,
               vehicleEngine: vehicle.engineDisplacement,
               exactYearMatch: yearDiff === 0,
               engineMatch,
+              engineMatchReason,
               exactJobNameMatch,
             });
           } else {
@@ -932,6 +948,7 @@ export async function registerRoutes(
               year: vehicles.year,
               make: vehicles.make,
               model: vehicles.model,
+              vin: vehicles.vin,
               engineDisplacement: vehicles.engineDisplacement,
             },
           })
