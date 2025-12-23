@@ -224,11 +224,13 @@ function ClientConcernsSection({
   concerns, 
   legacyNotes, 
   onUpdate, 
+  onClearLegacy,
   isPending 
 }: { 
   concerns: ClientConcern[]; 
   legacyNotes?: string;
   onUpdate: (concerns: ClientConcern[]) => void;
+  onClearLegacy?: () => void;
   isPending: boolean;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -268,8 +270,11 @@ function ClientConcernsSection({
   };
 
   const handleDelete = (id: string) => {
-    if (id === 'legacy') return;
-    onUpdate(concerns.filter(c => c.id !== id));
+    if (id === 'legacy' && onClearLegacy) {
+      onClearLegacy();
+    } else {
+      onUpdate(concerns.filter(c => c.id !== id));
+    }
   };
 
   if (allConcerns.length === 0 && !showAddForm) {
@@ -340,17 +345,15 @@ function ClientConcernsSection({
                 >
                   <Edit className="w-3 h-3" />
                 </Button>
-                {concern.id !== 'legacy' && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-6 w-6 p-0 text-red-600 hover:bg-red-50"
-                    onClick={() => handleDelete(concern.id)}
-                    disabled={isPending}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
-                )}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 w-6 p-0 text-red-600 hover:bg-red-50"
+                  onClick={() => handleDelete(concern.id)}
+                  disabled={isPending}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
               </div>
             </>
           )}
@@ -3590,6 +3593,12 @@ export default function RepairOrderDetail() {
                     updateRO.mutate({
                       id: ro.id,
                       updates: { concerns },
+                    });
+                  }}
+                  onClearLegacy={() => {
+                    updateRO.mutate({
+                      id: ro.id,
+                      updates: { notes: '' },
                     });
                   }}
                   isPending={updateRO.isPending}
