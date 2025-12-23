@@ -3723,33 +3723,32 @@ export default function RepairOrderDetail() {
                                               {job.similarity}% match
                                             </Badge>
                                           </TooltipTrigger>
-                                          <TooltipContent side="top" className="p-3 bg-slate-900 text-white border-0">
-                                            <div className="space-y-2">
-                                              <p className="font-semibold text-sm">Vehicle Match Score</p>
-                                              <div className="space-y-1.5 text-sm">
-                                                <div className="flex justify-between gap-4">
-                                                  <span className="text-slate-300">Same make & model</span>
-                                                  <span className="font-medium text-green-400">+50%</span>
+                                          <TooltipContent side="top" className="p-3 bg-slate-900 text-white border-0 min-w-[200px]">
+                                            <div className="space-y-2.5">
+                                              <div className="space-y-1">
+                                                <p className="font-semibold text-xs text-slate-400 uppercase tracking-wide">Vehicle</p>
+                                                <div className="flex justify-between">
+                                                  <span className="text-sm text-slate-300">{job.vehicleYear} {job.vehicleMake} {job.vehicleModel}</span>
+                                                  <span className="font-medium text-green-400 text-sm">+{job.vehicleScore || 0}%</span>
                                                 </div>
-                                                <div className="flex justify-between gap-4">
-                                                  <span className="text-slate-300">Year: {job.vehicleYear}</span>
-                                                  <span className="font-medium text-green-400">
-                                                    {job.exactYearMatch ? '+30%' : job.vehicleYear && vehicle ? 
-                                                      (Math.abs(job.vehicleYear - vehicle.year) <= 2 ? '+20%' : '+10%') : '+0%'}
+                                                {job.exactYearMatch && (
+                                                  <span className="text-xs text-green-400">Exact year match</span>
+                                                )}
+                                              </div>
+                                              <div className="space-y-1">
+                                                <p className="font-semibold text-xs text-slate-400 uppercase tracking-wide">Job Name</p>
+                                                <div className="flex justify-between">
+                                                  <span className="text-sm text-slate-300">
+                                                    {job.exactJobNameMatch ? 'Exact match' : job.jobNameScore > 0 ? 'Partial match' : 'No match'}
+                                                  </span>
+                                                  <span className={cn("font-medium text-sm", job.jobNameScore > 0 ? "text-green-400" : "text-slate-500")}>
+                                                    +{job.jobNameScore || 0}%
                                                   </span>
                                                 </div>
-                                                {job.engineMatch !== null && (
-                                                  <div className="flex justify-between gap-4">
-                                                    <span className="text-slate-300">Engine</span>
-                                                    <span className={cn("font-medium", job.engineMatch ? "text-green-400" : "text-red-400")}>
-                                                      {job.engineMatch ? '+20%' : '-10%'}
-                                                    </span>
-                                                  </div>
-                                                )}
-                                                <div className="border-t border-slate-700 pt-1.5 flex justify-between gap-4">
-                                                  <span className="font-medium">Total</span>
-                                                  <span className="font-bold text-white">{job.similarity}%</span>
-                                                </div>
+                                              </div>
+                                              <div className="border-t border-slate-700 pt-2 flex justify-between">
+                                                <span className="font-semibold text-sm">Total Match</span>
+                                                <span className="font-bold text-white text-sm">{job.similarity}%</span>
                                               </div>
                                             </div>
                                           </TooltipContent>

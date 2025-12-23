@@ -285,12 +285,15 @@ export interface SimilarJob {
   createdAt: string;
   count: number;
   similarity: number;
+  vehicleScore: number;
+  jobNameScore: number;
   vehicleYear: number;
   vehicleMake: string;
   vehicleModel: string;
   vehicleEngine: string | null;
   exactYearMatch: boolean;
   engineMatch: boolean | null;
+  exactJobNameMatch: boolean;
 }
 
 export interface SimilarJobsResponse {

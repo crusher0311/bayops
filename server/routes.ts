@@ -787,16 +787,19 @@ export async function registerRoutes(
         createdAt: Date;
         count: number;
         similarity: number;
+        vehicleScore: number;
+        jobNameScore: number;
         vehicleYear: number;
         vehicleMake: string;
         vehicleModel: string;
         vehicleEngine: string | null;
         exactYearMatch: boolean;
         engineMatch: boolean | null;
+        exactJobNameMatch: boolean;
       }>();
       
-      // Split search term into words for flexible matching
-      const searchWords = searchTerm.split(/\s+/).filter(word => word.length > 2);
+      // Split search term into words for flexible matching (filter out short/common words)
+      const searchWords = searchTerm.split(/\s+/).filter(word => word.length > 2 && !['the', 'and', 'for', 'with'].includes(word));
       
       for (const { ro, vehicle } of rosWithVehicles) {
         const jobs = (ro.jobs as any[]) || [];
@@ -816,34 +819,54 @@ export async function registerRoutes(
             }
           }
           
-          // Calculate similarity score
-          let similarity = 50; // Base score for make/model match
+          // Calculate VEHICLE similarity score (up to 50 points)
+          let vehicleScore = 25; // Base score for make/model match
           
-          // Year matching
+          // Year matching (up to 15 more points)
           const yearDiff = Math.abs(vehicle.year - targetYear);
           if (yearDiff === 0) {
-            similarity += 30; // Exact year match
+            vehicleScore += 15; // Exact year match
           } else if (yearDiff <= 2) {
-            similarity += 20; // Close year
+            vehicleScore += 10; // Close year
           } else if (yearDiff <= 5) {
-            similarity += 10; // Within range
+            vehicleScore += 5; // Within range
           }
           
-          // Engine matching (if available)
+          // Engine matching (up to 10 more points)
           let engineMatch: boolean | null = null;
           if (targetEngine && vehicle.engineDisplacement) {
             const vehicleEngine = vehicle.engineDisplacement.toLowerCase();
             if (vehicleEngine.includes(targetEngine) || targetEngine.includes(vehicleEngine)) {
-              similarity += 20;
+              vehicleScore += 10;
               engineMatch = true;
             } else {
-              similarity -= 10;
+              vehicleScore -= 5;
               engineMatch = false;
             }
           }
           
-          // Cap similarity at 100
-          similarity = Math.min(similarity, 100);
+          // Calculate JOB NAME similarity score (up to 50 points)
+          let jobNameScore = 0;
+          const exactJobNameMatch = jobNameLower === searchTerm;
+          
+          if (exactJobNameMatch) {
+            // Exact match gets full points
+            jobNameScore = 50;
+          } else if (searchWords.length > 0) {
+            // Calculate word overlap percentage
+            const jobWords = jobNameLower.split(/\s+/).filter(word => word.length > 2 && !['the', 'and', 'for', 'with'].includes(word));
+            const matchingWords = searchWords.filter(word => jobNameLower.includes(word));
+            const overlapPercent = matchingWords.length / searchWords.length;
+            jobNameScore = Math.round(overlapPercent * 40); // Up to 40 points for partial match
+            
+            // Bonus if job name contains search term as substring
+            if (jobNameLower.includes(searchTerm) || searchTerm.includes(jobNameLower)) {
+              jobNameScore = Math.min(jobNameScore + 10, 45);
+            }
+          }
+          
+          // Total similarity is vehicle + job name
+          let similarity = vehicleScore + jobNameScore;
           
           // Use job name as key, keep the highest similarity version
           const existing = jobsMap.get(jobNameLower);
@@ -858,12 +881,15 @@ export async function registerRoutes(
               createdAt: ro.createdAt,
               count: (existing?.count || 0) + 1,
               similarity,
+              vehicleScore,
+              jobNameScore,
               vehicleYear: vehicle.year,
               vehicleMake: vehicle.make,
               vehicleModel: vehicle.model,
               vehicleEngine: vehicle.engineDisplacement,
               exactYearMatch: yearDiff === 0,
               engineMatch,
+              exactJobNameMatch,
             });
           } else {
             existing.count++;
