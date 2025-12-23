@@ -437,36 +437,49 @@ export async function findEngineCompatibleJobs(
     return [];
   }
 
-  // Filter candidates to those with potentially matching engines
-  // Use flexible matching: displacement (e.g., 5.4L), cylinder count, or engine family
-  const engineMatches = candidateJobs.filter(job => {
-    if (!job.vehicleEngine) return false;
-    const targetEng = targetVehicle.engine.toLowerCase().replace(/\s+/g, '');
-    const jobEng = job.vehicleEngine.toLowerCase().replace(/\s+/g, '');
+  let engineMatches: CandidateJob[];
+  
+  // If we have engine data, filter by engine compatibility
+  if (targetVehicle.engine) {
+    // Filter candidates to those with potentially matching engines
+    // Use flexible matching: displacement (e.g., 5.4L), cylinder count, or engine family
+    engineMatches = candidateJobs.filter(job => {
+      if (!job.vehicleEngine) return false;
+      const targetEng = targetVehicle.engine.toLowerCase().replace(/\s+/g, '');
+      const jobEng = job.vehicleEngine.toLowerCase().replace(/\s+/g, '');
+      
+      // Check for displacement match (e.g., "5.4" in both)
+      const targetDisp = targetEng.match(/(\d+\.?\d*)\s*l/)?.[1] || targetEng.match(/\d+\.\d+/)?.[0];
+      const jobDisp = jobEng.match(/(\d+\.?\d*)\s*l/)?.[1] || jobEng.match(/\d+\.\d+/)?.[0];
+      
+      // Check for cylinder count match (e.g., V8, I4, 4-cylinder)
+      const targetCyl = targetEng.match(/v(\d+)|(\d+)\s*cyl|i(\d+)|(\d+)\s*-?\s*cyl/);
+      const jobCyl = jobEng.match(/v(\d+)|(\d+)\s*cyl|i(\d+)|(\d+)\s*-?\s*cyl/);
+      const targetCylCount = targetCyl ? (targetCyl[1] || targetCyl[2] || targetCyl[3] || targetCyl[4]) : null;
+      const jobCylCount = jobCyl ? (jobCyl[1] || jobCyl[2] || jobCyl[3] || jobCyl[4]) : null;
+      
+      // Match if displacement is the same (within 0.1L tolerance for parsing variations)
+      if (targetDisp && jobDisp) {
+        const dispDiff = Math.abs(parseFloat(targetDisp) - parseFloat(jobDisp));
+        if (dispDiff < 0.15) return true;
+      }
+      
+      // Match if same cylinder count and similar displacement range
+      if (targetCylCount && jobCylCount && targetCylCount === jobCylCount) {
+        return true;
+      }
+      
+      return false;
+    });
     
-    // Check for displacement match (e.g., "5.4" in both)
-    const targetDisp = targetEng.match(/(\d+\.?\d*)\s*l/)?.[1] || targetEng.match(/\d+\.\d+/)?.[0];
-    const jobDisp = jobEng.match(/(\d+\.?\d*)\s*l/)?.[1] || jobEng.match(/\d+\.\d+/)?.[0];
-    
-    // Check for cylinder count match (e.g., V8, I4, 4-cylinder)
-    const targetCyl = targetEng.match(/v(\d+)|(\d+)\s*cyl|i(\d+)|(\d+)\s*-?\s*cyl/);
-    const jobCyl = jobEng.match(/v(\d+)|(\d+)\s*cyl|i(\d+)|(\d+)\s*-?\s*cyl/);
-    const targetCylCount = targetCyl ? (targetCyl[1] || targetCyl[2] || targetCyl[3] || targetCyl[4]) : null;
-    const jobCylCount = jobCyl ? (jobCyl[1] || jobCyl[2] || jobCyl[3] || jobCyl[4]) : null;
-    
-    // Match if displacement is the same (within 0.1L tolerance for parsing variations)
-    if (targetDisp && jobDisp) {
-      const dispDiff = Math.abs(parseFloat(targetDisp) - parseFloat(jobDisp));
-      if (dispDiff < 0.15) return true;
+    // If no engine matches, fall back to all candidates for AI to evaluate
+    if (engineMatches.length === 0) {
+      engineMatches = candidateJobs;
     }
-    
-    // Match if same cylinder count and similar displacement range
-    if (targetCylCount && jobCylCount && targetCylCount === jobCylCount) {
-      return true;
-    }
-    
-    return false;
-  });
+  } else {
+    // No engine data available - let AI evaluate all candidates based on job type
+    engineMatches = candidateJobs;
+  }
 
   if (engineMatches.length === 0) {
     return [];
@@ -476,11 +489,12 @@ export async function findEngineCompatibleJobs(
   const topCandidates = engineMatches.slice(0, 20);
 
   try {
-    const prompt = `You are an experienced automotive technician. Determine which of these historical repair jobs would be relevant for a ${targetVehicle.year} ${targetVehicle.make} ${targetVehicle.model} with a ${targetVehicle.engine} engine, for the search term "${searchTerm}".
+    const hasEngine = targetVehicle.engine && targetVehicle.engine.trim() !== '';
+    const prompt = `You are an experienced automotive technician. Determine which of these historical repair jobs would be relevant for a ${targetVehicle.year} ${targetVehicle.make} ${targetVehicle.model}${hasEngine ? ` with a ${targetVehicle.engine} engine` : ''}, for the search term "${searchTerm}".
 
-Target Vehicle Engine: ${targetVehicle.engine}
+${hasEngine ? `Target Vehicle Engine: ${targetVehicle.engine}` : 'Note: Engine data not available - evaluate based on job type and vehicle similarity'}
 
-Candidate Jobs (from vehicles with similar engines):
+Candidate Jobs (from similar or compatible vehicles):
 ${topCandidates.map((job, i) => `
 ${i + 1}. Job: ${job.name}
    Vehicle: ${job.vehicleYear} ${job.vehicleMake} ${job.vehicleModel}

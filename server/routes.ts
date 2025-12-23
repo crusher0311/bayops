@@ -919,8 +919,9 @@ export async function registerRoutes(
         isAiMatch: boolean;
       }> = [];
       
-      // AI Engine Fallback only runs when: few results, engine data available, and search term provided
-      if (results.length < 3 && targetEngine && searchTerm && engine) {
+      // AI Engine Fallback: runs when few results and search term provided
+      // Works with or without engine data - AI will find relevant jobs based on job type
+      if (results.length < 3 && searchTerm) {
         // Query jobs from any vehicle with engine data, matching the search term
         const engineCandidates = await db
           .select({
@@ -991,7 +992,7 @@ export async function registerRoutes(
                 year: targetYear, 
                 make: make as string, 
                 model: model as string, 
-                engine: engine as string 
+                engine: (engine as string) || '' 
               },
               searchTerm,
               candidateJobs
