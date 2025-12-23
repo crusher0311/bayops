@@ -35,6 +35,7 @@ import {
   Send, 
   Plus, 
   Trash2, 
+  Edit,
   CheckCircle2, 
   AlertCircle,
   FileText,
@@ -207,6 +208,173 @@ function SupplierBar({
           Search Parts
         </Button>
       </div>
+    </div>
+  );
+}
+
+interface ClientConcern {
+  id: string;
+  text: string;
+}
+
+function ClientConcernsSection({ 
+  concerns, 
+  legacyNotes, 
+  onUpdate, 
+  isPending 
+}: { 
+  concerns: ClientConcern[]; 
+  legacyNotes?: string;
+  onUpdate: (concerns: ClientConcern[]) => void;
+  isPending: boolean;
+}) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+  const [newConcern, setNewConcern] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  const allConcerns: ClientConcern[] = [
+    ...concerns,
+    ...(legacyNotes && !concerns.some(c => c.text === legacyNotes) 
+      ? [{ id: 'legacy', text: legacyNotes }] 
+      : [])
+  ];
+
+  const handleAdd = () => {
+    if (!newConcern.trim()) return;
+    const newItem: ClientConcern = { id: `concern-${Date.now()}`, text: newConcern.trim() };
+    onUpdate([...concerns, newItem]);
+    setNewConcern('');
+    setShowAddForm(false);
+  };
+
+  const handleEdit = (concern: ClientConcern) => {
+    setEditingId(concern.id);
+    setEditText(concern.text);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingId || !editText.trim()) return;
+    if (editingId === 'legacy') {
+      onUpdate([...concerns, { id: `concern-${Date.now()}`, text: editText.trim() }]);
+    } else {
+      onUpdate(concerns.map(c => c.id === editingId ? { ...c, text: editText.trim() } : c));
+    }
+    setEditingId(null);
+    setEditText('');
+  };
+
+  const handleDelete = (id: string) => {
+    if (id === 'legacy') return;
+    onUpdate(concerns.filter(c => c.id !== id));
+  };
+
+  if (allConcerns.length === 0 && !showAddForm) {
+    return (
+      <Button 
+        variant="outline" 
+        size="sm" 
+        className="gap-2 text-amber-700 border-amber-300 hover:bg-amber-50"
+        onClick={() => setShowAddForm(true)}
+      >
+        <Plus className="w-4 h-4" />
+        Add Client Concern
+      </Button>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider flex items-center gap-2">
+          <AlertCircle className="w-4 h-4" />
+          Client Concerns
+        </p>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="h-7 text-xs gap-1 text-amber-700 hover:bg-amber-50"
+          onClick={() => setShowAddForm(true)}
+        >
+          <Plus className="w-3 h-3" />
+          Add
+        </Button>
+      </div>
+
+      {allConcerns.map((concern) => (
+        <div 
+          key={concern.id}
+          className="bg-amber-50 border border-amber-300 border-l-4 border-l-amber-500 rounded-lg p-3 flex gap-3 items-start"
+        >
+          {editingId === concern.id ? (
+            <div className="flex-1 flex gap-2">
+              <Input
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                className="flex-1 h-8 text-sm"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveEdit();
+                  if (e.key === 'Escape') setEditingId(null);
+                }}
+              />
+              <Button size="sm" className="h-8" onClick={handleSaveEdit} disabled={isPending}>
+                <Check className="w-3 h-3" />
+              </Button>
+              <Button size="sm" variant="ghost" className="h-8" onClick={() => setEditingId(null)}>
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-amber-900 flex-1">{concern.text}</p>
+              <div className="flex gap-1 shrink-0">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 w-6 p-0 text-amber-700 hover:bg-amber-100"
+                  onClick={() => handleEdit(concern)}
+                >
+                  <Edit className="w-3 h-3" />
+                </Button>
+                {concern.id !== 'legacy' && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 w-6 p-0 text-red-600 hover:bg-red-50"
+                    onClick={() => handleDelete(concern.id)}
+                    disabled={isPending}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      ))}
+
+      {showAddForm && (
+        <div className="bg-amber-50 border border-amber-300 border-dashed rounded-lg p-3 flex gap-2">
+          <Input
+            placeholder="Enter client concern..."
+            value={newConcern}
+            onChange={(e) => setNewConcern(e.target.value)}
+            className="flex-1 h-8 text-sm"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleAdd();
+              if (e.key === 'Escape') { setShowAddForm(false); setNewConcern(''); }
+            }}
+          />
+          <Button size="sm" className="h-8" onClick={handleAdd} disabled={!newConcern.trim() || isPending}>
+            Add
+          </Button>
+          <Button size="sm" variant="ghost" className="h-8" onClick={() => { setShowAddForm(false); setNewConcern(''); }}>
+            Cancel
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -3216,15 +3384,17 @@ export default function RepairOrderDetail() {
               </TabsList>
 
               <TabsContent value="estimate" className="mt-6 space-y-6">
-                {ro.notes && (
-                  <div className="bg-amber-50 border border-amber-300 border-l-4 border-l-amber-500 rounded-lg p-4 flex gap-3 items-start mb-4">
-                    <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Client Concern</p>
-                      <p className="text-sm font-medium text-amber-900 mt-1">{ro.notes}</p>
-                    </div>
-                  </div>
-                )}
+                <ClientConcernsSection 
+                  concerns={ro.concerns || []} 
+                  legacyNotes={ro.notes}
+                  onUpdate={(concerns) => {
+                    updateRO.mutate({
+                      id: ro.id,
+                      updates: { concerns },
+                    });
+                  }}
+                  isPending={updateRO.isPending}
+                />
 
                 <div className="flex justify-end gap-2">
                   <Dialog open={isPackageDialogOpen} onOpenChange={setIsPackageDialogOpen}>
@@ -3586,7 +3756,23 @@ export default function RepairOrderDetail() {
                 )}
               </TabsContent>
 
-              <TabsContent value="inspection" className="mt-6">
+              <TabsContent value="inspection" className="mt-6 space-y-4">
+                {((ro.concerns && ro.concerns.length > 0) || ro.notes) && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4" />
+                      Client Concerns
+                    </p>
+                    {[...(ro.concerns || []), ...(ro.notes && !(ro.concerns || []).some((c: any) => c.text === ro.notes) ? [{ id: 'legacy', text: ro.notes }] : [])].map((concern: any) => (
+                      <div 
+                        key={concern.id}
+                        className="bg-amber-50 border border-amber-300 border-l-4 border-l-amber-500 rounded-lg p-3"
+                      >
+                        <p className="text-sm font-medium text-amber-900">{concern.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {inspectionLoading || createInspectionMutation.isPending ? (
                   <div className="flex flex-col items-center justify-center py-12 gap-4">
                     <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />

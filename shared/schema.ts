@@ -305,6 +305,7 @@ export const repairOrders = pgTable("repair_orders", {
     }>;
   }>>(),
   notes: text("notes").notNull().default(''),
+  concerns: jsonb("concerns").$type<Array<{ id: string; text: string }>>().default([]),
   odometerIn: integer("odometer_in").notNull(),
   promisedAt: timestamp("promised_at"),
   completedAt: timestamp("completed_at"),
