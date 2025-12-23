@@ -3756,23 +3756,7 @@ export default function RepairOrderDetail() {
                 )}
               </TabsContent>
 
-              <TabsContent value="inspection" className="mt-6 space-y-4">
-                {((ro.concerns && ro.concerns.length > 0) || ro.notes) && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4" />
-                      Client Concerns
-                    </p>
-                    {[...(ro.concerns || []), ...(ro.notes && !(ro.concerns || []).some((c: any) => c.text === ro.notes) ? [{ id: 'legacy', text: ro.notes }] : [])].map((concern: any) => (
-                      <div 
-                        key={concern.id}
-                        className="bg-amber-50 border border-amber-300 border-l-4 border-l-amber-500 rounded-lg p-3"
-                      >
-                        <p className="text-sm font-medium text-amber-900">{concern.text}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <TabsContent value="inspection" className="mt-6">
                 {inspectionLoading || createInspectionMutation.isPending ? (
                   <div className="flex flex-col items-center justify-center py-12 gap-4">
                     <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -3787,6 +3771,7 @@ export default function RepairOrderDetail() {
                     initialItems={roInspection.items || []}
                     vehicle={vehicle ? { year: vehicle.year, make: vehicle.make, model: vehicle.model, mileage: vehicle.mileage } : { year: 0, make: '', model: '' }}
                     customer={customer ? { firstName: customer.firstName, email: customer.email || '', phone: customer.phone || '' } : undefined}
+                    clientConcerns={[...(ro.concerns || []), ...(ro.notes && !(ro.concerns || []).some((c: any) => c.text === ro.notes) ? [{ id: 'legacy', text: ro.notes }] : [])]}
                     onSave={(items) => updateInspectionMutation.mutate({ id: roInspection.id, items })}
                     onComplete={() => updateInspectionMutation.mutate({ id: roInspection.id, items: roInspection.items || [], status: 'COMPLETED' })}
                     onDelete={() => {

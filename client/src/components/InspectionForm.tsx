@@ -64,12 +64,18 @@ interface CustomerInfo {
   phone?: string;
 }
 
+interface ClientConcern {
+  id: string;
+  text: string;
+}
+
 interface InspectionFormProps {
   inspectionId: string;
   templateItems: InspectionTemplateItem[];
   initialItems: InspectionResultItem[];
   vehicle: Vehicle;
   customer?: CustomerInfo;
+  clientConcerns?: ClientConcern[];
   onSave: (items: InspectionResultItem[]) => void;
   onComplete: () => void;
   onDelete?: () => void;
@@ -135,6 +141,7 @@ export function InspectionForm({
   initialItems,
   vehicle,
   customer,
+  clientConcerns = [],
   onSave,
   onComplete,
   onDelete,
@@ -483,6 +490,138 @@ export function InspectionForm({
 
       <ScrollArea className="h-[calc(100vh-360px)]">
         <div className="space-y-10 pr-4">
+          {clientConcerns.length > 0 && (
+            <div>
+              <div className="bg-amber-500 rounded-lg px-4 py-3 mb-5">
+                <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <AlertTriangle className="w-6 h-6" />
+                  Client Concerns
+                </h3>
+              </div>
+              
+              <div className="space-y-5">
+                {clientConcerns.map((concern) => {
+                  const concernItemId = `concern-${concern.id}`;
+                  const result = getItemResult(concernItemId);
+                  const isLoadingAI = loadingAI === concernItemId;
+                  const requiresRecommendation = result.status === 'YELLOW' || result.status === 'RED';
+                  const missingRecommendation = requiresRecommendation && !result.recommendation?.trim();
+                  const statusConfig = result.status ? STATUS_CONFIG[result.status] : null;
+                  
+                  return (
+                    <Card 
+                      key={concern.id} 
+                      className={cn(
+                        "transition-all duration-200 border-l-4 bg-amber-900/30 border border-amber-600/50",
+                        statusConfig ? statusConfig.borderClass : "border-l-amber-500"
+                      )}
+                      data-testid={`inspection-concern-${concern.id}`}
+                    >
+                      <CardContent className="p-6 bg-amber-900/20">
+                        <div className="flex items-start justify-between gap-6">
+                          <h4 className="text-xl font-semibold text-amber-100 flex-1 leading-tight">
+                            {concern.text}
+                          </h4>
+                          
+                          <div className="flex items-center gap-3">
+                            {!result.status && (
+                              <span className="text-sm text-amber-300 mr-2">Not checked</span>
+                            )}
+                            {(['GREEN', 'YELLOW', 'RED'] as const).map((status) => {
+                              const config = STATUS_CONFIG[status];
+                              const Icon = config.icon;
+                              const isActive = result.status === status;
+                              
+                              return (
+                                <Button
+                                  key={status}
+                                  variant="outline"
+                                  size="sm"
+                                  className={cn(
+                                    "h-11 px-4 gap-2 transition-all font-semibold",
+                                    isActive ? config.buttonClass : config.inactiveClass
+                                  )}
+                                  onClick={() => handleStatusChange(concernItemId, status)}
+                                  data-testid={`concern-status-${concern.id}-${status.toLowerCase()}`}
+                                >
+                                  <Icon className="w-5 h-5" />
+                                  {config.label}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        
+                        {result.status && (
+                          <div className="mt-5 space-y-4">
+                            <div>
+                              <Label className="text-sm font-semibold text-slate-300 mb-2 block">
+                                Finding
+                              </Label>
+                              <Textarea
+                                placeholder="Describe what was found..."
+                                value={result.finding || ''}
+                                onChange={(e) => updateItem(concernItemId, { finding: e.target.value })}
+                                className="min-h-[80px] bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400"
+                              />
+                            </div>
+                            
+                            <div>
+                              <Label className={cn(
+                                "text-sm font-semibold mb-2 block",
+                                missingRecommendation ? "text-red-400" : "text-slate-300"
+                              )}>
+                                Recommendation {missingRecommendation && <span className="text-red-400">*</span>}
+                              </Label>
+                              <Textarea
+                                placeholder="Recommend what action should be taken..."
+                                value={result.recommendation || ''}
+                                onChange={(e) => updateItem(concernItemId, { recommendation: e.target.value })}
+                                className={cn(
+                                  "min-h-[80px] bg-slate-700/50 text-white placeholder:text-slate-400",
+                                  missingRecommendation 
+                                    ? "border-red-500/50 focus:border-red-500" 
+                                    : "border-slate-600"
+                                )}
+                              />
+                              {missingRecommendation && (
+                                <p className="text-xs text-red-400 mt-1">
+                                  A recommendation is required for Yellow/Red items
+                                </p>
+                              )}
+                            </div>
+                            
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-2 bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-purple-500/50 text-purple-300 hover:from-purple-600/30 hover:to-blue-600/30"
+                              onClick={() => handleAIAssist(
+                                { id: concernItemId, label: concern.text, category: 'Client Concerns', sortOrder: 0 }
+                              )}
+                              disabled={isLoadingAI}
+                            >
+                              {isLoadingAI ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  Generating...
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="w-4 h-4" />
+                                  AI Assist
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          
           {categories.map((category) => (
             <div key={category}>
               <div className="bg-blue-600 rounded-lg px-4 py-3 mb-5">
