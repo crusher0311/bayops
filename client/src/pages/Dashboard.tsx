@@ -3,7 +3,6 @@ import { useRepairOrders, useLocations, useDashboardRepairOrders } from '@/lib/h
 import { useShopStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
   DollarSign, 
   Car, 
@@ -13,23 +12,17 @@ import {
   ArrowRight,
   Clock,
   Loader2,
-  Zap,
-  QrCode,
-  Smartphone,
-  Download
+  Zap
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'wouter';
-import { useEffect, useState, useRef } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
+import { useEffect } from 'react';
 
 export default function Dashboard() {
   const { currentLocationId, setCurrentLocation } = useShopStore();
   const { data: locations = [], isLoading: locationsLoading } = useLocations();
   const { data: ros = [], isLoading: rosLoading } = useRepairOrders(currentLocationId || undefined);
   const { data: dashboardRos = [] } = useDashboardRepairOrders(currentLocationId || '', 10);
-  const [qrDialogOpen, setQrDialogOpen] = useState(false);
-  const qrRef = useRef<HTMLDivElement>(null);
 
   // Set default location if none selected
   useEffect(() => {
@@ -39,52 +32,6 @@ export default function Dashboard() {
   }, [locations, currentLocationId, setCurrentLocation]);
 
   const currentLocation = locations.find(l => l.id === currentLocationId) as any;
-  const checkInToken = currentLocation?.checkInToken;
-  const checkInUrl = currentLocationId && checkInToken 
-    ? `${window.location.origin}/checkin/${currentLocationId}/${checkInToken}` 
-    : '';
-
-  const downloadQRCode = () => {
-    if (!qrRef.current) return;
-    const svg = qrRef.current.querySelector('svg');
-    if (!svg) return;
-    
-    const svgClone = svg.cloneNode(true) as SVGElement;
-    svgClone.setAttribute('width', '400');
-    svgClone.setAttribute('height', '400');
-    
-    const svgData = new XMLSerializer().serializeToString(svgClone);
-    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(svgBlob);
-    
-    const canvas = document.createElement('canvas');
-    canvas.width = 400;
-    canvas.height = 400;
-    const ctx = canvas.getContext('2d');
-    
-    const img = new Image();
-    img.onload = () => {
-      if (ctx) {
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, 400, 400);
-        ctx.drawImage(img, 0, 0, 400, 400);
-        
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const pngUrl = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.download = `${currentLocation?.name || 'shop'}-checkin-qr.png`;
-            link.href = pngUrl;
-            link.click();
-            URL.revokeObjectURL(pngUrl);
-          }
-        }, 'image/png');
-      }
-      URL.revokeObjectURL(url);
-    };
-    
-    img.src = url;
-  };
 
   // Helper to get the effective date for an RO (use original invoice date for imports, otherwise completion date)
   const getEffectiveDate = (ro: any): Date | null => {
@@ -348,73 +295,6 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="bg-gradient-to-br from-blue-50 to-purple-50 border-blue-100">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Smartphone className="w-5 h-5 text-blue-600" />
-              Customer Self Check-In
-            </CardTitle>
-            <CardDescription>
-              Let customers check in from their own phone
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
-              <DialogTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  className="w-full gap-2 border-blue-200 hover:bg-blue-100"
-                  data-testid="button-show-qr"
-                >
-                  <QrCode className="w-4 h-4" />
-                  Show QR Code
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[400px]">
-                <DialogHeader>
-                  <DialogTitle className="text-center">Customer Self Check-In</DialogTitle>
-                </DialogHeader>
-                <div className="flex flex-col items-center py-6">
-                  <div ref={qrRef} className="bg-white p-4 rounded-xl shadow-lg">
-                    {checkInUrl && (
-                      <QRCodeSVG 
-                        value={checkInUrl}
-                        size={200}
-                        level="H"
-                        includeMargin
-                      />
-                    )}
-                  </div>
-                  <p className="text-center text-sm text-muted-foreground mt-4 max-w-[280px]">
-                    Display this QR code in your waiting area. Customers scan it to check in from their phone.
-                  </p>
-                  <div className="flex gap-2 mt-4 w-full">
-                    <Button 
-                      variant="outline" 
-                      className="flex-1 gap-2"
-                      onClick={downloadQRCode}
-                      data-testid="button-download-qr"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download
-                    </Button>
-                    <Button 
-                      className="flex-1 gap-2"
-                      onClick={() => {
-                        navigator.clipboard.writeText(checkInUrl);
-                      }}
-                      data-testid="button-copy-link"
-                    >
-                      Copy Link
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </CardContent>
-        </Card>
-      </div>
     </AppLayout>
   );
 }
