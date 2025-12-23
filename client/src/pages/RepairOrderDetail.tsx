@@ -3523,8 +3523,8 @@ export default function RepairOrderDetail() {
                       />
                       mi
                     </div>
-                    <div className="flex gap-2 mt-3">
-                      {vehicle?.vin && !vehicle.engineDisplacement && (
+                    {vehicle?.vin && !vehicle.engineDisplacement && (
+                      <div className="mt-2">
                         <Button
                           variant="outline"
                           size="sm"
@@ -3556,28 +3556,8 @@ export default function RepairOrderDetail() {
                           <RefreshCw className="w-3.5 h-3.5" />
                           Decode VIN
                         </Button>
-                      )}
-                      {vehicle?.vin && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-2 text-xs"
-                          onClick={() => {
-                            navigator.clipboard.writeText(vehicle.vin);
-                            window.open('https://www2.prodemand.com', '_blank');
-                            toast({ 
-                              title: 'VIN copied to clipboard!', 
-                              description: 'Paste in ProDemand vehicle lookup (Ctrl+V)' 
-                            });
-                          }}
-                          data-testid="button-launch-prodemand"
-                        >
-                          <Wrench className="w-3.5 h-3.5" />
-                          ProDemand
-                          <ExternalLink className="w-3 h-3" />
-                        </Button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -4488,15 +4468,41 @@ export default function RepairOrderDetail() {
                           )}
                         </div>
                       </div>
-                      <Button
-                        size="sm"
-                        onClick={() => handleAddDeferredToRO(dw)}
-                        className="ml-2 gap-1"
-                        data-testid={`btn-add-deferred-${dw.id}`}
-                      >
-                        <Plus className="w-3 h-3" />
-                        Add to RO
-                      </Button>
+                      <div className="flex items-center gap-1 ml-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(`/api/deferred-work/${dw.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ status: 'DISMISSED', notes: 'Dismissed - no longer needed' }),
+                              });
+                              if (res.ok) {
+                                queryClient.invalidateQueries({ queryKey: ['deferred-work', 'vehicle', ro.vehicleId] });
+                                toast({ title: 'Deferred work dismissed' });
+                              }
+                            } catch (err: any) {
+                              toast({ title: 'Error', description: err.message, variant: 'destructive' });
+                            }
+                          }}
+                          data-testid={`btn-dismiss-deferred-${dw.id}`}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleAddDeferredToRO(dw)}
+                          className="gap-1"
+                          data-testid={`btn-add-deferred-${dw.id}`}
+                        >
+                          <Plus className="w-3 h-3" />
+                          Add to RO
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </CardContent>
