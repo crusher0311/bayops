@@ -2926,8 +2926,7 @@ function LaborGuideIntegrationCard() {
             size="sm" 
             className="mt-3 border-amber-300 hover:bg-amber-100"
             onClick={() => {
-              // Extension download link would go here
-              window.open('/chrome-extension/bayops-labor-guide.zip', '_blank');
+              window.open('/api/chrome-extension/download', '_blank');
             }}
             data-testid="button-download-extension"
           >

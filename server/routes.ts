@@ -7689,4 +7689,44 @@ function setupMessagingRoutes(app: Express) {
       res.status(500).json({ message: error.message });
     }
   });
+
+  // ============================================================================
+  // Chrome Extension Download
+  // ============================================================================
+
+  // Download BayOPS Parts & Labor Connector Chrome extension as zip
+  app.get("/api/chrome-extension/download", async (req, res) => {
+    try {
+      const AdmZip = (await import("adm-zip")).default;
+      const path = await import("path");
+      const fs = await import("fs");
+      
+      const extensionDir = path.join(process.cwd(), "chrome-extension");
+      
+      if (!fs.existsSync(extensionDir)) {
+        return res.status(404).json({ message: "Chrome extension not found" });
+      }
+      
+      const zip = new AdmZip();
+      
+      const files = fs.readdirSync(extensionDir);
+      for (const file of files) {
+        const filePath = path.join(extensionDir, file);
+        const stat = fs.statSync(filePath);
+        if (stat.isFile()) {
+          zip.addLocalFile(filePath);
+        }
+      }
+      
+      const zipBuffer = zip.toBuffer();
+      
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader("Content-Disposition", "attachment; filename=bayops-parts-labor-connector.zip");
+      res.setHeader("Content-Length", zipBuffer.length);
+      res.send(zipBuffer);
+    } catch (error: any) {
+      console.error("Chrome extension download error:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
 }
