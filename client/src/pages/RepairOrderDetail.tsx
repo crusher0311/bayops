@@ -3304,75 +3304,75 @@ export default function RepairOrderDetail() {
                 ) : (
                   jobs.map((job) => (
                     <Card key={job.id} className="overflow-hidden border-l-4 border-l-blue-500" data-testid={`card-job-${job.id}`}>
-                      <CardHeader className="bg-muted/10 pb-4 border-b">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <CardTitle className="text-lg">{job.name || job.title}</CardTitle>
-                            {job.description && <p className="text-sm text-muted-foreground mt-1">{job.description}</p>}
-                          </div>
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="secondary" 
-                              size="sm" 
-                              className="gap-2 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20 hover:from-purple-500/20 hover:to-blue-500/20" 
-                              onClick={() => handleGenerateJobDescription(job)}
-                              disabled={generateDescription.isPending || !vehicle}
-                              data-testid={`button-ai-description-${job.id}`}
-                            >
-                              <Sparkles className="w-3 h-3 text-purple-500" />
-                              {generateDescription.isPending && aiActiveJobId === job.id ? 'Writing...' : 'AI Write'}
-                            </Button>
-                            <Button 
-                              variant="default" 
-                              size="sm" 
-                              className="gap-2" 
-                              onClick={() => openLaborGuide(job.id)}
-                              disabled={updateRO.isPending || !vehicle}
-                              data-testid={`button-labor-guide-${job.id}`}
-                            >
-                              <BookOpen className="w-3 h-3" /> Labor Guide
-                            </Button>
-                            <Button 
-                              variant="secondary" 
-                              size="sm" 
-                              className="gap-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-700 border-orange-500/20" 
-                              onClick={() => openPartstechSearch(job.id, job.name || job.title)}
-                              disabled={updateRO.isPending}
-                              data-testid={`button-partstech-${job.id}`}
-                            >
-                              <Package className="w-3 h-3" /> PartsTech
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="gap-2" 
-                              onClick={() => handleAddLabor(job.id)}
-                              disabled={updateRO.isPending}
-                              data-testid={`button-add-labor-${job.id}`}
-                            >
-                              <Plus className="w-3 h-3" /> Labor
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="gap-2" 
-                              onClick={() => handleAddPart(job.id)}
-                              disabled={updateRO.isPending}
-                              data-testid={`button-add-part-${job.id}`}
-                            >
-                              <Plus className="w-3 h-3" /> Part
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-destructive hover:bg-destructive/10" 
-                              onClick={() => handleDeleteJob(job.id)}
-                              disabled={updateRO.isPending}
-                              data-testid={`button-delete-job-${job.id}`}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
+                      <CardHeader className="bg-muted/10 pb-3 border-b space-y-3">
+                        <div className="flex items-start justify-between gap-4">
+                          <CardTitle className="text-lg">{job.name || job.title}</CardTitle>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-destructive hover:bg-destructive/10 shrink-0" 
+                            onClick={() => handleDeleteJob(job.id)}
+                            disabled={updateRO.isPending}
+                            data-testid={`button-delete-job-${job.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        {job.description && (
+                          <p className="text-sm text-muted-foreground leading-relaxed">{job.description}</p>
+                        )}
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          <Button 
+                            variant="secondary" 
+                            size="sm" 
+                            className="gap-1.5 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20 hover:from-purple-500/20 hover:to-blue-500/20" 
+                            onClick={() => handleGenerateJobDescription(job)}
+                            disabled={generateDescription.isPending || !vehicle}
+                            data-testid={`button-ai-description-${job.id}`}
+                          >
+                            <Sparkles className="w-3 h-3 text-purple-500" />
+                            {generateDescription.isPending && aiActiveJobId === job.id ? 'Writing...' : 'AI Write'}
+                          </Button>
+                          <Button 
+                            variant="default" 
+                            size="sm" 
+                            className="gap-1.5" 
+                            onClick={() => openLaborGuide(job.id)}
+                            disabled={updateRO.isPending || !vehicle}
+                            data-testid={`button-labor-guide-${job.id}`}
+                          >
+                            <BookOpen className="w-3 h-3" /> Labor Guide
+                          </Button>
+                          <Button 
+                            variant="secondary" 
+                            size="sm" 
+                            className="gap-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-700 border-orange-500/20" 
+                            onClick={() => openPartstechSearch(job.id, job.name || job.title)}
+                            disabled={updateRO.isPending}
+                            data-testid={`button-partstech-${job.id}`}
+                          >
+                            <Package className="w-3 h-3" /> PartsTech
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="gap-1.5" 
+                            onClick={() => handleAddLabor(job.id)}
+                            disabled={updateRO.isPending}
+                            data-testid={`button-add-labor-${job.id}`}
+                          >
+                            <Plus className="w-3 h-3" /> Labor
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="gap-1.5" 
+                            onClick={() => handleAddPart(job.id)}
+                            disabled={updateRO.isPending}
+                            data-testid={`button-add-part-${job.id}`}
+                          >
+                            <Plus className="w-3 h-3" /> Part
+                          </Button>
                         </div>
                       </CardHeader>
                       <CardContent className="p-0">
