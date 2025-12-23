@@ -3210,6 +3210,16 @@ export default function RepairOrderDetail() {
               </TabsList>
 
               <TabsContent value="estimate" className="mt-6 space-y-6">
+                {ro.notes && (
+                  <div className="bg-amber-50 border border-amber-300 border-l-4 border-l-amber-500 rounded-lg p-4 flex gap-3 items-start mb-4">
+                    <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Client Concern</p>
+                      <p className="text-sm font-medium text-amber-900 mt-1">{ro.notes}</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-end gap-2">
                   <Dialog open={isPackageDialogOpen} onOpenChange={setIsPackageDialogOpen}>
                     <DialogTrigger asChild>
@@ -3699,19 +3709,6 @@ export default function RepairOrderDetail() {
               </CardContent>
             </Card>
 
-            {ro.notes && (
-              <Card className="bg-amber-50 border-amber-300 border-l-4 border-l-amber-500">
-                <CardContent className="p-4">
-                  <div className="flex gap-3 items-start">
-                    <Car className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Reason Vehicle Here</p>
-                      <p className="text-sm font-medium text-amber-900">{ro.notes}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {pendingDeferredWork.length > 0 && (
               <Card className="bg-orange-50/50 border-orange-200">
