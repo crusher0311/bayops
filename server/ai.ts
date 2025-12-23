@@ -1,9 +1,43 @@
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-});
+// Support both Replit AI integration (billed through Replit) and direct OpenAI API key (for self-hosting)
+// Priority: Replit AI integration > Direct OpenAI API key
+function createOpenAIClient(): OpenAI {
+  // Check for Replit AI integration (preferred when running on Replit)
+  if (process.env.AI_INTEGRATIONS_OPENAI_BASE_URL && process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
+    console.log('[AI] Using Replit AI integration');
+    return new OpenAI({
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+    });
+  }
+  
+  // Fallback to direct OpenAI API key (for self-hosting outside Replit)
+  if (process.env.OPENAI_API_KEY) {
+    console.log('[AI] Using direct OpenAI API key');
+    return new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  
+  // No API key available - create client anyway (will fail on first call with helpful error)
+  console.warn('[AI] No OpenAI configuration found. AI features will not work.');
+  console.warn('[AI] For Replit: AI integration should be automatic.');
+  console.warn('[AI] For self-hosting: Set OPENAI_API_KEY environment variable.');
+  return new OpenAI({
+    apiKey: 'not-configured',
+  });
+}
+
+const openai = createOpenAIClient();
+
+// Helper to check if AI is properly configured
+export function isAIConfigured(): boolean {
+  return !!(
+    (process.env.AI_INTEGRATIONS_OPENAI_BASE_URL && process.env.AI_INTEGRATIONS_OPENAI_API_KEY) ||
+    process.env.OPENAI_API_KEY
+  );
+}
 
 interface VehicleInfo {
   year: number;

@@ -67,7 +67,10 @@ The database is undergoing a three-phase refactor for enterprise-grade normalize
 - JSONB columns retained for backwards compatibility (can be removed after full verification period)
 
 ## External Dependencies
-- **OpenAI**: Integrated via Replit AI for AI Service Writer functionalities (no separate API key required).
+- **OpenAI**: Dual-mode AI integration for service writing, DVI notes, and authorization requests:
+  - **Replit hosting**: Uses Replit AI integration automatically (billed through Replit credits, no API key needed)
+  - **Self-hosting**: Set `OPENAI_API_KEY` environment variable (billed directly to your OpenAI account)
+  - Status endpoint: `GET /api/ai/status` returns configuration mode and status
 - **Geoapify**: Used for address autocomplete (`GEOAPIFY_API_KEY`).
 - **VehicleDatabases.com**: Provides labor guide API for repair pricing estimates (`VEHICLE_DATABASES_API_KEY`).
 - **PartsTech**: Offers native parts search and ordering integration. This includes both a popup mode (using existing PartsTech shop account) and a full API mode for in-app search and direct part selection. Requires `PARTSTECH_USERNAME`, `PARTSTECH_API_KEY`, and optionally `PARTSTECH_PARTNER_ID`, `PARTSTECH_PARTNER_KEY` for full API access.

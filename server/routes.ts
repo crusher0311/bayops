@@ -2443,6 +2443,26 @@ export async function registerRoutes(
   // AI Service Writer Routes
   // ============================================
 
+  // Check AI configuration status
+  app.get("/api/ai/status", requireAuth, async (req, res) => {
+    try {
+      const { isAIConfigured } = await import("./ai");
+      const configured = isAIConfigured();
+      const mode = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL ? 'replit' : 
+                   process.env.OPENAI_API_KEY ? 'direct' : 'none';
+      
+      res.json({ 
+        configured,
+        mode,
+        message: configured 
+          ? (mode === 'replit' ? 'Using Replit AI integration' : 'Using direct OpenAI API key')
+          : 'AI not configured. Set OPENAI_API_KEY for self-hosting.'
+      });
+    } catch (error: any) {
+      res.status(500).json({ configured: false, mode: 'error', message: error.message });
+    }
+  });
+
   // Generate customer-friendly service description for a job
   app.post("/api/ai/service-description", requireAuth, async (req, res) => {
     try {
