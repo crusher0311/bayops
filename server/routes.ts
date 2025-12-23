@@ -6899,6 +6899,65 @@ function setupMessagingRoutes(app: Express) {
     }
   });
 
+  // Refresh vehicle VIN data - decodes VIN and updates vehicle record with detailed info
+  app.post("/api/vehicles/:vehicleId/refresh-vin-data", requireAuth, async (req, res) => {
+    try {
+      const vehicle = await storage.getVehicle(req.params.vehicleId);
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+
+      // Verify org access
+      if (vehicle.orgId && vehicle.orgId !== req.user!.orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const vin = vehicle.vin?.toUpperCase().trim();
+      if (!vin || vin.length !== 17) {
+        return res.status(400).json({ message: "Valid 17-character VIN required" });
+      }
+
+      const result = await decodeVin(vin);
+      
+      if (!result.ok || !result.vehicle) {
+        return res.status(404).json({ 
+          message: result.error || "Could not decode VIN",
+          vin,
+        });
+      }
+
+      // Update vehicle with decoded data
+      const decoded = result.vehicle;
+      const updates: Record<string, any> = {};
+      
+      if (decoded.trim && !vehicle.trim) updates.trim = decoded.trim;
+      if (decoded.engine) updates.engineDisplacement = decoded.engine;
+      if (decoded.transmission) updates.transmission = decoded.transmission;
+      if (decoded.driveType) updates.driveType = decoded.driveType;
+      if (decoded.fuelType) updates.fuelType = decoded.fuelType;
+
+      if (Object.keys(updates).length > 0) {
+        const updated = await storage.updateVehicle(vehicle.id, updates);
+        res.json({ 
+          message: "Vehicle data updated",
+          vehicle: updated,
+          decoded: decoded,
+          fieldsUpdated: Object.keys(updates),
+        });
+      } else {
+        res.json({ 
+          message: "No new data to update",
+          vehicle,
+          decoded: decoded,
+          fieldsUpdated: [],
+        });
+      }
+    } catch (error: any) {
+      console.error('[VIN Refresh] Error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Get maintenance schedule directly by VIN (for RO creation flow)
   app.get("/api/vin/:vin/maintenance", requireAuth, async (req, res) => {
     try {

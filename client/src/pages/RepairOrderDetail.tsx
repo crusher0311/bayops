@@ -3523,26 +3523,61 @@ export default function RepairOrderDetail() {
                       />
                       mi
                     </div>
-                    {vehicle?.vin && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-3 gap-2 text-xs"
-                        onClick={() => {
-                          navigator.clipboard.writeText(vehicle.vin);
-                          window.open('https://www2.prodemand.com', '_blank');
-                          toast({ 
-                            title: 'VIN copied to clipboard!', 
-                            description: 'Paste in ProDemand vehicle lookup (Ctrl+V)' 
-                          });
-                        }}
-                        data-testid="button-launch-prodemand"
-                      >
-                        <Wrench className="w-3.5 h-3.5" />
-                        ProDemand
-                        <ExternalLink className="w-3 h-3" />
-                      </Button>
-                    )}
+                    <div className="flex gap-2 mt-3">
+                      {vehicle?.vin && !vehicle.engineDisplacement && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2 text-xs"
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(`/api/vehicles/${vehicle.id}/refresh-vin-data`, {
+                                method: 'POST',
+                                credentials: 'include',
+                              });
+                              const data = await res.json();
+                              if (res.ok) {
+                                queryClient.invalidateQueries({ queryKey: ['vehicle', vehicle.id] });
+                                toast({ 
+                                  title: 'VIN data refreshed',
+                                  description: data.fieldsUpdated?.length > 0 
+                                    ? `Updated: ${data.fieldsUpdated.join(', ')}`
+                                    : 'Vehicle data already up to date'
+                                });
+                              } else {
+                                toast({ title: 'Error', description: data.message, variant: 'destructive' });
+                              }
+                            } catch (err: any) {
+                              toast({ title: 'Error', description: err.message, variant: 'destructive' });
+                            }
+                          }}
+                          data-testid="button-refresh-vin"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          Decode VIN
+                        </Button>
+                      )}
+                      {vehicle?.vin && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2 text-xs"
+                          onClick={() => {
+                            navigator.clipboard.writeText(vehicle.vin);
+                            window.open('https://www2.prodemand.com', '_blank');
+                            toast({ 
+                              title: 'VIN copied to clipboard!', 
+                              description: 'Paste in ProDemand vehicle lookup (Ctrl+V)' 
+                            });
+                          }}
+                          data-testid="button-launch-prodemand"
+                        >
+                          <Wrench className="w-3.5 h-3.5" />
+                          ProDemand
+                          <ExternalLink className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CardContent>
