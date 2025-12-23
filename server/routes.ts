@@ -737,56 +737,8 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/repair-orders/:id", requireAuth, async (req, res) => {
-    try {
-      const ro = await storage.getRepairOrder(req.params.id, req.user!.orgId);
-      if (!ro) {
-        return res.status(404).json({ message: "Repair order not found" });
-      }
-      res.json(ro);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.post("/api/repair-orders", requireAuth, async (req, res) => {
-    try {
-      const result = insertRepairOrderSchema.safeParse({
-        ...req.body,
-        orgId: req.user!.orgId,
-      });
-      if (!result.success) {
-        return res.status(400).json({ 
-          message: fromZodError(result.error).toString() 
-        });
-      }
-      const ro = await storage.createRepairOrder(result.data);
-      res.status(201).json(ro);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.patch("/api/repair-orders/:id", requireAuth, async (req, res) => {
-    try {
-      const updates = { ...req.body };
-      
-      // Auto-set completedAt when status changes to 'completed'
-      if (updates.status === 'completed' && !updates.completedAt) {
-        updates.completedAt = new Date();
-      }
-      
-      const ro = await storage.updateRepairOrder(req.params.id, req.user!.orgId, updates);
-      if (!ro) {
-        return res.status(404).json({ message: "Repair order not found" });
-      }
-      res.json(ro);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
   // Search historical jobs by year/make/model and job name with AI similarity scoring
+  // IMPORTANT: This route must come BEFORE /api/repair-orders/:id to avoid matching "similar-jobs" as an :id
   app.get("/api/repair-orders/similar-jobs", requireAuth, async (req, res) => {
     try {
       const { year, make, model, engine, jobName } = req.query;
@@ -931,6 +883,55 @@ export async function registerRoutes(
       });
     } catch (error: any) {
       console.error('Similar jobs error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/repair-orders/:id", requireAuth, async (req, res) => {
+    try {
+      const ro = await storage.getRepairOrder(req.params.id, req.user!.orgId);
+      if (!ro) {
+        return res.status(404).json({ message: "Repair order not found" });
+      }
+      res.json(ro);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/repair-orders", requireAuth, async (req, res) => {
+    try {
+      const result = insertRepairOrderSchema.safeParse({
+        ...req.body,
+        orgId: req.user!.orgId,
+      });
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: fromZodError(result.error).toString() 
+        });
+      }
+      const ro = await storage.createRepairOrder(result.data);
+      res.status(201).json(ro);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/repair-orders/:id", requireAuth, async (req, res) => {
+    try {
+      const updates = { ...req.body };
+      
+      // Auto-set completedAt when status changes to 'completed'
+      if (updates.status === 'completed' && !updates.completedAt) {
+        updates.completedAt = new Date();
+      }
+      
+      const ro = await storage.updateRepairOrder(req.params.id, req.user!.orgId, updates);
+      if (!ro) {
+        return res.status(404).json({ message: "Repair order not found" });
+      }
+      res.json(ro);
+    } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
