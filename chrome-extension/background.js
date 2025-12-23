@@ -149,12 +149,19 @@ async function handleMessage(message, sender) {
         status: 'draft'
       });
       
-      // Build PartsTech URL with VIN for vehicle auto-selection
+      // Build PartsTech URL with VIN and optional search query
       let url = 'https://app.partstech.com/';
       
       // Add VIN to URL if provided - PartsTech will auto-select the vehicle
       if (vin && vin.length === 17) {
         url = `https://app.partstech.com/searchresult?vin=${encodeURIComponent(vin)}`;
+        // Add search query (job name) if provided
+        if (searchQuery) {
+          url += `&part_text=${encodeURIComponent(searchQuery)}`;
+        }
+      } else if (searchQuery) {
+        // No VIN but have search query
+        url = `https://app.partstech.com/searchresult?part_text=${encodeURIComponent(searchQuery)}`;
       }
       
       // Check if we already have a PartsTech tab for this job
