@@ -3,7 +3,7 @@
 
 window.BayOPSExtension = {
   isInstalled: true,
-  version: '1.1.0',
+  version: '1.2.0',
   
   // Generate unique request ID
   _requestId: 0,
