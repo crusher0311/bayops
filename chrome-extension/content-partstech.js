@@ -211,87 +211,154 @@ async function updateCartCount() {
   }
 }
 
-// Parse cart items from PartsTech DOM
+// Intercept "Add to cart" clicks to capture part data
+function setupAddToCartInterceptor() {
+  document.addEventListener('click', (e) => {
+    const target = e.target;
+    const button = target.closest('button');
+    
+    if (!button) return;
+    
+    const buttonText = button.textContent?.toLowerCase() || '';
+    const isAddToCart = buttonText.includes('add to cart') || 
+                        buttonText.includes('add to order') ||
+                        button.getAttribute('aria-label')?.toLowerCase().includes('add');
+    
+    if (isAddToCart && currentJobContext) {
+      // Find the product container (go up the DOM tree)
+      const productCard = button.closest('[class*="product"], [class*="Part"], [class*="item"], [class*="result"], [class*="card"]') ||
+                          button.parentElement?.parentElement?.parentElement;
+      
+      if (productCard) {
+        const partData = extractPartFromProductCard(productCard);
+        if (partData.partNumber) {
+          console.log('BayOPS: Captured part from Add to Cart:', partData);
+          
+          // Send to background to add to session
+          chrome.runtime.sendMessage({
+            type: 'ADD_PART',
+            jobId: currentJobContext.jobId,
+            part: partData
+          }, (response) => {
+            if (response?.success) {
+              updateCartCount();
+              showToast(`Added: ${partData.partNumber}`);
+            }
+          });
+        }
+      }
+    }
+  }, true);
+  
+  console.log('BayOPS: Add to Cart interceptor set up');
+}
+
+// Extract part data from a product card/listing
+function extractPartFromProductCard(element) {
+  const text = element.textContent || '';
+  const html = element.innerHTML || '';
+  
+  // Look for part number patterns - usually a short alphanumeric code
+  // Common formats: CRK4233, KOE4233, 12345, ABC-123
+  let partNumber = '';
+  
+  // Try specific selectors first
+  const partNumEl = element.querySelector('[class*="part-number"], [class*="partNumber"], [class*="sku"], [data-part-number]');
+  if (partNumEl) {
+    partNumber = partNumEl.textContent?.trim() || '';
+  }
+  
+  // Look for patterns like "CRK4233" or "KOE4233" in the text
+  if (!partNumber) {
+    const partPatterns = text.match(/\b([A-Z]{2,4}[0-9]{3,6}[A-Z]?)\b/g);
+    if (partPatterns && partPatterns.length > 0) {
+      partNumber = partPatterns[0];
+    }
+  }
+  
+  // Get price - look for dollar amounts
+  let price = 0;
+  const priceMatches = text.match(/\$\s*([\d,]+\.?\d*)/g);
+  if (priceMatches) {
+    // Usually the wholesale/net price is what we want - often the smaller number
+    const prices = priceMatches.map(p => parseFloat(p.replace(/[$,\s]/g, ''))).filter(p => p > 0);
+    if (prices.length > 0) {
+      price = Math.min(...prices); // Take the lower price (usually cost)
+    }
+  }
+  
+  // Get brand from known brands or from DOM
+  let brand = '';
+  const brandEl = element.querySelector('[class*="brand"], [class*="manufacturer"], [class*="vendor"]');
+  if (brandEl) {
+    brand = brandEl.textContent?.trim() || '';
+  }
+  
+  const knownBrands = ['PowerStop', 'AC Delco', 'ACDelco', 'Motorcraft', 'Bosch', 'Denso', 'NGK', 
+                       'Gates', 'Dayco', 'Moog', 'TRW', 'Monroe', 'KYB', 'Bilstein',
+                       'Wagner', 'Bendix', 'Raybestos', 'Centric', 'StopTech',
+                       'Dorman', 'Standard', 'BWD', 'Cardone', 'Beck Arnley', 'Duralast',
+                       'AutoZone', 'O\'Reilly', 'NAPA', 'Carquest', 'FelPro', 'Fel-Pro'];
+  
+  if (!brand) {
+    for (const b of knownBrands) {
+      if (text.includes(b)) {
+        brand = b;
+        break;
+      }
+    }
+  }
+  
+  // Get description - look for product title/name
+  let description = '';
+  const titleEl = element.querySelector('h1, h2, h3, h4, [class*="title"], [class*="name"], [class*="description"]');
+  if (titleEl) {
+    description = titleEl.textContent?.trim().substring(0, 150) || '';
+  }
+  
+  if (!description) {
+    // Take first significant text chunk
+    const textNodes = text.split('\n').map(t => t.trim()).filter(t => t.length > 10 && t.length < 200);
+    description = textNodes[0] || partNumber;
+  }
+  
+  // Get quantity from input field
+  let quantity = 1;
+  const qtyInput = element.querySelector('input[type="number"], input[class*="qty"], input[class*="quantity"]');
+  if (qtyInput) {
+    quantity = parseInt(qtyInput.value) || 1;
+  }
+  
+  return {
+    partNumber,
+    description,
+    brand,
+    supplier: 'PartsTech',
+    price,
+    quantity
+  };
+}
+
+// Parse cart items from PartsTech DOM (for cart page)
 function parseCartItems() {
   const items = [];
   
-  // PartsTech cart selectors - these may need adjustment based on actual DOM
-  // Common patterns for cart items
-  const cartSelectors = [
-    '.cart-item',
-    '[data-testid="cart-item"]',
-    '.shopping-cart-item',
-    '.cart-line-item',
-    'tr[data-item-id]',
-    '.order-item'
-  ];
+  // On cart/review page, look for line items
+  const cartPage = window.location.href.includes('cart') || window.location.href.includes('review');
   
-  let cartElements = [];
-  for (const selector of cartSelectors) {
-    cartElements = document.querySelectorAll(selector);
-    if (cartElements.length > 0) break;
-  }
-  
-  // If no standard selectors work, try to find cart by content patterns
-  if (cartElements.length === 0) {
-    // Look for elements containing part number patterns
-    const allElements = document.querySelectorAll('[class*="cart"], [class*="Cart"], [class*="order"], [class*="Order"]');
-    cartElements = allElements;
-  }
-  
-  cartElements.forEach((element) => {
-    try {
-      const item = extractPartFromElement(element);
-      if (item && item.partNumber) {
-        items.push(item);
+  if (cartPage) {
+    // Find all items in cart - look for rows/cards with part info
+    const rows = document.querySelectorAll('[class*="cart"] [class*="item"], [class*="order"] [class*="line"], tr:has([class*="part"])');
+    
+    rows.forEach(row => {
+      const part = extractPartFromProductCard(row);
+      if (part.partNumber) {
+        items.push(part);
       }
-    } catch (e) {
-      console.error('BayOPS: Error parsing cart item:', e);
-    }
-  });
+    });
+  }
   
   return items;
-}
-
-function extractPartFromElement(element) {
-  const text = element.textContent || '';
-  
-  // Try to extract part number (alphanumeric, often with dashes)
-  const partNumberMatch = text.match(/\b([A-Z0-9]{2,}[-]?[A-Z0-9]+)\b/i);
-  
-  // Try to extract price
-  const priceMatch = text.match(/\$[\d,]+\.?\d*/);
-  
-  // Try to extract quantity
-  const qtyMatch = text.match(/(?:qty|quantity|x)\s*:?\s*(\d+)/i) || 
-                   text.match(/(\d+)\s*(?:ea|each|pc|pcs)/i);
-  
-  // Try to find brand/manufacturer
-  const knownBrands = ['AC Delco', 'ACDelco', 'Motorcraft', 'Bosch', 'Denso', 'NGK', 
-                       'Gates', 'Dayco', 'Moog', 'TRW', 'Monroe', 'KYB', 'Bilstein',
-                       'Wagner', 'Bendix', 'Raybestos', 'Centric', 'StopTech',
-                       'Dorman', 'Standard', 'BWD', 'Cardone', 'Beck Arnley'];
-  
-  let brand = '';
-  for (const b of knownBrands) {
-    if (text.toLowerCase().includes(b.toLowerCase())) {
-      brand = b;
-      break;
-    }
-  }
-  
-  // Get description - usually the longest text segment
-  const description = element.querySelector('[class*="description"], [class*="name"], [class*="title"]')?.textContent?.trim() || 
-                     text.substring(0, 100).trim();
-  
-  return {
-    partNumber: partNumberMatch ? partNumberMatch[1] : '',
-    description: description,
-    brand: brand,
-    supplier: 'PartsTech',
-    price: priceMatch ? parseFloat(priceMatch[0].replace(/[$,]/g, '')) : 0,
-    quantity: qtyMatch ? parseInt(qtyMatch[1]) : 1
-  };
 }
 
 // Sync current cart to BayOPS
@@ -364,7 +431,7 @@ function setupCartObserver() {
 
 // Initialize
 function init() {
-  console.log('BayOPS Parts Connector: PartsTech content script loaded');
+  console.log('BayOPS Parts Connector: PartsTech content script loaded v1.5.0');
   
   // Check if we have a stored job context for this tab
   chrome.runtime.sendMessage({ type: 'GET_TAB_CONTEXT' }, (response) => {
@@ -373,6 +440,9 @@ function init() {
       showJobBanner();
     }
   });
+  
+  // Set up "Add to Cart" button interceptor immediately
+  setupAddToCartInterceptor();
   
   // Set up cart monitoring after page settles
   setTimeout(() => {
