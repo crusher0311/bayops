@@ -843,19 +843,25 @@ export async function registerRoutes(
         engineMatch: boolean | null;
       }>();
       
+      // Split search term into words for flexible matching
+      const searchWords = searchTerm.split(/\s+/).filter(word => word.length > 2);
+      
       for (const { ro, vehicle } of rosWithVehicles) {
         const jobs = (ro.jobs as any[]) || [];
         for (const job of jobs) {
           const jobNameLower = (job.name || '').toLowerCase();
           
-          // If search term provided, filter by it
-          if (searchTerm && !jobNameLower.includes(searchTerm)) {
-            continue;
-          }
-          
           // Skip empty jobs
           if (!job.name || !job.lineItems?.length) {
             continue;
+          }
+          
+          // If search term provided, filter by word match (at least one significant word must match)
+          if (searchWords.length > 0) {
+            const hasWordMatch = searchWords.some(word => jobNameLower.includes(word));
+            if (!hasWordMatch) {
+              continue;
+            }
           }
           
           // Calculate similarity score

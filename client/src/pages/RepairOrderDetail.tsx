@@ -2401,18 +2401,25 @@ export default function RepairOrderDetail() {
   // Canned Jobs / Service Packages state
   const [isPackageDialogOpen, setIsPackageDialogOpen] = useState(false);
   
-  // Similar Jobs state
-  const [isSimilarJobsOpen, setIsSimilarJobsOpen] = useState(false);
+  // Similar Jobs state - now job-level
+  const [similarJobsForJob, setSimilarJobsForJob] = useState<{ id: string; name: string } | null>(null);
   const [similarJobSearch, setSimilarJobSearch] = useState('');
   
-  // Similar Jobs query
-  const { data: similarJobsData, isLoading: similarJobsLoading } = useSimilarJobs(
+  // Similar Jobs query - uses job name as initial search when opening from a job
+  const effectiveJobSearch = similarJobsForJob ? (similarJobSearch || similarJobsForJob.name) : similarJobSearch;
+  const { data: similarJobsData, isLoading: similarJobsLoading, refetch: refetchSimilarJobs } = useSimilarJobs(
     vehicle?.year ?? null,
     vehicle?.make ?? '',
     vehicle?.model ?? '',
     vehicle?.engineDisplacement ?? undefined,
-    similarJobSearch || undefined
+    effectiveJobSearch || undefined
   );
+  
+  // Open similar jobs dialog for a specific job
+  const openSimilarJobsForJob = (job: { id: string; name: string }) => {
+    setSimilarJobsForJob(job);
+    setSimilarJobSearch(job.name);
+  };
   
   // Job Approvals state
   const [approvalDialogJob, setApprovalDialogJob] = useState<string | null>(null);
@@ -2917,7 +2924,7 @@ export default function RepairOrderDetail() {
       updates: { jobs: [...jobs, newJob] as any },
     });
     
-    setIsSimilarJobsOpen(false);
+    setSimilarJobsForJob(null);
     setSimilarJobSearch('');
     
     toast({
@@ -3648,18 +3655,19 @@ export default function RepairOrderDetail() {
                       </div>
                     </DialogContent>
                   </Dialog>
-                  <Dialog open={isSimilarJobsOpen} onOpenChange={setIsSimilarJobsOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" className="gap-2" data-testid="button-similar-jobs" disabled={!vehicle}>
-                        <History className="w-4 h-4" /> Similar Jobs
-                      </Button>
-                    </DialogTrigger>
+                  {/* Similar Jobs Dialog - Now opened from individual job cards */}
+                  <Dialog open={similarJobsForJob !== null} onOpenChange={(open) => {
+                    if (!open) {
+                      setSimilarJobsForJob(null);
+                      setSimilarJobSearch('');
+                    }
+                  }}>
                     <DialogContent className="max-w-2xl">
                       <DialogHeader>
-                        <DialogTitle>Reuse Historical Jobs</DialogTitle>
-                        {vehicle && (
+                        <DialogTitle>Find Similar Historical Jobs</DialogTitle>
+                        {vehicle && similarJobsForJob && (
                           <p className="text-sm text-muted-foreground">
-                            Jobs from similar {vehicle.year} {vehicle.make} {vehicle.model} vehicles
+                            Searching for "{similarJobsForJob.name}" on {vehicle.year} {vehicle.make} {vehicle.model}
                           </p>
                         )}
                       </DialogHeader>
@@ -3924,6 +3932,16 @@ export default function RepairOrderDetail() {
                             data-testid={`button-partstech-${job.id}`}
                           >
                             <Package className="w-3 h-3" /> PartsTech
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="gap-1.5" 
+                            onClick={() => openSimilarJobsForJob({ id: job.id, name: job.name || job.title || 'Job' })}
+                            disabled={!vehicle}
+                            data-testid={`button-similar-jobs-${job.id}`}
+                          >
+                            <History className="w-3 h-3" /> Similar
                           </Button>
                           <Button 
                             variant="outline" 
