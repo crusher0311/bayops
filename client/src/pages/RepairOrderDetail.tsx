@@ -3728,7 +3728,7 @@ export default function RepairOrderDetail() {
                           <div className="flex items-center justify-center py-8">
                             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                           </div>
-                        ) : !similarJobsData?.jobs?.length ? (
+                        ) : !similarJobsData?.jobs?.length && !similarJobsData?.aiEngineMatches?.length ? (
                           <div className="text-center py-8">
                             <History className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                             <p className="text-muted-foreground">
@@ -3834,6 +3834,94 @@ export default function RepairOrderDetail() {
                                   </Button>
                                 </div>
                               ))}
+                              
+                              {/* AI Engine Matches Section */}
+                              {similarJobsData?.aiEngineMatches && similarJobsData.aiEngineMatches.length > 0 && (
+                                <>
+                                  <div className="flex items-center gap-2 pt-4 pb-2">
+                                    <div className="h-px flex-1 bg-gradient-to-r from-purple-500/20 to-blue-500/20" />
+                                    <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0">
+                                      <Sparkles className="w-3 h-3 mr-1" />
+                                      AI Engine Matches
+                                    </Badge>
+                                    <div className="h-px flex-1 bg-gradient-to-l from-purple-500/20 to-blue-500/20" />
+                                  </div>
+                                  <p className="text-xs text-muted-foreground text-center mb-2">
+                                    Similar engine repairs from other vehicle models
+                                  </p>
+                                  {similarJobsData.aiEngineMatches.map((job: any, idx: number) => (
+                                    <div
+                                      key={`ai-${job.roId}-${idx}`}
+                                      className="flex items-start justify-between p-3 border rounded-lg hover:bg-purple-50/50 transition-colors border-purple-200/50 bg-purple-50/20"
+                                      data-testid={`ai-engine-job-${idx}`}
+                                    >
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <p className="font-medium truncate">{job.name}</p>
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Badge className="shrink-0 text-xs bg-gradient-to-r from-purple-500/10 to-blue-500/10 text-purple-700 border-purple-500/20 cursor-help">
+                                                  <Sparkles className="w-3 h-3 mr-1" />
+                                                  {job.aiRelevanceScore}% AI match
+                                                </Badge>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="top" className="p-3 bg-slate-900 text-white border-0 max-w-[280px]">
+                                                <div className="space-y-2">
+                                                  <p className="font-semibold text-xs text-purple-400 uppercase tracking-wide flex items-center gap-1">
+                                                    <Sparkles className="w-3 h-3" />
+                                                    AI Engine Match
+                                                  </p>
+                                                  <p className="text-sm text-slate-300">{job.aiReason}</p>
+                                                  <div className="border-t border-slate-700 pt-2">
+                                                    <p className="text-xs text-slate-400">
+                                                      From: {job.vehicleYear} {job.vehicleMake} {job.vehicleModel}
+                                                    </p>
+                                                    {job.vehicleEngine && (
+                                                      <p className="text-xs text-slate-400">Engine: {job.vehicleEngine}</p>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mt-1">
+                                          <span>RO #{job.roNumber}</span>
+                                          <span>•</span>
+                                          <span>{job.vehicleYear} {job.vehicleMake} {job.vehicleModel}</span>
+                                          {job.vehicleEngine && (
+                                            <>
+                                              <span>•</span>
+                                              <span className="text-purple-600">{job.vehicleEngine}</span>
+                                            </>
+                                          )}
+                                          {job.lineItems?.length > 0 && (
+                                            <>
+                                              <span>•</span>
+                                              <span>{job.lineItems.length} items</span>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="border-purple-300 hover:bg-purple-100 hover:text-purple-700"
+                                        onClick={() => handleAddSimilarJob(job)}
+                                        disabled={updateRO.isPending}
+                                        data-testid={`button-add-ai-job-${idx}`}
+                                      >
+                                        {updateRO.isPending ? (
+                                          <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                          <Plus className="w-4 h-4" />
+                                        )}
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </>
+                              )}
                             </div>
                           </ScrollArea>
                         )}

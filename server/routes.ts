@@ -10,6 +10,7 @@ import {
   generateAuthorizationRequest,
   improveJobDescription,
   generateJobsFromDVI,
+  findEngineCompatibleJobs,
 } from "./ai";
 import {
   sendSMS,
@@ -73,7 +74,7 @@ import {
 import { fromZodError } from "zod-validation-error";
 import { z } from "zod";
 import { db } from "./db";
-import { and, eq, sql, or, gte, lte } from "drizzle-orm";
+import { and, eq, sql, or, gte, lte, isNotNull } from "drizzle-orm";
 import { 
   organizations, 
   locations, 
@@ -902,10 +903,137 @@ export async function registerRoutes(
         .sort((a, b) => b.similarity - a.similarity || b.count - a.count)
         .slice(0, 20);
       
+      // AI Engine Fallback: If few/no direct matches and engine info available, search by engine
+      let aiEngineMatches: Array<{
+        name: string;
+        description?: string;
+        lineItems: any[];
+        roNumber: number;
+        roId: string;
+        vehicleYear: number;
+        vehicleMake: string;
+        vehicleModel: string;
+        vehicleEngine: string | null;
+        aiRelevanceScore: number;
+        aiReason: string;
+        isAiMatch: boolean;
+      }> = [];
+      
+      // AI Engine Fallback only runs when: few results, engine data available, and search term provided
+      if (results.length < 3 && targetEngine && searchTerm && engine) {
+        // Query jobs from any vehicle with engine data, matching the search term
+        const engineCandidates = await db
+          .select({
+            ro: repairOrders,
+            vehicle: {
+              year: vehicles.year,
+              make: vehicles.make,
+              model: vehicles.model,
+              engineDisplacement: vehicles.engineDisplacement,
+            },
+          })
+          .from(repairOrders)
+          .innerJoin(vehicles, eq(repairOrders.vehicleId, vehicles.id))
+          .where(
+            and(
+              eq(repairOrders.orgId, req.user!.orgId),
+              isNotNull(vehicles.engineDisplacement),
+              // Exclude already-matched make/model
+              sql`NOT (LOWER(${vehicles.make}) = ${targetMake} AND LOWER(${vehicles.model}) = ${targetModel})`
+            )
+          )
+          .limit(100);
+        
+        // Extract jobs that match the search term
+        const candidateJobs: Array<{
+          name: string;
+          description?: string;
+          vehicleYear: number;
+          vehicleMake: string;
+          vehicleModel: string;
+          vehicleEngine: string | null;
+          roId: string;
+          roNumber: number;
+          lineItems: any[];
+        }> = [];
+        
+        for (const { ro, vehicle } of engineCandidates) {
+          const jobs = (ro.jobs as any[]) || [];
+          for (const job of jobs) {
+            const jobNameLower = (job.name || '').toLowerCase();
+            if (!job.name || !job.lineItems?.length) continue;
+            
+            // Check if job name matches search term
+            if (searchWords.length > 0) {
+              const hasWordMatch = searchWords.some(word => jobNameLower.includes(word));
+              if (!hasWordMatch) continue;
+            }
+            
+            candidateJobs.push({
+              name: job.name,
+              description: job.description,
+              vehicleYear: vehicle.year,
+              vehicleMake: vehicle.make,
+              vehicleModel: vehicle.model,
+              vehicleEngine: vehicle.engineDisplacement,
+              roId: ro.id,
+              roNumber: ro.roNumber,
+              lineItems: job.lineItems || [],
+            });
+          }
+        }
+        
+        // Use AI to find engine-compatible jobs
+        if (candidateJobs.length > 0) {
+          try {
+            const aiMatches = await findEngineCompatibleJobs(
+              { 
+                year: targetYear, 
+                make: make as string, 
+                model: model as string, 
+                engine: engine as string 
+              },
+              searchTerm,
+              candidateJobs
+            );
+            
+            // Map AI results back to full job data, normalizing fields for UI compatibility
+            const seenJobKeys = new Set<string>();
+            for (const match of aiMatches) {
+              const candidate = candidateJobs.find(j => j.roId === match.roId && j.name === match.jobName);
+              if (candidate) {
+                // Prevent duplicates
+                const jobKey = `${candidate.name.toLowerCase()}-${candidate.roId}`;
+                if (seenJobKeys.has(jobKey)) continue;
+                seenJobKeys.add(jobKey);
+                
+                aiEngineMatches.push({
+                  name: candidate.name,
+                  description: candidate.description,
+                  lineItems: candidate.lineItems,
+                  roNumber: candidate.roNumber,
+                  roId: candidate.roId,
+                  vehicleYear: candidate.vehicleYear,
+                  vehicleMake: candidate.vehicleMake,
+                  vehicleModel: candidate.vehicleModel,
+                  vehicleEngine: candidate.vehicleEngine,
+                  aiRelevanceScore: match.relevanceScore,
+                  aiReason: match.reason,
+                  isAiMatch: true,
+                });
+              }
+            }
+          } catch (err) {
+            console.error('AI engine matching failed:', err);
+          }
+        }
+      }
+      
       res.json({
         vehicleMatch: `${year} ${make} ${model}`,
         matchingROs: rosWithVehicles.length,
         jobs: results,
+        aiEngineMatches,
       });
     } catch (error: any) {
       console.error('Similar jobs error:', error);

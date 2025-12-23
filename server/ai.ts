@@ -406,6 +406,143 @@ interface GeneratedLineItem {
   unitPrice: number;
 }
 
+// ==========================================
+// AI Engine Matching for Similar Jobs
+// ==========================================
+
+interface CandidateJob {
+  name: string;
+  description?: string;
+  vehicleYear: number;
+  vehicleMake: string;
+  vehicleModel: string;
+  vehicleEngine: string | null;
+  roId: string;
+  lineItems: any[];
+}
+
+interface EngineMatchResult {
+  roId: string;
+  jobName: string;
+  relevanceScore: number;
+  reason: string;
+}
+
+export async function findEngineCompatibleJobs(
+  targetVehicle: { year: number; make: string; model: string; engine: string },
+  searchTerm: string,
+  candidateJobs: CandidateJob[]
+): Promise<EngineMatchResult[]> {
+  if (candidateJobs.length === 0) {
+    return [];
+  }
+
+  // Filter candidates to those with potentially matching engines
+  // Use flexible matching: displacement (e.g., 5.4L), cylinder count, or engine family
+  const engineMatches = candidateJobs.filter(job => {
+    if (!job.vehicleEngine) return false;
+    const targetEng = targetVehicle.engine.toLowerCase().replace(/\s+/g, '');
+    const jobEng = job.vehicleEngine.toLowerCase().replace(/\s+/g, '');
+    
+    // Check for displacement match (e.g., "5.4" in both)
+    const targetDisp = targetEng.match(/(\d+\.?\d*)\s*l/)?.[1] || targetEng.match(/\d+\.\d+/)?.[0];
+    const jobDisp = jobEng.match(/(\d+\.?\d*)\s*l/)?.[1] || jobEng.match(/\d+\.\d+/)?.[0];
+    
+    // Check for cylinder count match (e.g., V8, I4, 4-cylinder)
+    const targetCyl = targetEng.match(/v(\d+)|(\d+)\s*cyl|i(\d+)|(\d+)\s*-?\s*cyl/);
+    const jobCyl = jobEng.match(/v(\d+)|(\d+)\s*cyl|i(\d+)|(\d+)\s*-?\s*cyl/);
+    const targetCylCount = targetCyl ? (targetCyl[1] || targetCyl[2] || targetCyl[3] || targetCyl[4]) : null;
+    const jobCylCount = jobCyl ? (jobCyl[1] || jobCyl[2] || jobCyl[3] || jobCyl[4]) : null;
+    
+    // Match if displacement is the same (within 0.1L tolerance for parsing variations)
+    if (targetDisp && jobDisp) {
+      const dispDiff = Math.abs(parseFloat(targetDisp) - parseFloat(jobDisp));
+      if (dispDiff < 0.15) return true;
+    }
+    
+    // Match if same cylinder count and similar displacement range
+    if (targetCylCount && jobCylCount && targetCylCount === jobCylCount) {
+      return true;
+    }
+    
+    return false;
+  });
+
+  if (engineMatches.length === 0) {
+    return [];
+  }
+
+  // Limit to top 20 candidates for AI processing
+  const topCandidates = engineMatches.slice(0, 20);
+
+  try {
+    const prompt = `You are an experienced automotive technician. Determine which of these historical repair jobs would be relevant for a ${targetVehicle.year} ${targetVehicle.make} ${targetVehicle.model} with a ${targetVehicle.engine} engine, for the search term "${searchTerm}".
+
+Target Vehicle Engine: ${targetVehicle.engine}
+
+Candidate Jobs (from vehicles with similar engines):
+${topCandidates.map((job, i) => `
+${i + 1}. Job: ${job.name}
+   Vehicle: ${job.vehicleYear} ${job.vehicleMake} ${job.vehicleModel}
+   Engine: ${job.vehicleEngine || 'Unknown'}
+`).join('\n')}
+
+Consider:
+- Engine-specific repairs (timing chains, intake manifolds, head gaskets) are highly transferable between vehicles with the same engine
+- Powertrain repairs on similar displacement engines are often relevant
+- Chassis/body/suspension work is NOT transferable between different vehicle models
+
+Return JSON with up to 5 most relevant jobs:
+{
+  "matches": [
+    {
+      "index": 1,
+      "relevanceScore": 85,
+      "reason": "Brief explanation of why this is relevant"
+    }
+  ]
+}
+
+Only include jobs with relevanceScore >= 60. If no jobs are relevant, return {"matches": []}.`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 500,
+      temperature: 0.3,
+      response_format: { type: "json_object" },
+    });
+
+    const content = response.choices[0]?.message?.content || "{}";
+    const parsed = JSON.parse(content);
+
+    if (!Array.isArray(parsed.matches)) {
+      return [];
+    }
+
+    return parsed.matches
+      .filter((m: any) => 
+        typeof m.index === 'number' && 
+        m.index >= 1 && 
+        m.index <= topCandidates.length &&
+        typeof m.relevanceScore === 'number' &&
+        m.relevanceScore >= 60
+      )
+      .map((m: any) => {
+        const job = topCandidates[m.index - 1];
+        return {
+          roId: job.roId,
+          jobName: job.name,
+          relevanceScore: m.relevanceScore,
+          reason: typeof m.reason === 'string' ? m.reason : 'Engine compatible',
+        };
+      });
+  } catch (error) {
+    console.error('AI engine matching error:', error);
+    return [];
+  }
+}
+
 interface GeneratedJob {
   name: string;
   description: string;
