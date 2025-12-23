@@ -2358,7 +2358,8 @@ export default function RepairOrderDetail() {
     // Try Chrome extension first
     if (extensionReady && isExtensionInstalled() && ro?.id) {
       const vehicleInfo = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : '';
-      const result = await openPartsTech(jobId, ro.id, ro.roNumber?.toString() || '', vehicleInfo, jobName);
+      const vin = vehicle?.vin || '';
+      const result = await openPartsTech(jobId, ro.id, ro.roNumber?.toString() || '', vehicleInfo, vin, jobName);
       
       if (result.success) {
         toast({

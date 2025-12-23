@@ -48,13 +48,14 @@ window.BayOPSExtension = {
   },
   
   // Open PartsTech for a job
-  async openPartsTech(jobId, repairOrderId, roNumber, vehicleInfo, searchQuery) {
+  async openPartsTech(jobId, repairOrderId, roNumber, vehicleInfo, vin, searchQuery) {
     return this.sendMessage({
       type: 'OPEN_PARTSTECH',
       jobId,
       repairOrderId,
       roNumber,
       vehicleInfo,
+      vin,
       searchQuery
     });
   },

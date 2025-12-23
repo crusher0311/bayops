@@ -6,7 +6,7 @@ declare global {
     BayOPSExtension?: {
       isInstalled: boolean;
       version: string;
-      openPartsTech: (jobId: string, repairOrderId: string, roNumber: string, vehicleInfo: string, searchQuery?: string) => Promise<{ success: boolean; tabId?: number; reused?: boolean }>;
+      openPartsTech: (jobId: string, repairOrderId: string, roNumber: string, vehicleInfo: string, vin: string, searchQuery?: string) => Promise<{ success: boolean; tabId?: number; reused?: boolean }>;
       getSession: (jobId: string) => Promise<{ success: boolean; session?: PartsSession }>;
       getAllSessions: () => Promise<{ success: boolean; sessions?: Record<string, PartsSession> }>;
       addPart: (jobId: string, part: PartItem) => Promise<{ success: boolean; session?: PartsSession }>;
@@ -87,6 +87,7 @@ export async function openPartsTech(
   repairOrderId: string,
   roNumber: string,
   vehicleInfo: string,
+  vin: string,
   searchQuery?: string
 ): Promise<{ success: boolean; tabId?: number; reused?: boolean; error?: string }> {
   if (!isExtensionInstalled()) {
@@ -94,7 +95,7 @@ export async function openPartsTech(
   }
   
   try {
-    return await window.BayOPSExtension!.openPartsTech(jobId, repairOrderId, roNumber, vehicleInfo, searchQuery);
+    return await window.BayOPSExtension!.openPartsTech(jobId, repairOrderId, roNumber, vehicleInfo, vin, searchQuery);
   } catch (error: any) {
     return { success: false, error: error.message };
   }

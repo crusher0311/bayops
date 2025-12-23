@@ -146,20 +146,30 @@ async function handleMessage(message, sender) {
   switch (message.type) {
     case 'OPEN_PARTSTECH': {
       // Open PartsTech in a new tab for a specific job
-      const { jobId, repairOrderId, roNumber, vehicleInfo, searchQuery } = message;
+      const { jobId, repairOrderId, roNumber, vehicleInfo, vin, searchQuery } = message;
       
       // Create/update session with repairOrderId for API persistence
       await createOrUpdateSession(jobId, {
         repairOrderId,
         roNumber,
         vehicleInfo,
+        vin,
         status: 'draft'
       });
       
-      // Build PartsTech URL (with optional search query)
+      // Build PartsTech URL with VIN and search query
       let url = 'https://app.partstech.com/';
+      const params = new URLSearchParams();
+      
+      if (vin) {
+        params.set('vin', vin);
+      }
       if (searchQuery) {
-        url = `https://app.partstech.com/search?q=${encodeURIComponent(searchQuery)}`;
+        params.set('keyword', searchQuery);
+      }
+      
+      if (params.toString()) {
+        url = `https://app.partstech.com/search?${params.toString()}`;
       }
       
       // Check if we already have a PartsTech tab for this job
