@@ -2039,9 +2039,20 @@ export class DatabaseStorage implements IStorage {
     return session || undefined;
   }
 
-  async getPartsSessionsByRO(repairOrderId: string, orgId: string): Promise<PartsSession[]> {
-    return db.select().from(partsSessions)
+  async getPartsSessionsByRO(repairOrderId: string, orgId: string): Promise<(PartsSession & { items: PartsSessionItem[] })[]> {
+    const sessions = await db.select().from(partsSessions)
       .where(and(eq(partsSessions.repairOrderId, repairOrderId), eq(partsSessions.orgId, orgId)));
+    
+    // Include items for each session
+    const sessionsWithItems = await Promise.all(
+      sessions.map(async (session) => {
+        const items = await db.select().from(partsSessionItems)
+          .where(eq(partsSessionItems.sessionId, session.id));
+        return { ...session, items };
+      })
+    );
+    
+    return sessionsWithItems;
   }
 
   async getPartsSessionWithItems(id: string, orgId: string): Promise<(PartsSession & { items: PartsSessionItem[] }) | undefined> {
