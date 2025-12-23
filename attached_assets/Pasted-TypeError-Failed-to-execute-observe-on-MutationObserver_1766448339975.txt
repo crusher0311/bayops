@@ -1,0 +1,42 @@
+TypeError: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.
+    at index.ts-3ccca066.js:1:3297
+client:733 [vite] connecting...
+client:827 [vite] connected.
+react-dom_client.js?v=830f6b09:20103 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+content-bayops.js:228 Executing inline script violates the following Content Security Policy directive 'script-src 'self' 'wasm-unsafe-eval' 'inline-speculation-rules' http://localhost:* http://127.0.0.1:* chrome-extension://653d23d9-dfef-4816-b3a9-a7b7d2fb6393/'. Either the 'unsafe-inline' keyword, a hash ('sha256-LpGHLuut5juAZtAgnvv30NNQPkMWlLLqJlW7WbnpToA='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.
+(anonymous) @ content-bayops.js:228
+content-bayops.js:231 BayOPS Parts Connector: Content script loaded
+inject.js:56 Tekmetric Job Importer: Inject script loaded on repair search app
+inject.js:18 Inject: App URL already configured, not overwriting: https://heart-helper.replit.app
+contentscript.js:25 [contentscript] No benefits on init, will wait for fetch
+/api/auth/me:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
+49465b1e-b24a-454f-a….kirk.replit.dev/:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+49465b1e-b24a-454f-a….kirk.replit.dev/:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+49465b1e-b24a-454f-a….kirk.replit.dev/:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+49465b1e-b24a-454f-a….kirk.replit.dev/:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+49465b1e-b24a-454f-a….kirk.replit.dev/:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+49465b1e-b24a-454f-a….kirk.replit.dev/:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+49465b1e-b24a-454f-a….kirk.replit.dev/:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+49465b1e-b24a-454f-a….kirk.replit.dev/:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+49465b1e-b24a-454f-a….kirk.replit.dev/:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+49465b1e-b24a-454f-a….kirk.replit.dev/:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+49465b1e-b24a-454f-aa34-7520934df76d-00-1x1eqpe7nbexx.kirk.replit.dev/:1 Unchecked runtime.lastError: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+chunk-4DG7FXKS.js?v=830f6b09:509 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(anonymous) @ chunk-4DG7FXKS.js?v=830f6b09:509
+chunk-4DG7FXKS.js?v=830f6b09:509 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(anonymous) @ chunk-4DG7FXKS.js?v=830f6b09:509
+2c9410ea-9eb4-4bbe-89ce-d47f1c93699c:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+2c9410ea-9eb4-4bbe-89ce-d47f1c93699c:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+2c9410ea-9eb4-4bbe-89ce-d47f1c93699c:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+2c9410ea-9eb4-4bbe-89ce-d47f1c93699c:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+2c9410ea-9eb4-4bbe-89ce-d47f1c93699c:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+2c9410ea-9eb4-4bbe-89ce-d47f1c93699c:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+2c9410ea-9eb4-4bbe-89ce-d47f1c93699c:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+2c9410ea-9eb4-4bbe-89ce-d47f1c93699c:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+2c9410ea-9eb4-4bbe-89ce-d47f1c93699c:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+2c9410ea-9eb4-4bbe-89ce-d47f1c93699c:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+2c9410ea-9eb4-4bbe-89ce-d47f1c93699c:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+2c9410ea-9eb4-4bbe-89ce-d47f1c93699c:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+2c9410ea-9eb4-4bbe-89ce-d47f1c93699c:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+2c9410ea-9eb4-4bbe-89ce-d47f1c93699c:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+2c9410ea-9eb4-4bbe-89ce-d47f1c93699c:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received

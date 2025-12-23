@@ -46,5 +46,11 @@
   },
   "externally_connectable": {
     "matches": ["http://localhost:5000/*", "https://*.replit.app/*", "https://*.replit.dev/*"]
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["injected-bayops.js"],
+      "matches": ["http://localhost:5000/*", "https://*.replit.app/*", "https://*.replit.dev/*"]
+    }
+  ]
 }
