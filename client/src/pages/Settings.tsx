@@ -1262,12 +1262,22 @@ function PartsMatrixSection({ locationId, matrices, onRefresh }: { locationId: s
   });
 
   const handleAdd = () => {
+    const costMin = parseFloat(newMatrix.costMin) || 0;
+    const costMax = newMatrix.costMax ? parseFloat(newMatrix.costMax) : null;
+    const markupPercent = parseFloat(newMatrix.markup) || 0;
+    
     createMutation.mutate({
       locationId,
       name: newMatrix.name,
-      costMin: parseFloat(newMatrix.costMin) || 0,
-      costMax: parseFloat(newMatrix.costMax) || null,
-      markupPercent: parseFloat(newMatrix.markup) || 0,
+      isDefault: false,
+      autoApplyToPartTypes: 'ALL',
+      tiers: [{
+        minCost: costMin,
+        maxCost: costMax,
+        multiplier: 1 + (markupPercent / 100),
+        grossProfit: markupPercent,
+        markup: markupPercent,
+      }],
     });
   };
 
@@ -1355,20 +1365,23 @@ function PartsMatrixSection({ locationId, matrices, onRefresh }: { locationId: s
               </TableRow>
             </TableHeader>
             <TableBody>
-              {matrices.map((matrix) => (
-                <TableRow key={matrix.id} data-testid={`row-parts-matrix-${matrix.id}`}>
-                  <TableCell className="font-medium">{matrix.name}</TableCell>
-                  <TableCell>
-                    ${Number(matrix.costMin).toFixed(2)} - {matrix.costMax ? `$${Number(matrix.costMax).toFixed(2)}` : 'No limit'}
-                  </TableCell>
-                  <TableCell>{matrix.markupPercent}%</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(matrix.id)}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {matrices.map((matrix) => {
+                const tier = matrix.tiers?.[0] || {};
+                return (
+                  <TableRow key={matrix.id} data-testid={`row-parts-matrix-${matrix.id}`}>
+                    <TableCell className="font-medium">{matrix.name}</TableCell>
+                    <TableCell>
+                      ${Number(tier.minCost || 0).toFixed(2)} - {tier.maxCost ? `$${Number(tier.maxCost).toFixed(2)}` : 'No limit'}
+                    </TableCell>
+                    <TableCell>{tier.markup || 0}%</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(matrix.id)}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}
@@ -1404,12 +1417,20 @@ function LaborMatrixSection({ locationId, matrices, onRefresh }: { locationId: s
   });
 
   const handleAdd = () => {
+    const hoursMin = parseFloat(newMatrix.hoursMin) || 0;
+    const hoursMax = newMatrix.hoursMax ? parseFloat(newMatrix.hoursMax) : null;
+    const markupPercent = parseFloat(newMatrix.markup) || 0;
+    
     createMutation.mutate({
       locationId,
       name: newMatrix.name,
-      hoursMin: parseFloat(newMatrix.hoursMin) || 0,
-      hoursMax: parseFloat(newMatrix.hoursMax) || null,
-      markupPercent: parseFloat(newMatrix.markup) || 0,
+      isDefault: false,
+      tiers: [{
+        minHours: hoursMin,
+        maxHours: hoursMax,
+        multiplier: 1 + (markupPercent / 100),
+        markup: markupPercent,
+      }],
     });
   };
 
@@ -1499,20 +1520,23 @@ function LaborMatrixSection({ locationId, matrices, onRefresh }: { locationId: s
               </TableRow>
             </TableHeader>
             <TableBody>
-              {matrices.map((matrix) => (
-                <TableRow key={matrix.id} data-testid={`row-labor-matrix-${matrix.id}`}>
-                  <TableCell className="font-medium">{matrix.name}</TableCell>
-                  <TableCell>
-                    {matrix.hoursMin} - {matrix.hoursMax ? `${matrix.hoursMax} hrs` : 'No limit'}
-                  </TableCell>
-                  <TableCell>{matrix.markupPercent}%</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(matrix.id)}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {matrices.map((matrix) => {
+                const tier = matrix.tiers?.[0] || {};
+                return (
+                  <TableRow key={matrix.id} data-testid={`row-labor-matrix-${matrix.id}`}>
+                    <TableCell className="font-medium">{matrix.name}</TableCell>
+                    <TableCell>
+                      {tier.minHours || 0} - {tier.maxHours ? `${tier.maxHours} hrs` : 'No limit'}
+                    </TableCell>
+                    <TableCell>{tier.markup || 0}%</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(matrix.id)}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}
