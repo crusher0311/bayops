@@ -922,8 +922,9 @@ export async function registerRoutes(
       // AI Engine Fallback: runs when few results and search term provided
       // Works with or without engine data - AI will find relevant jobs based on job type
       if (results.length < 3 && searchTerm) {
-        // Query jobs from any vehicle (not limited to those with engine data)
-        // The AI will evaluate relevance based on job type and available vehicle info
+        // Query ROs that have jobs matching the search term directly in SQL
+        // This is more efficient than fetching 200 random ROs and filtering
+        const searchPattern = `%${searchTerm.toLowerCase()}%`;
         const engineCandidates = await db
           .select({
             ro: repairOrders,
@@ -940,10 +941,16 @@ export async function registerRoutes(
             and(
               eq(repairOrders.orgId, req.user!.orgId),
               // Exclude already-matched make/model to find jobs from different vehicles
-              sql`NOT (LOWER(${vehicles.make}) = ${targetMake} AND LOWER(${vehicles.model}) = ${targetModel})`
+              sql`NOT (LOWER(${vehicles.make}) = ${targetMake} AND LOWER(${vehicles.model}) = ${targetModel})`,
+              // Filter to ROs that have at least one job matching the search term
+              sql`EXISTS (
+                SELECT 1 FROM jsonb_array_elements(${repairOrders.jobs}) AS j
+                WHERE LOWER(j->>'name') LIKE ${searchPattern}
+                AND jsonb_array_length(j->'lineItems') > 0
+              )`
             )
           )
-          .limit(200);
+          .limit(50);
         
         // Extract jobs that match the search term
         const candidateJobs: Array<{
