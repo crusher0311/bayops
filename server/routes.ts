@@ -4747,6 +4747,247 @@ export async function registerRoutes(
   });
 
   // ==========================================
+  // LABOR GUIDE INTEGRATION ROUTES
+  // ==========================================
+
+  // Get labor guide settings
+  app.get("/api/labor-guide/settings", requireAuth, async (req, res) => {
+    try {
+      const locationId = req.query.locationId as string | undefined;
+      const settings = await storage.getLaborGuideSettings(req.user!.orgId, locationId);
+      res.json(settings || { 
+        orgId: req.user!.orgId,
+        defaultProvider: null,
+        prodemandEnabled: false,
+        alldataEnabled: false,
+        identifixEnabled: false 
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Create or update labor guide settings
+  app.post("/api/labor-guide/settings", requireAuth, async (req, res) => {
+    try {
+      const existing = await storage.getLaborGuideSettings(req.user!.orgId, req.body.locationId);
+      
+      if (existing) {
+        const updated = await storage.updateLaborGuideSettings(existing.id, req.user!.orgId, req.body);
+        return res.json(updated);
+      }
+      
+      const settings = await storage.createLaborGuideSettings({
+        ...req.body,
+        orgId: req.user!.orgId,
+      });
+      res.status(201).json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Create labor guide session (opens labor guide website with vehicle info)
+  app.post("/api/labor-guide/session", requireAuth, async (req, res) => {
+    try {
+      const { repairOrderId, jobId, provider } = req.body;
+      
+      if (!repairOrderId || !jobId) {
+        return res.status(400).json({ message: "repairOrderId and jobId are required" });
+      }
+      
+      // Get repair order and verify access
+      const repairOrder = await storage.getRepairOrder(repairOrderId, req.user!.orgId);
+      if (!repairOrder) {
+        return res.status(404).json({ message: "Repair order not found" });
+      }
+      
+      // Get vehicle info
+      const vehicle = await storage.getVehicle(repairOrder.vehicleId);
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+      
+      // Determine provider (from request or settings)
+      let selectedProvider = provider;
+      if (!selectedProvider) {
+        const settings = await storage.getLaborGuideSettings(req.user!.orgId, repairOrder.locationId);
+        selectedProvider = settings?.defaultProvider || 'PRODEMAND';
+      }
+      
+      // Generate session token
+      const sessionToken = `lg-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+      
+      // Create session (expires in 2 hours)
+      const session = await storage.createLaborGuideSession({
+        orgId: req.user!.orgId,
+        locationId: repairOrder.locationId,
+        repairOrderId,
+        jobId,
+        provider: selectedProvider,
+        vehicleVin: vehicle.vin,
+        vehicleYear: vehicle.year,
+        vehicleMake: vehicle.make,
+        vehicleModel: vehicle.model,
+        vehicleEngine: vehicle.engineDisplacement,
+        sessionToken,
+        expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000),
+      });
+      
+      // Build launch URL based on provider
+      let launchUrl = '';
+      const vin = vehicle.vin || '';
+      const year = vehicle.year;
+      const make = encodeURIComponent(vehicle.make);
+      const model = encodeURIComponent(vehicle.model);
+      
+      switch (selectedProvider) {
+        case 'PRODEMAND':
+          launchUrl = `https://prodemand.com/`;
+          break;
+        case 'ALLDATA':
+          launchUrl = `https://my.alldata.com/`;
+          break;
+        case 'IDENTIFIX':
+          launchUrl = `https://www.identifix.com/`;
+          break;
+      }
+      
+      res.json({
+        session,
+        launchUrl,
+        vehicle: {
+          vin,
+          year,
+          make: vehicle.make,
+          model: vehicle.model,
+          engine: vehicle.engineDisplacement,
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get active labor guide sessions for an RO
+  app.get("/api/labor-guide/sessions/ro/:roId", requireAuth, async (req, res) => {
+    try {
+      const sessions = await storage.getLaborGuideSessionsByRO(req.params.roId, req.user!.orgId);
+      res.json(sessions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Capture labor from Chrome extension (uses session token for auth)
+  app.post("/api/labor-guide/capture", async (req, res) => {
+    try {
+      const { sessionToken, laborItems } = req.body;
+      
+      if (!sessionToken) {
+        return res.status(400).json({ message: "sessionToken is required" });
+      }
+      
+      // Find session by token
+      const session = await storage.getLaborGuideSessionByToken(sessionToken);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found or expired" });
+      }
+      
+      // Check expiration
+      if (new Date() > new Date(session.expiresAt)) {
+        return res.status(410).json({ message: "Session has expired" });
+      }
+      
+      // Get the repair order
+      const repairOrder = await storage.getRepairOrder(session.repairOrderId, session.orgId);
+      if (!repairOrder) {
+        return res.status(404).json({ message: "Repair order not found" });
+      }
+      
+      // Process labor items - add to the job's line items
+      if (laborItems && laborItems.length > 0) {
+        const jobs = (repairOrder.jobs || []) as any[];
+        const jobIndex = jobs.findIndex((j: any) => j.id === session.jobId);
+        
+        if (jobIndex >= 0) {
+          const job = jobs[jobIndex];
+          const existingLineItems = job.lineItems || [];
+          
+          // Get default labor rate
+          const laborRates = await storage.getLaborRatesByLocation(session.locationId);
+          const defaultRate = laborRates.find((r: any) => r.isDefault)?.ratePerHour || 150;
+          
+          // Add labor items
+          const newLineItems = laborItems.map((item: any, idx: number) => ({
+            id: `li-labor-${Date.now()}-${idx}`,
+            type: 'LABOR',
+            description: item.description || 'Labor',
+            quantity: parseFloat(item.laborHours) || 1,
+            unitCost: 0,
+            unitPrice: defaultRate,
+            approved: false,
+            notes: item.operationCode ? `Code: ${item.operationCode}` : undefined,
+          }));
+          
+          job.lineItems = [...existingLineItems, ...newLineItems];
+          jobs[jobIndex] = job;
+          
+          // Update repair order
+          await storage.updateRepairOrder(session.repairOrderId, session.orgId, { jobs });
+          
+          // Also create session items for tracking
+          for (const item of laborItems) {
+            await storage.createLaborGuideSessionItem({
+              sessionId: session.id,
+              operationCode: item.operationCode,
+              description: item.description,
+              laborHours: item.laborHours?.toString() || '1',
+              skillLevel: item.skillLevel,
+              laborType: item.laborType,
+              notes: item.notes,
+              source: session.provider,
+            });
+          }
+          
+          // Mark session as completed
+          await storage.updateLaborGuideSession(session.id, session.orgId, { status: 'COMPLETED' });
+          
+          res.json({
+            success: true,
+            message: `Added ${newLineItems.length} labor item(s) to job`,
+            addedItems: newLineItems.length,
+          });
+        } else {
+          res.status(404).json({ message: "Job not found in repair order" });
+        }
+      } else {
+        res.json({ success: true, message: "No labor items to add" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get session status by token (for extension polling)
+  app.get("/api/labor-guide/session/:token", async (req, res) => {
+    try {
+      const session = await storage.getLaborGuideSessionByToken(req.params.token);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      const isExpired = new Date() > new Date(session.expiresAt);
+      res.json({
+        ...session,
+        isExpired,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==========================================
   // WHOLESALE / B2B ROUTES
   // ==========================================
 

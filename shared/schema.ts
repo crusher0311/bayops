@@ -2303,3 +2303,125 @@ export type InsertPartsSession = z.infer<typeof insertPartsSessionSchema>;
 
 export type PartsSessionItem = typeof partsSessionItems.$inferSelect;
 export type InsertPartsSessionItem = z.infer<typeof insertPartsSessionItemSchema>;
+
+// ============================================================================
+// Labor Guide Integration - ProDemand, AllData, Identifix
+// ============================================================================
+
+// Labor Guide Provider Enum
+export const laborGuideProviderEnum = pgEnum('labor_guide_provider', ['PRODEMAND', 'ALLDATA', 'IDENTIFIX']);
+
+// Labor Guide Settings - Per location configuration
+export const laborGuideSettings = pgTable("labor_guide_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  locationId: varchar("location_id").references(() => locations.id, { onDelete: 'cascade' }),
+  defaultProvider: laborGuideProviderEnum("default_provider"),
+  prodemandEnabled: boolean("prodemand_enabled").notNull().default(false),
+  alldataEnabled: boolean("alldata_enabled").notNull().default(false),
+  identifixEnabled: boolean("identifix_enabled").notNull().default(false),
+  prodemandUrl: text("prodemand_url"),
+  alldataUrl: text("alldata_url"),
+  identifixUrl: text("identifix_url"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const laborGuideSettingsRelations = relations(laborGuideSettings, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [laborGuideSettings.orgId],
+    references: [organizations.id],
+  }),
+  location: one(locations, {
+    fields: [laborGuideSettings.locationId],
+    references: [locations.id],
+  }),
+}));
+
+// Labor Guide Session Status Enum
+export const laborSessionStatusEnum = pgEnum('labor_session_status', ['ACTIVE', 'COMPLETED', 'CANCELLED']);
+
+// Labor Guide Sessions - Track labor lookup sessions per job
+export const laborGuideSessions = pgTable("labor_guide_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: varchar("org_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  repairOrderId: varchar("repair_order_id").notNull().references(() => repairOrders.id, { onDelete: 'cascade' }),
+  jobId: varchar("job_id").notNull(),
+  provider: laborGuideProviderEnum("provider").notNull(),
+  vehicleVin: varchar("vehicle_vin", { length: 17 }),
+  vehicleYear: integer("vehicle_year"),
+  vehicleMake: text("vehicle_make"),
+  vehicleModel: text("vehicle_model"),
+  vehicleEngine: text("vehicle_engine"),
+  sessionToken: varchar("session_token").notNull().unique(),
+  status: laborSessionStatusEnum("status").notNull().default('ACTIVE'),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const laborGuideSessionsRelations = relations(laborGuideSessions, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [laborGuideSessions.orgId],
+    references: [organizations.id],
+  }),
+  location: one(locations, {
+    fields: [laborGuideSessions.locationId],
+    references: [locations.id],
+  }),
+  repairOrder: one(repairOrders, {
+    fields: [laborGuideSessions.repairOrderId],
+    references: [repairOrders.id],
+  }),
+  items: many(laborGuideSessionItems),
+}));
+
+// Labor Guide Session Items - Captured labor entries
+export const laborGuideSessionItems = pgTable("labor_guide_session_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => laborGuideSessions.id, { onDelete: 'cascade' }),
+  operationCode: text("operation_code"),
+  description: text("description").notNull(),
+  laborHours: decimal("labor_hours", { precision: 5, scale: 2 }).notNull(),
+  skillLevel: text("skill_level"),
+  laborType: text("labor_type"),
+  notes: text("notes"),
+  source: laborGuideProviderEnum("source").notNull(),
+  addedAt: timestamp("added_at").notNull().defaultNow(),
+});
+
+export const laborGuideSessionItemsRelations = relations(laborGuideSessionItems, ({ one }) => ({
+  session: one(laborGuideSessions, {
+    fields: [laborGuideSessionItems.sessionId],
+    references: [laborGuideSessions.id],
+  }),
+}));
+
+// Insert schemas for Labor Guide
+export const insertLaborGuideSettingsSchema = createInsertSchema(laborGuideSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertLaborGuideSessionSchema = createInsertSchema(laborGuideSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertLaborGuideSessionItemSchema = createInsertSchema(laborGuideSessionItems).omit({
+  id: true,
+  addedAt: true,
+});
+
+// Types for Labor Guide
+export type LaborGuideSettings = typeof laborGuideSettings.$inferSelect;
+export type InsertLaborGuideSettings = z.infer<typeof insertLaborGuideSettingsSchema>;
+
+export type LaborGuideSession = typeof laborGuideSessions.$inferSelect;
+export type InsertLaborGuideSession = z.infer<typeof insertLaborGuideSessionSchema>;
+
+export type LaborGuideSessionItem = typeof laborGuideSessionItems.$inferSelect;
+export type InsertLaborGuideSessionItem = z.infer<typeof insertLaborGuideSessionItemSchema>;

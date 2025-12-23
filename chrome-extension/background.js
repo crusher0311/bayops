@@ -1,7 +1,8 @@
-// BayOPS Parts Connector - Background Service Worker
-// Manages communication between BayOPS and PartsTech tabs
+// BayOPS Parts & Labor Connector - Background Service Worker
+// Manages communication between BayOPS, PartsTech, and Labor Guide tabs
 
 const SESSION_STORAGE_KEY = 'bayops_parts_sessions';
+const LABOR_SESSION_STORAGE_KEY = 'bayops_labor_sessions';
 
 // Session structure:
 // {
@@ -293,23 +294,172 @@ async function handleMessage(message, sender) {
       return { success: false };
     }
     
+    // ==========================================
+    // LABOR GUIDE HANDLERS
+    // ==========================================
+    
+    case 'OPEN_LABOR_GUIDE': {
+      const { sessionToken, provider, vin, year, make, model, engine, jobId } = message;
+      
+      // Store labor session
+      const laborSessions = await getLaborSessions();
+      laborSessions[sessionToken] = {
+        sessionToken,
+        jobId,
+        vin,
+        year,
+        make,
+        model,
+        engine,
+        provider,
+        tabId: null,
+        createdAt: Date.now()
+      };
+      await saveLaborSessions(laborSessions);
+      
+      // Build labor guide URL based on provider
+      let url = '';
+      switch (provider) {
+        case 'PRODEMAND':
+          url = 'https://prodemand.com/';
+          break;
+        case 'ALLDATA':
+          url = 'https://my.alldata.com/';
+          break;
+        case 'IDENTIFIX':
+          url = 'https://www.identifix.com/';
+          break;
+        default:
+          url = 'https://prodemand.com/';
+      }
+      
+      // Open tab
+      const tab = await chrome.tabs.create({ url, active: true });
+      
+      // Update session with tab ID
+      laborSessions[sessionToken].tabId = tab.id;
+      await saveLaborSessions(laborSessions);
+      
+      // Set context in the tab after it loads
+      setTimeout(async () => {
+        try {
+          await chrome.tabs.sendMessage(tab.id, {
+            type: 'SET_LABOR_CONTEXT',
+            sessionToken,
+            jobId,
+            vin,
+            year,
+            make,
+            model,
+            engine
+          });
+        } catch (e) {
+          // Content script might not be ready
+        }
+      }, 2000);
+      
+      return { success: true, tabId: tab.id };
+    }
+    
+    case 'GET_LABOR_TAB_CONTEXT': {
+      // Labor guide content script asking for context
+      const laborSessions = await getLaborSessions();
+      for (const [token, session] of Object.entries(laborSessions)) {
+        if (session.tabId === sender.tab?.id) {
+          return { 
+            success: true, 
+            session: {
+              sessionToken: token,
+              jobId: session.jobId,
+              vin: session.vin,
+              year: session.year,
+              make: session.make,
+              model: session.model,
+              engine: session.engine
+            }
+          };
+        }
+      }
+      return { success: false };
+    }
+    
+    case 'SEND_LABOR_TO_BAYOPS': {
+      const { sessionToken, laborItems } = message;
+      
+      // Find all BayOPS tabs and send labor data to them
+      // The BayOPS content script will handle API persistence
+      try {
+        const tabs = await chrome.tabs.query({
+          url: ['http://localhost:5000/*', 'https://*.replit.app/*', 'https://*.replit.dev/*']
+        });
+        
+        if (tabs.length === 0) {
+          console.warn('No BayOPS tabs found to receive labor data');
+          return { success: false, error: 'No BayOPS tabs open' };
+        }
+        
+        let sentSuccessfully = false;
+        for (const tab of tabs) {
+          try {
+            await chrome.tabs.sendMessage(tab.id, {
+              type: 'LABOR_CAPTURED',
+              sessionToken,
+              laborItems
+            });
+            sentSuccessfully = true;
+            console.log('Labor data sent to BayOPS tab:', tab.id);
+          } catch (e) {
+            // Tab might not have content script loaded
+            console.log('Could not send to tab', tab.id, e.message);
+          }
+        }
+        
+        if (sentSuccessfully) {
+          return { success: true };
+        } else {
+          return { success: false, error: 'Failed to send to any BayOPS tab' };
+        }
+      } catch (error) {
+        console.error('Error sending labor to BayOPS:', error);
+        return { success: false, error: error.message };
+      }
+    }
+    
     default:
       return { success: false, error: 'Unknown message type' };
   }
 }
 
+// Labor session helpers
+async function getLaborSessions() {
+  const result = await chrome.storage.local.get(LABOR_SESSION_STORAGE_KEY);
+  return result[LABOR_SESSION_STORAGE_KEY] || {};
+}
+
+async function saveLaborSessions(sessions) {
+  await chrome.storage.local.set({ [LABOR_SESSION_STORAGE_KEY]: sessions });
+}
+
 // Track tab closures to update sessions
 chrome.tabs.onRemoved.addListener(async (tabId) => {
+  // Update parts sessions
   const sessions = await getSessions();
-  
   for (const [jobId, session] of Object.entries(sessions)) {
     if (session.tabId === tabId) {
       session.tabId = null;
       session.updatedAt = Date.now();
     }
   }
-  
   await saveSessions(sessions);
+  
+  // Update labor sessions
+  const laborSessions = await getLaborSessions();
+  for (const [token, session] of Object.entries(laborSessions)) {
+    if (session.tabId === tabId) {
+      session.tabId = null;
+    }
+  }
+  await saveLaborSessions(laborSessions);
 });
 
-console.log('BayOPS Parts Connector background service worker loaded');
+console.log('BayOPS Parts & Labor Connector background service worker loaded');

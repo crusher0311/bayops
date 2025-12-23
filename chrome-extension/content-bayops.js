@@ -52,8 +52,64 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     sendResponse({ success: true });
   }
+  
+  // Handle labor capture from labor guide content scripts
+  if (message.type === 'LABOR_CAPTURED') {
+    console.log('BayOPS Extension: Labor captured', message.laborItems?.length, 'items');
+    
+    // Persist labor to BayOPS server API
+    persistLaborToServer(message.sessionToken, message.laborItems);
+    
+    // Also forward to page for UI update
+    window.postMessage({
+      type: 'BAYOPS_LABOR_CAPTURED',
+      sessionToken: message.sessionToken,
+      laborItems: message.laborItems
+    }, '*');
+    
+    sendResponse({ success: true });
+  }
+  
   return true;
 });
+
+// Persist labor items to BayOPS server API
+async function persistLaborToServer(sessionToken, laborItems) {
+  try {
+    if (!sessionToken || !laborItems || laborItems.length === 0) {
+      console.log('BayOPS Extension: No session token or items, skipping labor persistence');
+      return;
+    }
+    
+    const response = await fetch('/api/labor-guide/capture', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        sessionToken,
+        laborItems
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'API error' }));
+      console.error('BayOPS Extension: Failed to persist labor:', error.message);
+    } else {
+      const result = await response.json();
+      console.log('BayOPS Extension: Labor persisted to server:', result.message);
+      
+      // Show success notification on page
+      window.postMessage({
+        type: 'BAYOPS_LABOR_SAVED',
+        result
+      }, '*');
+    }
+  } catch (error) {
+    console.error('BayOPS Extension: Error persisting labor:', error);
+  }
+}
 
 // Persist session to BayOPS server API
 async function persistSessionToServer(jobId, session) {
@@ -98,4 +154,4 @@ script.onload = function() {
 };
 (document.head || document.documentElement).appendChild(script);
 
-console.log('BayOPS Parts Connector: Content script loaded');
+console.log('BayOPS Parts & Labor Connector: Content script loaded');

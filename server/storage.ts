@@ -140,6 +140,9 @@ import {
   messages,
   partsSessions,
   partsSessionItems,
+  laborGuideSettings,
+  laborGuideSessions,
+  laborGuideSessionItems,
   jobApprovals,
   signatureTokens,
   type Conversation,
@@ -150,6 +153,12 @@ import {
   type InsertPartsSession,
   type PartsSessionItem,
   type InsertPartsSessionItem,
+  type LaborGuideSettings,
+  type InsertLaborGuideSettings,
+  type LaborGuideSession,
+  type InsertLaborGuideSession,
+  type LaborGuideSessionItem,
+  type InsertLaborGuideSessionItem,
   type JobApproval,
   type InsertJobApproval,
   type SignatureToken,
@@ -491,6 +500,23 @@ export interface IStorage {
   createPartsSessionItem(item: InsertPartsSessionItem): Promise<PartsSessionItem>;
   deletePartsSessionItem(id: string): Promise<boolean>;
   syncPartsSessionItems(sessionId: string, items: { partNumber: string; description?: string; brand?: string; supplier?: string; quantity?: number; price?: number }[]): Promise<void>;
+
+  // ==========================================
+  // LABOR GUIDE SESSIONS (Chrome Extension)
+  // ==========================================
+  getLaborGuideSettings(orgId: string, locationId?: string): Promise<LaborGuideSettings | undefined>;
+  createLaborGuideSettings(settings: InsertLaborGuideSettings): Promise<LaborGuideSettings>;
+  updateLaborGuideSettings(id: string, orgId: string, updates: Partial<InsertLaborGuideSettings>): Promise<LaborGuideSettings | undefined>;
+  
+  getLaborGuideSession(id: string, orgId: string): Promise<LaborGuideSession | undefined>;
+  getLaborGuideSessionByToken(token: string): Promise<LaborGuideSession | undefined>;
+  getLaborGuideSessionsByRO(repairOrderId: string, orgId: string): Promise<LaborGuideSession[]>;
+  getLaborGuideSessionWithItems(id: string, orgId: string): Promise<(LaborGuideSession & { items: LaborGuideSessionItem[] }) | undefined>;
+  createLaborGuideSession(session: InsertLaborGuideSession): Promise<LaborGuideSession>;
+  updateLaborGuideSession(id: string, orgId: string, updates: Partial<InsertLaborGuideSession>): Promise<LaborGuideSession | undefined>;
+  
+  createLaborGuideSessionItem(item: InsertLaborGuideSessionItem): Promise<LaborGuideSessionItem>;
+  deleteLaborGuideSessionItem(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2216,6 +2242,94 @@ export class DatabaseStorage implements IStorage {
     await db.update(partsSessions)
       .set({ totalCost: total.toString(), updatedAt: new Date() })
       .where(eq(partsSessions.id, sessionId));
+  }
+
+  // ==========================================
+  // LABOR GUIDE SESSIONS
+  // ==========================================
+  
+  async getLaborGuideSettings(orgId: string, locationId?: string): Promise<LaborGuideSettings | undefined> {
+    if (locationId) {
+      const [settings] = await db.select().from(laborGuideSettings)
+        .where(and(
+          eq(laborGuideSettings.orgId, orgId),
+          eq(laborGuideSettings.locationId, locationId)
+        ));
+      if (settings) return settings;
+    }
+    const [orgSettings] = await db.select().from(laborGuideSettings)
+      .where(and(
+        eq(laborGuideSettings.orgId, orgId),
+        sql`${laborGuideSettings.locationId} IS NULL`
+      ));
+    return orgSettings || undefined;
+  }
+
+  async createLaborGuideSettings(settings: InsertLaborGuideSettings): Promise<LaborGuideSettings> {
+    const [created] = await db.insert(laborGuideSettings).values(settings).returning();
+    return created;
+  }
+
+  async updateLaborGuideSettings(id: string, orgId: string, updates: Partial<InsertLaborGuideSettings>): Promise<LaborGuideSettings | undefined> {
+    const [updated] = await db.update(laborGuideSettings)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(laborGuideSettings.id, id), eq(laborGuideSettings.orgId, orgId)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getLaborGuideSession(id: string, orgId: string): Promise<LaborGuideSession | undefined> {
+    const [session] = await db.select().from(laborGuideSessions)
+      .where(and(eq(laborGuideSessions.id, id), eq(laborGuideSessions.orgId, orgId)));
+    return session || undefined;
+  }
+
+  async getLaborGuideSessionByToken(token: string): Promise<LaborGuideSession | undefined> {
+    const [session] = await db.select().from(laborGuideSessions)
+      .where(eq(laborGuideSessions.sessionToken, token));
+    return session || undefined;
+  }
+
+  async getLaborGuideSessionsByRO(repairOrderId: string, orgId: string): Promise<LaborGuideSession[]> {
+    return db.select().from(laborGuideSessions)
+      .where(and(
+        eq(laborGuideSessions.repairOrderId, repairOrderId),
+        eq(laborGuideSessions.orgId, orgId)
+      ))
+      .orderBy(desc(laborGuideSessions.createdAt));
+  }
+
+  async getLaborGuideSessionWithItems(id: string, orgId: string): Promise<(LaborGuideSession & { items: LaborGuideSessionItem[] }) | undefined> {
+    const session = await this.getLaborGuideSession(id, orgId);
+    if (!session) return undefined;
+    
+    const items = await db.select().from(laborGuideSessionItems)
+      .where(eq(laborGuideSessionItems.sessionId, id));
+    
+    return { ...session, items };
+  }
+
+  async createLaborGuideSession(session: InsertLaborGuideSession): Promise<LaborGuideSession> {
+    const [created] = await db.insert(laborGuideSessions).values(session).returning();
+    return created;
+  }
+
+  async updateLaborGuideSession(id: string, orgId: string, updates: Partial<InsertLaborGuideSession>): Promise<LaborGuideSession | undefined> {
+    const [updated] = await db.update(laborGuideSessions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(laborGuideSessions.id, id), eq(laborGuideSessions.orgId, orgId)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async createLaborGuideSessionItem(item: InsertLaborGuideSessionItem): Promise<LaborGuideSessionItem> {
+    const [created] = await db.insert(laborGuideSessionItems).values(item).returning();
+    return created;
+  }
+
+  async deleteLaborGuideSessionItem(id: string): Promise<boolean> {
+    await db.delete(laborGuideSessionItems).where(eq(laborGuideSessionItems.id, id));
+    return true;
   }
 }
 

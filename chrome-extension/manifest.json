@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "BayOPS Parts Connector",
-  "version": "1.9.3",
-  "description": "Connect BayOPS repair orders with PartsTech for seamless parts ordering",
+  "name": "BayOPS Parts & Labor Connector",
+  "version": "2.0.0",
+  "description": "Connect BayOPS repair orders with PartsTech, ProDemand, AllData, and Identifix",
   "permissions": [
     "storage",
     "tabs",
@@ -11,6 +11,12 @@
   "host_permissions": [
     "https://app.partstech.com/*",
     "https://*.partstech.com/*",
+    "https://prodemand.com/*",
+    "https://*.prodemand.com/*",
+    "https://my.alldata.com/*",
+    "https://*.alldata.com/*",
+    "https://www.identifix.com/*",
+    "https://*.identifix.com/*",
     "http://localhost:5000/*",
     "https://*.replit.app/*",
     "https://*.replit.dev/*"
@@ -23,6 +29,21 @@
     {
       "matches": ["https://app.partstech.com/*", "https://*.partstech.com/*"],
       "js": ["content-partstech.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://prodemand.com/*", "https://*.prodemand.com/*"],
+      "js": ["content-prodemand.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://my.alldata.com/*", "https://*.alldata.com/*"],
+      "js": ["content-alldata.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.identifix.com/*", "https://*.identifix.com/*"],
+      "js": ["content-identifix.js"],
       "run_at": "document_idle"
     },
     {

@@ -2639,9 +2639,42 @@ export default function RepairOrderDetail() {
     setLaborGuideJobId(null);
   };
 
-  const openLaborGuide = (jobId: string) => {
-    setLaborGuideJobId(jobId);
-    setIsLaborGuideOpen(true);
+  const openLaborGuide = async (jobId: string) => {
+    if (!ro?.id) return;
+    
+    try {
+      // Create a labor guide session via the API
+      const response = await fetch('/api/labor-guide/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ repairOrderId: ro.id, jobId }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create labor guide session');
+      }
+      
+      const data = await response.json();
+      
+      // Open the labor guide in a new window
+      if (data.launchUrl) {
+        window.open(data.launchUrl, '_blank', 'noopener,noreferrer');
+        toast({
+          title: 'Labor Guide opened',
+          description: `VIN: ${data.vehicle?.vin || 'N/A'} - Use the extension to capture labor times.`,
+        });
+      }
+      
+      // Also open the fallback dialog for manual entry if no extension installed
+      setLaborGuideJobId(jobId);
+      setIsLaborGuideOpen(true);
+    } catch (error) {
+      console.error('Failed to open labor guide:', error);
+      // Fallback to the dialog for manual entry
+      setLaborGuideJobId(jobId);
+      setIsLaborGuideOpen(true);
+    }
   };
 
   // PartsTech handlers - use Chrome extension if installed, otherwise fallback to popup

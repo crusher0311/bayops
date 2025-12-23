@@ -38,6 +38,7 @@ import {
   Database,
   ArrowRight,
   Plug,
+  ExternalLink,
 } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { ObjectUploader } from '@/components/ObjectUploader';
@@ -2677,6 +2678,7 @@ function CannedJobsTab({ locationId, settings }: { locationId: string; settings:
 // Available integration types
 const AVAILABLE_INTEGRATIONS = [
   { id: 'partstech', name: 'PartsTech', description: 'Parts ordering and supplier integration', icon: 'package' },
+  { id: 'laborguide', name: 'Labor Guides', description: 'ProDemand, AllData, and Identifix labor time integration', icon: 'clock' },
   { id: 'protractor', name: 'Protractor', description: 'Import customers, vehicles, and repair orders from Protractor', icon: 'database' },
   // Future integrations can be added here:
   // { id: 'quickbooks', name: 'QuickBooks', description: 'Sync invoices and payments' },
@@ -2754,14 +2756,197 @@ function PartstechIntegrationCard() {
   );
 }
 
+// Labor Guide integration card component
+function LaborGuideIntegrationCard() {
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ['/api/labor-guide/settings'],
+    staleTime: 60000,
+  });
+  
+  const [defaultProvider, setDefaultProvider] = useState<string>('PRODEMAND');
+  const [prodemandEnabled, setProdemandEnabled] = useState(true);
+  const [alldataEnabled, setAlldataEnabled] = useState(false);
+  const [identifixEnabled, setIdentifixEnabled] = useState(false);
+  
+  const queryClient = useQueryClient();
+  
+  // Update local state when settings load
+  useEffect(() => {
+    if (settings && typeof settings === 'object') {
+      const s = settings as { defaultProvider?: string; prodemandEnabled?: boolean; alldataEnabled?: boolean; identifixEnabled?: boolean };
+      setDefaultProvider(s.defaultProvider || 'PRODEMAND');
+      setProdemandEnabled(s.prodemandEnabled ?? true);
+      setAlldataEnabled(s.alldataEnabled ?? false);
+      setIdentifixEnabled(s.identifixEnabled ?? false);
+    }
+  }, [settings]);
+  
+  const saveMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch('/api/labor-guide/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to save settings');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/labor-guide/settings'] });
+    },
+  });
+  
+  const handleSave = () => {
+    saveMutation.mutate({
+      defaultProvider,
+      prodemandEnabled,
+      alldataEnabled,
+      identifixEnabled,
+    });
+  };
+  
+  return (
+    <div className="border rounded-lg p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+            <Clock className="w-5 h-5 text-blue-600" />
+          </div>
+          <div>
+            <h3 className="font-semibold">Labor Guide Integration</h3>
+            <p className="text-sm text-muted-foreground">ProDemand, AllData, and Identifix</p>
+          </div>
+        </div>
+        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+          Active
+        </Badge>
+      </div>
+      
+      <div className="bg-slate-50 rounded-lg p-4 text-sm">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
+            <span className="text-blue-600 text-xs font-bold">LG</span>
+          </div>
+          <div>
+            <h4 className="font-medium text-slate-900">How It Works</h4>
+            <p className="text-slate-600 mt-1">
+              Labor guide integration works with a browser extension that connects your labor guide 
+              subscriptions (ProDemand, AllData, or Identifix) directly to BayOPS repair orders.
+            </p>
+            <ul className="mt-3 space-y-1.5 text-slate-600">
+              <li className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-green-600" />
+                Auto-fills vehicle VIN in labor guide websites
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-green-600" />
+                Captures labor times with one click
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-green-600" />
+                Automatically adds labor to repair order jobs
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-green-600" />
+                Applies your shop's labor rate automatically
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      
+      <div className="space-y-4">
+        <div>
+          <Label>Default Labor Guide Provider</Label>
+          <Select value={defaultProvider} onValueChange={setDefaultProvider}>
+            <SelectTrigger className="w-[300px] mt-1" data-testid="select-default-labor-provider">
+              <SelectValue placeholder="Select default provider" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="PRODEMAND">ProDemand (Mitchell 1)</SelectItem>
+              <SelectItem value="ALLDATA">AllData</SelectItem>
+              <SelectItem value="IDENTIFIX">Identifix</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-3">
+          <Label>Enabled Providers</Label>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <Switch 
+                checked={prodemandEnabled} 
+                onCheckedChange={setProdemandEnabled}
+                data-testid="switch-prodemand"
+              />
+              <span className="text-sm">ProDemand (Mitchell 1)</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch 
+                checked={alldataEnabled} 
+                onCheckedChange={setAlldataEnabled}
+                data-testid="switch-alldata"
+              />
+              <span className="text-sm">AllData</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch 
+                checked={identifixEnabled} 
+                onCheckedChange={setIdentifixEnabled}
+                data-testid="switch-identifix"
+              />
+              <span className="text-sm">Identifix</span>
+            </div>
+          </div>
+        </div>
+        
+        <Button 
+          onClick={handleSave} 
+          disabled={saveMutation.isPending}
+          data-testid="button-save-labor-settings"
+        >
+          {saveMutation.isPending ? 'Saving...' : 'Save Settings'}
+        </Button>
+      </div>
+
+      <div className="border-t pt-4">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <h4 className="font-medium text-amber-800 flex items-center gap-2">
+            <ExternalLink className="w-4 h-4" />
+            Chrome Extension Required
+          </h4>
+          <p className="text-sm text-amber-700 mt-1">
+            To use labor guide integration, install the BayOPS Labor Guide Chrome extension. 
+            The extension captures labor times from your labor guide website and sends them 
+            directly to BayOPS.
+          </p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="mt-3 border-amber-300 hover:bg-amber-100"
+            onClick={() => {
+              // Extension download link would go here
+              window.open('/chrome-extension/bayops-labor-guide.zip', '_blank');
+            }}
+            data-testid="button-download-extension"
+          >
+            Download Extension
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function IntegrationsTab({ locationId }: { locationId: string }) {
   const { data: locations = [] } = useLocations();
   const currentLocation = locations.find(l => l.id === locationId);
   const [selectedIntegration, setSelectedIntegration] = useState<string>('partstech');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   
-  // Active integrations (PartsTech and Protractor are built-in)
-  const activeIntegrations = ['partstech', 'protractor'];
+  // Active integrations (PartsTech, Labor Guides, and Protractor are built-in)
+  const activeIntegrations = ['partstech', 'laborguide', 'protractor'];
   const availableToAdd = AVAILABLE_INTEGRATIONS.filter(i => !activeIntegrations.includes(i.id));
   
   return (
@@ -2840,6 +3025,10 @@ function IntegrationsTab({ locationId }: { locationId: string }) {
           
           {selectedIntegration === 'partstech' && (
             <PartstechIntegrationCard />
+          )}
+          
+          {selectedIntegration === 'laborguide' && (
+            <LaborGuideIntegrationCard />
           )}
           
           {selectedIntegration === 'protractor' && (
