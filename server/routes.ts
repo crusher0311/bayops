@@ -3865,7 +3865,7 @@ export async function registerRoutes(
     items: z.array(partsSessionItemSchema).optional(),
   });
   
-  // Create or update parts session
+  // Create or update parts session - AUTO-APPLIES parts to job line items
   app.post("/api/parts-sessions", requireAuth, async (req, res) => {
     try {
       // Validate request with Zod
@@ -3885,50 +3885,60 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Repair order not found or access denied" });
       }
       
-      // Check if session exists
-      let session = await storage.getPartsSessionByJob(jobId, req.user!.orgId);
-      
-      if (session) {
-        // Update existing session
-        session = await storage.updatePartsSession(session.id, req.user!.orgId, {
-          roNumber: roNumber || repairOrder.roNumber,
-          vehicleInfo,
-        });
+      // AUTO-APPLY: Add parts directly to the job's line items
+      if (items && items.length > 0) {
+        const jobs = (repairOrder.jobs || []) as any[];
+        const jobIndex = jobs.findIndex((j: any) => j.id === jobId);
         
-        // Update items if provided
-        if (items && Array.isArray(items)) {
-          await storage.syncPartsSessionItems(session!.id, items);
-        }
-      } else {
-        // Create new session using locationId from the repair order
-        session = await storage.createPartsSession({
-          orgId: req.user!.orgId,
-          locationId: repairOrder.locationId,
-          repairOrderId,
-          jobId,
-          roNumber: roNumber || repairOrder.roNumber,
-          vehicleInfo,
-        });
-        
-        // Add items if provided (already validated by Zod)
-        if (items && items.length > 0) {
-          for (const item of items) {
-            await storage.createPartsSessionItem({
-              sessionId: session.id,
+        if (jobIndex >= 0) {
+          const job = jobs[jobIndex];
+          const existingLineItems = job.lineItems || [];
+          
+          // Convert parts session items to line items
+          const newLineItems = items.map((item, idx) => {
+            const partCost = item.price ?? (item.unitCost ? parseFloat(item.unitCost) : 0);
+            // Apply basic markup (1.5x) if no parts matrix configured
+            const partPrice = Math.round(partCost * 1.5 * 100) / 100;
+            
+            return {
+              id: `li-${Date.now()}-${idx}`,
+              type: 'PART',
+              description: item.description || item.partNumber,
+              quantity: item.quantity || 1,
+              unitCost: partCost,
+              unitPrice: partPrice,
+              approved: true,
               partNumber: item.partNumber,
-              description: item.description,
-              brand: item.brand,
-              supplier: item.supplier,
-              quantity: item.quantity,
-              unitCost: item.price != null ? item.price.toFixed(2) : item.unitCost,
-            });
+              manufacturer: item.brand,
+              supplier: item.supplier || 'PartsTech',
+            };
+          });
+          
+          // Merge with existing line items (avoid duplicates by part number)
+          const existingPartNumbers = new Set(existingLineItems.map((li: any) => li.partNumber).filter(Boolean));
+          const uniqueNewItems = newLineItems.filter(li => !existingPartNumbers.has(li.partNumber));
+          
+          if (uniqueNewItems.length > 0) {
+            job.lineItems = [...existingLineItems, ...uniqueNewItems];
+            jobs[jobIndex] = job;
+            
+            // Update the repair order with new line items
+            await storage.updateRepairOrder(repairOrderId, req.user!.orgId, { jobs });
           }
+          
+          // Return success with the applied items
+          return res.json({ 
+            success: true, 
+            message: `Added ${uniqueNewItems.length} part(s) to job`,
+            appliedItems: uniqueNewItems,
+            repairOrderId,
+            jobId
+          });
         }
       }
       
-      // Fetch with items
-      const fullSession = await storage.getPartsSessionWithItems(session!.id, req.user!.orgId);
-      res.json(fullSession);
+      // Fallback: no items to add
+      res.json({ success: true, message: "No items to add", repairOrderId, jobId });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
