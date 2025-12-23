@@ -17,8 +17,10 @@ import {
   usePartstechSearch,
   useDeferredWorkByVehicle,
   useUpdateDeferredWork,
+  useSimilarJobs,
   type LaborGuideRepair,
-  type PartstechPart
+  type PartstechPart,
+  type SimilarJob
 } from '@/lib/hooks';
 import { InspectionForm } from '@/components/InspectionForm';
 import { Button } from '@/components/ui/button';
@@ -2399,6 +2401,19 @@ export default function RepairOrderDetail() {
   // Canned Jobs / Service Packages state
   const [isPackageDialogOpen, setIsPackageDialogOpen] = useState(false);
   
+  // Similar Jobs state
+  const [isSimilarJobsOpen, setIsSimilarJobsOpen] = useState(false);
+  const [similarJobSearch, setSimilarJobSearch] = useState('');
+  
+  // Similar Jobs query
+  const { data: similarJobsData, isLoading: similarJobsLoading } = useSimilarJobs(
+    vehicle?.year ?? null,
+    vehicle?.make ?? '',
+    vehicle?.model ?? '',
+    vehicle?.engineDisplacement ?? undefined,
+    similarJobSearch || undefined
+  );
+  
   // Fetch canned job templates
   const { data: cannedJobTemplates = [] } = useQuery<any[]>({
     queryKey: ['canned-jobs', ro?.locationId],
@@ -2765,6 +2780,65 @@ export default function RepairOrderDetail() {
     });
     setNewJobName('');
     setIsAddJobDialogOpen(false);
+  };
+
+  const handleAddSimilarJob = (similarJob: SimilarJob) => {
+    // Get current default labor rate from settings
+    const defaultLaborRate = settings?.laborRates?.find(r => r.isDefault);
+    const laborRate = defaultLaborRate ? parseFloat(defaultLaborRate.rate) : 0;
+    
+    // Convert line items - update labor rates but preserve part pricing
+    const lineItems: LineItem[] = (similarJob.lineItems || []).map((item, idx) => {
+      const itemType = (item.type?.toUpperCase() || 'LABOR') as 'LABOR' | 'PART' | 'TIRE' | 'FEE';
+      
+      // For labor items, use current labor rate
+      if (itemType === 'LABOR') {
+        const hours = typeof item.hours === 'number' && item.hours > 0 
+          ? item.hours 
+          : (typeof item.quantity === 'number' && item.quantity > 0 ? item.quantity : 1);
+        return {
+          id: `li-${Date.now()}-${idx}`,
+          type: itemType,
+          description: item.description || '',
+          quantity: hours,
+          unitCost: 0,
+          unitPrice: laborRate,
+          approved: false,
+        };
+      }
+      
+      // For parts/fees, preserve original pricing (may need re-sourcing for availability)
+      return {
+        id: `li-${Date.now()}-${idx}`,
+        type: itemType,
+        description: item.description || '',
+        quantity: item.quantity || 1,
+        unitCost: 0, // Parts may need re-sourcing, set cost to 0 to flag for update
+        unitPrice: item.unitPrice || 0,
+        approved: false,
+        partNumber: item.partNumber,
+      };
+    });
+    
+    const newJob: ServiceJob = {
+      id: `job-${Date.now()}`,
+      name: similarJob.name,
+      description: similarJob.description || '',
+      lineItems,
+    };
+    
+    updateRO.mutate({
+      id: ro.id,
+      updates: { jobs: [...jobs, newJob] as any },
+    });
+    
+    setIsSimilarJobsOpen(false);
+    setSimilarJobSearch('');
+    
+    toast({
+      title: 'Job Added',
+      description: `"${similarJob.name}" added from RO #${similarJob.roNumber}. Parts may need re-sourcing.`,
+    });
   };
 
   const handleAddDeferredToRO = (deferredItem: any) => {
@@ -3486,6 +3560,114 @@ export default function RepairOrderDetail() {
                         >
                           Create Job
                         </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  <Dialog open={isSimilarJobsOpen} onOpenChange={setIsSimilarJobsOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="gap-2" data-testid="button-similar-jobs" disabled={!vehicle}>
+                        <History className="w-4 h-4" /> Similar Jobs
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Reuse Historical Jobs</DialogTitle>
+                        {vehicle && (
+                          <p className="text-sm text-muted-foreground">
+                            Jobs from similar {vehicle.year} {vehicle.make} {vehicle.model} vehicles
+                          </p>
+                        )}
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input 
+                            placeholder="Search jobs..." 
+                            value={similarJobSearch}
+                            onChange={(e) => setSimilarJobSearch(e.target.value)}
+                            className="pl-9"
+                            data-testid="input-similar-job-search"
+                          />
+                        </div>
+                        
+                        {similarJobsLoading ? (
+                          <div className="flex items-center justify-center py-8">
+                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : !similarJobsData?.jobs?.length ? (
+                          <div className="text-center py-8">
+                            <History className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                            <p className="text-muted-foreground">
+                              {vehicle 
+                                ? `No historical jobs found for ${vehicle.make} ${vehicle.model} vehicles.`
+                                : 'No vehicle selected.'}
+                            </p>
+                          </div>
+                        ) : (
+                          <ScrollArea className="h-[400px] pr-4">
+                            <div className="space-y-2">
+                              {similarJobsData.jobs.map((job, idx) => (
+                                <div
+                                  key={`${job.roId}-${idx}`}
+                                  className="flex items-start justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                                  data-testid={`similar-job-${idx}`}
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <p className="font-medium truncate">{job.name}</p>
+                                      <Badge 
+                                        variant={job.similarity >= 80 ? 'default' : job.similarity >= 60 ? 'secondary' : 'outline'}
+                                        className={cn(
+                                          'shrink-0 text-xs',
+                                          job.similarity >= 80 && 'bg-green-500/10 text-green-700 border-green-500/20',
+                                          job.similarity >= 60 && job.similarity < 80 && 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20',
+                                          job.similarity < 60 && 'bg-red-500/10 text-red-700 border-red-500/20'
+                                        )}
+                                      >
+                                        {job.similarity}% match
+                                      </Badge>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mt-1">
+                                      <span>RO #{job.roNumber}</span>
+                                      <span>•</span>
+                                      <span>{job.vehicleYear} {job.vehicleMake} {job.vehicleModel}</span>
+                                      {job.lineItems?.length > 0 && (
+                                        <>
+                                          <span>•</span>
+                                          <span>{job.lineItems.length} items</span>
+                                        </>
+                                      )}
+                                      <span>•</span>
+                                      <span>Used {job.count}x</span>
+                                    </div>
+                                    {job.exactYearMatch && (
+                                      <Badge variant="outline" className="mt-1.5 text-xs bg-green-500/5 text-green-600 border-green-500/20">
+                                        Exact Year
+                                      </Badge>
+                                    )}
+                                    {job.engineMatch === true && (
+                                      <Badge variant="outline" className="mt-1.5 ml-1 text-xs bg-blue-500/5 text-blue-600 border-blue-500/20">
+                                        Engine Match
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleAddSimilarJob(job)}
+                                    disabled={updateRO.isPending}
+                                    data-testid={`button-add-similar-job-${idx}`}
+                                  >
+                                    {updateRO.isPending ? (
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      <Plus className="w-4 h-4" />
+                                    )}
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        )}
                       </div>
                     </DialogContent>
                   </Dialog>

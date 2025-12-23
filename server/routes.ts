@@ -73,13 +73,16 @@ import {
 import { fromZodError } from "zod-validation-error";
 import { z } from "zod";
 import { db } from "./db";
+import { and, eq, sql, or, gte, lte } from "drizzle-orm";
 import { 
   organizations, 
   locations, 
   users, 
   workflows, 
   laborRates, 
-  taxSettings 
+  taxSettings,
+  vehicles,
+  repairOrders
 } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 
@@ -779,6 +782,149 @@ export async function registerRoutes(
       }
       res.json(ro);
     } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Search historical jobs by year/make/model and job name with AI similarity scoring
+  app.get("/api/repair-orders/similar-jobs", requireAuth, async (req, res) => {
+    try {
+      const { year, make, model, engine, jobName } = req.query;
+      
+      if (!year || !make || !model) {
+        return res.status(400).json({ message: "year, make, and model are required" });
+      }
+      
+      const targetYear = parseInt(year as string);
+      const targetMake = (make as string).toLowerCase();
+      const targetModel = (model as string).toLowerCase();
+      const targetEngine = engine ? (engine as string).toLowerCase() : null;
+      const searchTerm = (jobName as string || '').toLowerCase();
+      
+      // Query ROs with vehicle data using a proper join - get similar vehicles (same make/model, year within 5 years)
+      const rosWithVehicles = await db
+        .select({
+          ro: repairOrders,
+          vehicle: {
+            year: vehicles.year,
+            make: vehicles.make,
+            model: vehicles.model,
+            engineDisplacement: vehicles.engineDisplacement,
+          },
+        })
+        .from(repairOrders)
+        .innerJoin(vehicles, eq(repairOrders.vehicleId, vehicles.id))
+        .where(
+          and(
+            eq(repairOrders.orgId, req.user!.orgId),
+            sql`LOWER(${vehicles.make}) = ${targetMake}`,
+            sql`LOWER(${vehicles.model}) = ${targetModel}`,
+            gte(vehicles.year, targetYear - 5),
+            lte(vehicles.year, targetYear + 5)
+          )
+        )
+        .orderBy(sql`ABS(${vehicles.year} - ${targetYear})`);
+      
+      // Extract jobs and calculate similarity scores
+      const jobsMap = new Map<string, {
+        name: string;
+        description?: string;
+        lineItems: any[];
+        roNumber: number;
+        roId: string;
+        createdAt: Date;
+        count: number;
+        similarity: number;
+        vehicleYear: number;
+        vehicleMake: string;
+        vehicleModel: string;
+        vehicleEngine: string | null;
+        exactYearMatch: boolean;
+        engineMatch: boolean | null;
+      }>();
+      
+      for (const { ro, vehicle } of rosWithVehicles) {
+        const jobs = (ro.jobs as any[]) || [];
+        for (const job of jobs) {
+          const jobNameLower = (job.name || '').toLowerCase();
+          
+          // If search term provided, filter by it
+          if (searchTerm && !jobNameLower.includes(searchTerm)) {
+            continue;
+          }
+          
+          // Skip empty jobs
+          if (!job.name || !job.lineItems?.length) {
+            continue;
+          }
+          
+          // Calculate similarity score
+          let similarity = 50; // Base score for make/model match
+          
+          // Year matching
+          const yearDiff = Math.abs(vehicle.year - targetYear);
+          if (yearDiff === 0) {
+            similarity += 30; // Exact year match
+          } else if (yearDiff <= 2) {
+            similarity += 20; // Close year
+          } else if (yearDiff <= 5) {
+            similarity += 10; // Within range
+          }
+          
+          // Engine matching (if available)
+          let engineMatch: boolean | null = null;
+          if (targetEngine && vehicle.engineDisplacement) {
+            const vehicleEngine = vehicle.engineDisplacement.toLowerCase();
+            if (vehicleEngine.includes(targetEngine) || targetEngine.includes(vehicleEngine)) {
+              similarity += 20;
+              engineMatch = true;
+            } else {
+              similarity -= 10;
+              engineMatch = false;
+            }
+          }
+          
+          // Cap similarity at 100
+          similarity = Math.min(similarity, 100);
+          
+          // Use job name as key, keep the highest similarity version
+          const existing = jobsMap.get(jobNameLower);
+          if (!existing || similarity > existing.similarity || 
+              (similarity === existing.similarity && new Date(ro.createdAt) > new Date(existing.createdAt))) {
+            jobsMap.set(jobNameLower, {
+              name: job.name,
+              description: job.description,
+              lineItems: job.lineItems || [],
+              roNumber: ro.roNumber,
+              roId: ro.id,
+              createdAt: ro.createdAt,
+              count: (existing?.count || 0) + 1,
+              similarity,
+              vehicleYear: vehicle.year,
+              vehicleMake: vehicle.make,
+              vehicleModel: vehicle.model,
+              vehicleEngine: vehicle.engineDisplacement,
+              exactYearMatch: yearDiff === 0,
+              engineMatch,
+            });
+          } else {
+            existing.count++;
+          }
+        }
+      }
+      
+      // Convert to array and sort by similarity (highest first), then by count
+      const results = Array.from(jobsMap.values())
+        .sort((a, b) => b.similarity - a.similarity || b.count - a.count)
+        .slice(0, 20);
+      
+      res.json({
+        vehicleMatch: `${year} ${make} ${model}`,
+        matchingROs: rosWithVehicles.length,
+        jobs: results,
+      });
+    } catch (error: any) {
+      console.error('Similar jobs error:', error);
       res.status(500).json({ message: error.message });
     }
   });

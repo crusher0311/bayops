@@ -267,6 +267,64 @@ export function useLaborGuide(year: number | string, make: string, model: string
   });
 }
 
+// Similar Jobs Hook - searches historical jobs by vehicle
+export interface SimilarJob {
+  name: string;
+  description?: string;
+  lineItems: Array<{
+    type: string;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    hours?: number;
+    laborRate?: number;
+    partNumber?: string;
+  }>;
+  roNumber: number;
+  roId: string;
+  createdAt: string;
+  count: number;
+  similarity: number;
+  vehicleYear: number;
+  vehicleMake: string;
+  vehicleModel: string;
+  vehicleEngine: string | null;
+  exactYearMatch: boolean;
+  engineMatch: boolean | null;
+}
+
+export interface SimilarJobsResponse {
+  vehicleMatch: string;
+  matchingROs: number;
+  jobs: SimilarJob[];
+}
+
+export function useSimilarJobs(year: number | null, make: string, model: string, engine?: string, jobName?: string) {
+  return useQuery<SimilarJobsResponse>({
+    queryKey: ['similar-jobs', year, make, model, engine, jobName],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        year: String(year),
+        make,
+        model,
+      });
+      if (engine) params.set('engine', engine);
+      if (jobName) params.set('jobName', jobName);
+      
+      const response = await fetch(`/api/repair-orders/similar-jobs?${params}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to fetch similar jobs');
+      }
+      return response.json();
+    },
+    enabled: !!year && !!make && !!model,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
+}
+
 // AI Service Writer Hooks
 interface VehicleInfo {
   year: number;
