@@ -168,7 +168,7 @@ function showJobBanner() {
   
   // Sync button handler
   document.getElementById('bayops-sync-btn').addEventListener('click', () => {
-    parseAndSyncCart();
+    syncToBayOPS();
   });
 }
 
@@ -453,28 +453,40 @@ function parseCartItems() {
   return items;
 }
 
-// Sync current cart to BayOPS
-async function parseAndSyncCart() {
-  const items = parseCartItems();
-  
-  console.log('BayOPS: Parsed cart items:', items);
-  
-  // Update cart count in banner
-  const countEl = document.getElementById('bayops-cart-count');
-  if (countEl) {
-    countEl.textContent = `${items.length} parts`;
+// Sync current session to BayOPS (triggers API persistence)
+async function syncToBayOPS() {
+  if (!currentJobContext) {
+    showToast('No active job context');
+    return;
   }
   
-  // Send to background
-  if (currentJobContext) {
-    chrome.runtime.sendMessage({
-      type: 'CART_UPDATE',
-      jobId: currentJobContext.jobId,
-      items
-    });
-  }
+  // Get current session from background
+  const response = await chrome.runtime.sendMessage({
+    type: 'GET_SESSION',
+    jobId: currentJobContext.jobId
+  });
   
-  return items;
+  if (response?.session) {
+    const session = response.session;
+    console.log('BayOPS: Syncing session to BayOPS:', session);
+    
+    // Update cart count in banner
+    const countEl = document.getElementById('bayops-cart-count');
+    if (countEl) {
+      countEl.textContent = `${session.items?.length || 0} parts`;
+    }
+    
+    if (session.items?.length > 0) {
+      // Notify BayOPS to persist - the background script handles this
+      chrome.runtime.sendMessage({
+        type: 'SYNC_TO_BAYOPS',
+        jobId: currentJobContext.jobId
+      });
+      showToast(`Synced ${session.items.length} parts to BayOPS`);
+    } else {
+      showToast('No parts to sync - add parts to cart first');
+    }
+  }
 }
 
 // Set up MutationObserver to watch for cart changes
@@ -557,7 +569,7 @@ function setupPartAddedListener() {
 
 // Initialize
 function init() {
-  console.log('BayOPS Parts Connector: PartsTech content script loaded v1.7.0');
+  console.log('BayOPS Parts Connector: PartsTech content script loaded v1.8.0');
   
   // Inject page script for fetch interception
   injectPageScript();

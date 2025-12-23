@@ -266,6 +266,34 @@ async function handleMessage(message, sender) {
       return { success: true, session };
     }
     
+    case 'SYNC_TO_BAYOPS': {
+      // Explicitly sync session to BayOPS app
+      const session = await getSession(message.jobId);
+      if (session) {
+        notifyBayOPS(message.jobId, session, true);
+        return { success: true, session };
+      }
+      return { success: false, error: 'No session found' };
+    }
+    
+    case 'GET_TAB_CONTEXT': {
+      // Content script asking for job context for current tab
+      const sessions = await getSessions();
+      for (const [jobId, session] of Object.entries(sessions)) {
+        if (session.tabId === sender.tab?.id) {
+          return { 
+            success: true, 
+            jobContext: {
+              jobId,
+              roNumber: session.roNumber,
+              vehicleInfo: session.vehicleInfo
+            }
+          };
+        }
+      }
+      return { success: false };
+    }
+    
     default:
       return { success: false, error: 'Unknown message type' };
   }
