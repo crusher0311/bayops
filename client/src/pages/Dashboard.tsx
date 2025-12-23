@@ -1,5 +1,5 @@
 import { AppLayout } from '@/components/layout/AppLayout';
-import { useRepairOrders, useLocations } from '@/lib/hooks';
+import { useRepairOrders, useLocations, useDashboardRepairOrders } from '@/lib/hooks';
 import { useShopStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,7 @@ export default function Dashboard() {
   const { currentLocationId, setCurrentLocation } = useShopStore();
   const { data: locations = [], isLoading: locationsLoading } = useLocations();
   const { data: ros = [], isLoading: rosLoading } = useRepairOrders(currentLocationId || undefined);
+  const { data: dashboardRos = [] } = useDashboardRepairOrders(currentLocationId || '', 10);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
 
@@ -246,30 +247,49 @@ export default function Dashboard() {
             <CardDescription>Latest repair orders and status updates</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-8">
-              {recentNativeRos.length === 0 ? (
+            <div className="space-y-4">
+              {dashboardRos.filter(ro => !ro.legacySystem && !ro.legacyId).length === 0 ? (
                 <p className="text-muted-foreground text-sm">No repair orders yet</p>
               ) : (
-                recentNativeRos.slice(0, 5).map((ro) => {
-                  const jobs = ro.jobs as Array<{ name: string }>;
+                dashboardRos.filter(ro => !ro.legacySystem && !ro.legacyId).slice(0, 5).map((ro) => {
+                  const customerName = ro.customer 
+                    ? `${ro.customer.firstName} ${ro.customer.lastName}` 
+                    : 'Walk-in';
+                  const vehicleYMM = ro.vehicle 
+                    ? `${ro.vehicle.year} ${ro.vehicle.make} ${ro.vehicle.model}`
+                    : 'No vehicle';
+                  const rvh = ro.notes || '';
+                  
                   return (
                     <Link key={ro.id} href={`/ros/${ro.id}`}>
-                      <div className="flex items-center cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors" data-testid={`row-activity-${ro.id}`}>
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium leading-none">
-                            RO #{ro.roNumber} - {jobs[0]?.name || 'Service'}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(ro.createdAt), 'MMM d, h:mm a')}
-                          </p>
-                        </div>
-                        <div className="ml-auto font-medium">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
-                            ${ro.status === 'completed' ? 'bg-green-50 text-green-700 border-green-200' : 
-                              ro.status === 'in-progress' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
-                              'bg-gray-100 text-gray-800 border-gray-200'}`}>
-                            {ro.status.replace(/-/g, ' ').toUpperCase()}
-                          </span>
+                      <div className="cursor-pointer hover:bg-muted/50 rounded-lg p-3 -mx-2 transition-colors border-b last:border-b-0" data-testid={`row-activity-${ro.id}`}>
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold text-sm">RO #{ro.roNumber}</span>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border
+                                ${ro.status === 'completed' ? 'bg-green-50 text-green-700 border-green-200' : 
+                                  ro.status === 'in-progress' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
+                                  'bg-gray-100 text-gray-800 border-gray-200'}`}>
+                                {ro.status.replace(/-/g, ' ').toUpperCase()}
+                              </span>
+                            </div>
+                            <p className="text-sm font-medium text-foreground">{customerName}</p>
+                            <p className="text-xs text-muted-foreground">{vehicleYMM}</p>
+                            {rvh && (
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2 italic">
+                                RVH: {rvh}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(ro.createdAt), 'MMM d')}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(ro.createdAt), 'h:mm a')}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </Link>

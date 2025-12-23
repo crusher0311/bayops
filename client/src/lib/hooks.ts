@@ -166,6 +166,19 @@ export function useRepairOrdersByVehicle(vehicleId: string) {
   });
 }
 
+export type DashboardRepairOrder = RepairOrder & { 
+  customer?: { firstName: string; lastName: string } | null; 
+  vehicle?: { year: string; make: string; model: string } | null;
+};
+
+export function useDashboardRepairOrders(locationId: string, limit: number = 10) {
+  return useQuery<DashboardRepairOrder[]>({
+    queryKey: ['repair-orders', 'dashboard', locationId, limit],
+    queryFn: () => api.getDashboardRepairOrders(locationId, limit),
+    enabled: !!locationId,
+  });
+}
+
 export function useCreateRepairOrder() {
   const queryClient = useQueryClient();
   return useMutation({

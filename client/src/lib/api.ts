@@ -165,6 +165,10 @@ class ApiClient {
     return this.request(`/api/repair-orders/vehicle/${vehicleId}`);
   }
 
+  async getDashboardRepairOrders(locationId: string, limit: number = 10): Promise<Array<RepairOrder & { customer?: { firstName: string; lastName: string } | null; vehicle?: { year: string; make: string; model: string } | null }>> {
+    return this.request(`/api/repair-orders/dashboard/${locationId}?limit=${limit}`);
+  }
+
   async createRepairOrder(ro: InsertRepairOrder): Promise<RepairOrder> {
     return this.request("/api/repair-orders", {
       method: "POST",

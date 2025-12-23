@@ -724,6 +724,16 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/repair-orders/dashboard/:locationId", requireAuth, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const ros = await storage.getDashboardRepairOrders(req.params.locationId, req.user!.orgId, limit);
+      res.json(ros);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/repair-orders/:id", requireAuth, async (req, res) => {
     try {
       const ro = await storage.getRepairOrder(req.params.id, req.user!.orgId);

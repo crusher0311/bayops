@@ -213,6 +213,7 @@ export interface IStorage {
   getRepairOrdersByLocation(locationId: string, orgId: string): Promise<RepairOrder[]>;
   getRepairOrdersByOrg(orgId: string): Promise<RepairOrder[]>;
   getRepairOrdersByVehicle(vehicleId: string, orgId: string): Promise<RepairOrder[]>;
+  getDashboardRepairOrders(locationId: string, orgId: string, limit?: number): Promise<Array<RepairOrder & { customer?: { firstName: string; lastName: string } | null; vehicle?: { year: string; make: string; model: string } | null }>>;
   createRepairOrder(ro: InsertRepairOrder): Promise<RepairOrder>;
   updateRepairOrder(id: string, orgId: string, updates: Partial<InsertRepairOrder>): Promise<RepairOrder | undefined>;
 
@@ -737,6 +738,33 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(repairOrders).where(
       and(eq(repairOrders.vehicleId, vehicleId), eq(repairOrders.orgId, orgId))
     ).orderBy(desc(repairOrders.createdAt));
+  }
+
+  async getDashboardRepairOrders(locationId: string, orgId: string, limit: number = 10): Promise<Array<RepairOrder & { customer?: { firstName: string; lastName: string } | null; vehicle?: { year: string; make: string; model: string } | null }>> {
+    const results = await db.select({
+      ro: repairOrders,
+      customer: {
+        firstName: customers.firstName,
+        lastName: customers.lastName,
+      },
+      vehicle: {
+        year: vehicles.year,
+        make: vehicles.make,
+        model: vehicles.model,
+      },
+    })
+    .from(repairOrders)
+    .leftJoin(customers, eq(repairOrders.customerId, customers.id))
+    .leftJoin(vehicles, eq(repairOrders.vehicleId, vehicles.id))
+    .where(and(eq(repairOrders.locationId, locationId), eq(repairOrders.orgId, orgId)))
+    .orderBy(desc(repairOrders.createdAt))
+    .limit(limit);
+    
+    return results.map(r => ({
+      ...r.ro,
+      customer: r.customer?.firstName ? r.customer : null,
+      vehicle: r.vehicle?.year ? r.vehicle : null,
+    }));
   }
 
   async createRepairOrder(insertRO: InsertRepairOrder): Promise<RepairOrder> {
