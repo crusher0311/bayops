@@ -3577,15 +3577,16 @@ export default function RepairOrderDetail() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Link href="/ros">
-            <Button variant="ghost" size="icon" data-testid="button-back">
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-          </Link>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight">RO #{ro.roNumber}</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-3">
+            <Link href="/ros">
+              <Button variant="ghost" size="icon" data-testid="button-back">
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+            </Link>
+            <div>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight">RO #{ro.roNumber}</h1>
               <Badge variant="outline" className="text-sm uppercase">
                 {ro.status.replace(/-/g, ' ')}
               </Badge>
@@ -3628,11 +3629,12 @@ export default function RepairOrderDetail() {
                 </Badge>
               ) : null}
             </div>
-            <p className="text-muted-foreground text-sm">
-              Created {format(new Date(ro.createdAt), 'MMM d, yyyy h:mm a')}
-            </p>
+              <p className="text-muted-foreground text-sm">
+                Created {format(new Date(ro.createdAt), 'MMM d, yyyy h:mm a')}
+              </p>
+            </div>
           </div>
-          <div className="ml-auto flex gap-2">
+          <div className="flex gap-2 overflow-x-auto sm:ml-auto pb-2 sm:pb-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2" data-testid="button-print">
@@ -3806,11 +3808,11 @@ export default function RepairOrderDetail() {
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-6">
-          <div className="col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+          <div className="lg:col-span-2 space-y-4 lg:space-y-6">
             <Card>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-2 gap-8">
+              <CardContent className="p-4 sm:p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8">
                   <div>
                     <h3 className="font-semibold text-sm text-muted-foreground mb-2 uppercase tracking-wider">Customer</h3>
                     <div className="font-medium text-lg">{customer?.firstName} {customer?.lastName}</div>
