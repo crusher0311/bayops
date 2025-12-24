@@ -2409,6 +2409,43 @@ export async function registerRoutes(
     }
   });
 
+  // AI-powered labor time estimation
+  app.post("/api/ai/labor-estimate", requireAuth, async (req, res) => {
+    try {
+      const { jobName, jobDescription, vehicle } = req.body;
+      
+      if (!jobName || !vehicle?.year || !vehicle?.make || !vehicle?.model) {
+        return res.status(400).json({ 
+          message: "Job name and vehicle info (year, make, model) are required" 
+        });
+      }
+
+      const { isAIConfigured, generateLaborTimeEstimate } = await import("./ai");
+      
+      if (!isAIConfigured()) {
+        return res.status(503).json({ 
+          message: "AI not configured. Set up OpenAI API key to use labor estimates." 
+        });
+      }
+
+      const estimate = await generateLaborTimeEstimate({
+        jobName,
+        jobDescription,
+        vehicle: {
+          year: parseInt(vehicle.year),
+          make: vehicle.make,
+          model: vehicle.model,
+          engine: vehicle.engine,
+        },
+      });
+
+      res.json(estimate);
+    } catch (error: any) {
+      console.error('AI labor estimate error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Address autocomplete proxy (keeps API key on server)
   app.get("/api/address-autocomplete", requireAuth, async (req, res) => {
     try {

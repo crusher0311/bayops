@@ -9,7 +9,7 @@ import {
   useVehicle, 
   useWorkflows, 
   useUpdateRepairOrder, 
-  useLaborGuide, 
+  useAILaborEstimate,
   useGenerateServiceDescription,
   useGenerateAuthorizationRequest,
   useImproveJobDescription,
@@ -18,7 +18,6 @@ import {
   useDeferredWorkByVehicle,
   useUpdateDeferredWork,
   useSimilarJobs,
-  type LaborGuideRepair,
   type PartstechPart,
   type SimilarJob
 } from '@/lib/hooks';
@@ -111,11 +110,17 @@ interface LineItem {
   partNumber?: string;
 }
 
+interface AILaborEstimateResult {
+  title: string;
+  description: string;
+  hours: number;
+}
+
 interface LaborGuideDialogProps {
   isOpen: boolean;
   onClose: () => void;
   vehicle: { year: number; make: string; model: string } | null;
-  onSelect: (repair: LaborGuideRepair) => void;
+  onSelect: (estimate: AILaborEstimateResult) => void;
 }
 
 interface PartsMatrix {
@@ -385,120 +390,171 @@ function ClientConcernsSection({
   );
 }
 
-function LaborGuideDialog({ isOpen, onClose, vehicle, onSelect }: LaborGuideDialogProps) {
-  const [searchTerm, setSearchTerm] = useState('');
+function LaborGuideDialog({ isOpen, onClose, vehicle, onSelect, jobName }: LaborGuideDialogProps & { jobName?: string }) {
+  const [searchTerm, setSearchTerm] = useState(jobName || '');
+  const aiEstimate = useAILaborEstimate();
   
-  const hasVehicle = vehicle && vehicle.year && vehicle.make && vehicle.model;
-  
-  const { data: laborGuideData, isLoading, error } = useLaborGuide(
-    hasVehicle ? vehicle.year : 0,
-    hasVehicle ? vehicle.make : '',
-    hasVehicle ? vehicle.model : ''
-  );
+  // Reset search term when job changes
+  useEffect(() => {
+    if (isOpen && jobName) {
+      setSearchTerm(jobName);
+      // Auto-fetch estimate for the job
+      if (vehicle?.year && vehicle?.make && vehicle?.model) {
+        aiEstimate.mutate({
+          jobName: jobName,
+          vehicle: {
+            year: vehicle.year,
+            make: vehicle.make,
+            model: vehicle.model,
+            engine: (vehicle as any).engineDisplacement,
+          },
+        });
+      }
+    }
+  }, [isOpen, jobName]);
 
-  const laborOperations = laborGuideData?.data?.repair?.flatMap(trim => 
-    trim.repair.map(r => ({ ...r, trim: trim.trim }))
-  ) || [];
+  const handleEstimate = () => {
+    if (!searchTerm.trim() || !vehicle?.year || !vehicle?.make || !vehicle?.model) return;
+    
+    aiEstimate.mutate({
+      jobName: searchTerm,
+      vehicle: {
+        year: vehicle.year,
+        make: vehicle.make,
+        model: vehicle.model,
+        engine: (vehicle as any).engineDisplacement,
+      },
+    });
+  };
 
-  const filteredOperations = laborOperations.filter(op =>
-    op.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const confidenceColors = {
+    high: 'bg-green-100 text-green-800 border-green-200',
+    medium: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    low: 'bg-orange-100 text-orange-800 border-orange-200',
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[700px] max-h-[85vh]">
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <BookOpen className="w-5 h-5" />
-            Labor Guide - {vehicle?.year} {vehicle?.make} {vehicle?.model}
+            <Sparkles className="w-5 h-5 text-purple-600" />
+            AI Labor Estimate - {vehicle?.year} {vehicle?.make} {vehicle?.model}
           </DialogTitle>
         </DialogHeader>
         
-        <div className="relative">
-          <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search labor operations..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-            data-testid="input-labor-guide-search"
-          />
-        </div>
-
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-            <span className="ml-3 text-muted-foreground">Loading labor guide...</span>
-          </div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <AlertCircle className="w-12 h-12 text-orange-500 mb-4" />
-            <h3 className="text-lg font-semibold">Labor pricing data unavailable</h3>
-            <p className="text-muted-foreground text-sm max-w-sm mb-4">
-              ProDemand opened in a new tab. Use it to look up labor times and add them manually using the "+ Labor" button.
-            </p>
-            <Button variant="outline" size="sm" onClick={onClose}>
-              Close
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Enter job or repair name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleEstimate()}
+              data-testid="input-labor-guide-search"
+              className="flex-1"
+            />
+            <Button 
+              onClick={handleEstimate} 
+              disabled={aiEstimate.isPending || !searchTerm.trim()}
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            >
+              {aiEstimate.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              <span className="ml-2">Estimate</span>
             </Button>
           </div>
-        ) : filteredOperations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <BookOpen className="w-12 h-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold">
-              {searchTerm ? 'No matching operations' : 'No labor data available'}
-            </h3>
-            <p className="text-muted-foreground text-sm max-w-sm">
-              {searchTerm 
-                ? 'Try a different search term' 
-                : 'Labor guide data not found for this vehicle'}
-            </p>
-          </div>
-        ) : (
-          <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-3">
-              {filteredOperations.map((op, index) => {
-                const laborCost = op.costs.find(c => c.name === 'Labor');
-                const partsCost = op.costs.find(c => c.name === 'Parts');
-                
-                return (
-                  <Card 
-                    key={`${op.value}-${index}`} 
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => onSelect(op)}
-                    data-testid={`labor-guide-item-${index}`}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-sm">{op.title}</h4>
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                            {op.description}
-                          </p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          {laborCost && (laborCost.low > 0 || laborCost.high > 0) && (
-                            <div className="flex items-center gap-1 text-sm font-medium text-primary">
-                              <DollarSign className="w-3 h-3" />
-                              {laborCost.low === laborCost.high 
-                                ? `$${laborCost.low}`
-                                : `$${laborCost.low} - $${laborCost.high}`}
-                            </div>
-                          )}
-                          {partsCost && (partsCost.low > 0 || partsCost.high > 0) && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Parts: ${partsCost.low} - ${partsCost.high}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+
+          {aiEstimate.isPending && (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+              <span className="ml-3 text-muted-foreground">Generating estimate...</span>
             </div>
-          </ScrollArea>
-        )}
+          )}
+
+          {aiEstimate.error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+              <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+              <p className="text-sm text-red-700">{aiEstimate.error.message}</p>
+            </div>
+          )}
+
+          {aiEstimate.data && !aiEstimate.isPending && (
+            <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-blue-50">
+              <CardContent className="p-4 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="font-semibold text-lg">{aiEstimate.data.jobName}</h4>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border mt-1 ${confidenceColors[aiEstimate.data.confidence]}`}>
+                      {aiEstimate.data.confidence === 'high' && '✓'}
+                      {aiEstimate.data.confidence === 'medium' && '~'}
+                      {aiEstimate.data.confidence === 'low' && '?'}
+                      {aiEstimate.data.confidence} confidence
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-purple-700">
+                      {aiEstimate.data.estimatedHours} hrs
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Range: {aiEstimate.data.hoursRange.low} - {aiEstimate.data.hoursRange.high} hrs
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-sm text-muted-foreground">
+                  {aiEstimate.data.reasoning}
+                </p>
+
+                {aiEstimate.data.commonProcedures.length > 0 && (
+                  <div>
+                    <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                      Common Procedures
+                    </h5>
+                    <ul className="text-sm space-y-1">
+                      {aiEstimate.data.commonProcedures.map((proc, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-purple-500 mt-0.5">•</span>
+                          <span>{proc}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-xs text-amber-800">
+                  <strong>AI Estimate:</strong> This is an AI-generated estimate. Verify with ProDemand or industry labor guides before quoting.
+                </div>
+
+                <Button 
+                  className="w-full"
+                  onClick={() => {
+                    onSelect({
+                      title: aiEstimate.data!.jobName,
+                      description: aiEstimate.data!.reasoning,
+                      hours: aiEstimate.data!.estimatedHours,
+                    });
+                    onClose();
+                  }}
+                >
+                  Add {aiEstimate.data.estimatedHours} hrs to Job
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {!aiEstimate.data && !aiEstimate.isPending && !aiEstimate.error && (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Sparkles className="w-12 h-12 text-purple-300 mb-4" />
+              <h3 className="text-lg font-semibold">Get AI Labor Estimate</h3>
+              <p className="text-muted-foreground text-sm max-w-sm mt-2">
+                Enter a job name (e.g., "timing chain replacement", "brake pads and rotors") and click Estimate to get AI-powered labor time suggestions.
+              </p>
+            </div>
+          )}
+        </div>
         
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
@@ -2611,19 +2667,21 @@ export default function RepairOrderDetail() {
 
   const currentStepIndex = activeStages.findIndex(s => s.id === ro.status);
 
-  const handleAddFromLaborGuide = (repair: LaborGuideRepair) => {
+  const handleAddFromLaborGuide = (estimate: AILaborEstimateResult) => {
     if (!laborGuideJobId) return;
     
-    const laborCost = repair.costs.find(c => c.name === 'Labor');
-    const avgLaborPrice = laborCost ? (laborCost.low + laborCost.high) / 2 : 0;
+    // Get the shop's default labor rate (with fallback and NaN guard)
+    const defaultLaborRate = settings?.laborRates?.find(r => r.isDefault);
+    const parsedRate = defaultLaborRate ? parseFloat(defaultLaborRate.rate) : NaN;
+    const laborRate = isNaN(parsedRate) || parsedRate <= 0 ? 150 : parsedRate;
     
     const newItem: LineItem = {
       id: `li-${Date.now()}`,
       type: 'LABOR',
-      description: repair.title,
-      quantity: 1,
+      description: estimate.title,
+      quantity: estimate.hours,
       unitCost: 0,
-      unitPrice: Math.round(avgLaborPrice * 100) / 100,
+      unitPrice: laborRate,
       approved: true
     };
     
@@ -2640,6 +2698,11 @@ export default function RepairOrderDetail() {
     
     setIsLaborGuideOpen(false);
     setLaborGuideJobId(null);
+    
+    toast({
+      title: 'Labor added',
+      description: `${estimate.hours} hours at $${laborRate}/hr = $${(estimate.hours * laborRate).toFixed(2)}`,
+    });
   };
 
   const openLaborGuide = async (jobId: string) => {
@@ -4807,6 +4870,7 @@ export default function RepairOrderDetail() {
           }}
           vehicle={{ year: vehicle.year, make: vehicle.make, model: vehicle.model }}
           onSelect={handleAddFromLaborGuide}
+          jobName={jobs.find(j => j.id === laborGuideJobId)?.name}
         />
       )}
 

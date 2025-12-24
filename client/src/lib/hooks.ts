@@ -267,6 +267,38 @@ export function useLaborGuide(year: number | string, make: string, model: string
   });
 }
 
+// AI Labor Time Estimate
+export interface AILaborEstimate {
+  jobName: string;
+  estimatedHours: number;
+  hoursRange: { low: number; high: number };
+  confidence: 'high' | 'medium' | 'low';
+  reasoning: string;
+  commonProcedures: string[];
+}
+
+export function useAILaborEstimate() {
+  return useMutation<AILaborEstimate, Error, { 
+    jobName: string; 
+    jobDescription?: string; 
+    vehicle: { year: number; make: string; model: string; engine?: string } 
+  }>({
+    mutationFn: async (request) => {
+      const response = await fetch('/api/ai/labor-estimate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(request),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to get labor estimate');
+      }
+      return response.json();
+    },
+  });
+}
+
 // Similar Jobs Hook - searches historical jobs by vehicle
 export interface SimilarJob {
   name: string;

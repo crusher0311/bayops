@@ -599,6 +599,100 @@ interface GeneratedJob {
   sourceItemLabel: string;
 }
 
+// ==========================================
+// AI Labor Time Estimation
+// ==========================================
+
+export interface LaborTimeEstimate {
+  jobName: string;
+  estimatedHours: number;
+  hoursRange: { low: number; high: number };
+  confidence: 'high' | 'medium' | 'low';
+  reasoning: string;
+  commonProcedures: string[];
+}
+
+export interface LaborEstimateRequest {
+  jobName: string;
+  jobDescription?: string;
+  vehicle: {
+    year: number;
+    make: string;
+    model: string;
+    engine?: string;
+  };
+}
+
+export async function generateLaborTimeEstimate(
+  request: LaborEstimateRequest
+): Promise<LaborTimeEstimate> {
+  const { jobName, jobDescription, vehicle } = request;
+  
+  const prompt = `You are an experienced automotive technician and service advisor. Estimate the labor time for this repair job.
+
+Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.engine ? ` with ${vehicle.engine}` : ''}
+
+Job: ${jobName}
+${jobDescription ? `Details: ${jobDescription}` : ''}
+
+Based on your knowledge of standard repair times for this type of work on this vehicle, provide an estimate in JSON format:
+
+{
+  "jobName": "${jobName}",
+  "estimatedHours": 2.5,
+  "hoursRange": { "low": 2.0, "high": 3.5 },
+  "confidence": "medium",
+  "reasoning": "Brief explanation of the estimate based on typical procedures for this vehicle",
+  "commonProcedures": ["Step 1", "Step 2", "Step 3"]
+}
+
+Guidelines:
+- Base estimates on industry-standard flat-rate times when applicable
+- Consider vehicle-specific factors (engine access, design complexity)
+- Use "high" confidence for common/straightforward repairs
+- Use "medium" confidence for repairs with some variability
+- Use "low" confidence for uncommon repairs or when more info is needed
+- Provide 2-4 common procedures involved
+- Be realistic - don't underestimate complex jobs`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 400,
+      temperature: 0.4,
+      response_format: { type: "json_object" },
+    });
+
+    const content = response.choices[0]?.message?.content || "{}";
+    const parsed = JSON.parse(content);
+
+    return {
+      jobName: typeof parsed.jobName === 'string' ? parsed.jobName : jobName,
+      estimatedHours: typeof parsed.estimatedHours === 'number' ? parsed.estimatedHours : 1.0,
+      hoursRange: {
+        low: typeof parsed.hoursRange?.low === 'number' ? parsed.hoursRange.low : 0.5,
+        high: typeof parsed.hoursRange?.high === 'number' ? parsed.hoursRange.high : 2.0,
+      },
+      confidence: ['high', 'medium', 'low'].includes(parsed.confidence) ? parsed.confidence : 'low',
+      reasoning: typeof parsed.reasoning === 'string' ? parsed.reasoning : 'Estimate based on typical repair times.',
+      commonProcedures: Array.isArray(parsed.commonProcedures) 
+        ? parsed.commonProcedures.filter((p: unknown) => typeof p === 'string').slice(0, 5)
+        : [],
+    };
+  } catch (error) {
+    console.error('AI labor estimate error:', error);
+    return {
+      jobName,
+      estimatedHours: 1.0,
+      hoursRange: { low: 0.5, high: 2.0 },
+      confidence: 'low',
+      reasoning: 'Unable to generate estimate. Please verify with labor guide.',
+      commonProcedures: [],
+    };
+  }
+}
+
 interface GenerateJobsFromDVIResult {
   jobs: GeneratedJob[];
   summary: string;
