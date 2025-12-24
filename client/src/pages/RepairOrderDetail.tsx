@@ -2892,27 +2892,6 @@ export default function RepairOrderDetail() {
     }
   };
 
-  const openProDemand = () => {
-    if (!vehicle) return;
-    
-    const vin = vehicle.vin || '';
-    
-    window.open('https://www1.prodemand.com/', 'prodemand');
-    
-    if (vin && vin.length === 17) {
-      navigator.clipboard.writeText(vin);
-      toast({
-        title: 'ProDemand Opened',
-        description: `VIN copied to clipboard: ${vin}. Paste it in ProDemand's vehicle search.`,
-      });
-    } else {
-      toast({
-        title: 'ProDemand Opened',
-        description: `Search for: ${vehicle.year} ${vehicle.make} ${vehicle.model}`,
-      });
-    }
-  };
-
   const handleAddJob = () => {
     if (!newJobName.trim()) return;
     
@@ -3615,18 +3594,6 @@ export default function RepairOrderDetail() {
                         </Button>
                       </div>
                     )}
-                    <div className="mt-3 pt-3 border-t">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-                        onClick={openProDemand}
-                        data-testid="button-open-prodemand"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        Open in ProDemand
-                      </Button>
-                    </div>
                   </div>
                 </div>
               </CardContent>
