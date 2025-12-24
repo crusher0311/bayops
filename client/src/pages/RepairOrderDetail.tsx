@@ -58,6 +58,8 @@ import {
   ShoppingCart,
   Package,
   ChevronDown,
+  ChevronUp,
+  GripVertical,
   Receipt,
   Calendar,
   RefreshCw,
@@ -3281,6 +3283,29 @@ export default function RepairOrderDetail() {
     });
   };
 
+  const handleMoveItem = (jobId: string, itemId: string, direction: 'up' | 'down') => {
+    const updatedJobs = jobs.map(job => {
+      if (job.id !== jobId) return job;
+      
+      const items = [...job.lineItems];
+      const currentIndex = items.findIndex(i => i.id === itemId);
+      if (currentIndex === -1) return job;
+      
+      const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+      if (newIndex < 0 || newIndex >= items.length) return job;
+      
+      // Swap items
+      [items[currentIndex], items[newIndex]] = [items[newIndex], items[currentIndex]];
+      
+      return { ...job, lineItems: items };
+    });
+    
+    updateRO.mutate({
+      id: ro.id,
+      updates: { jobs: updatedJobs as any },
+    });
+  };
+
   const handleDeleteJob = (jobId: string) => {
     const jobToDelete = jobs.find(j => j.id === jobId);
     const updatedJobs = jobs.filter(job => job.id !== jobId);
@@ -4390,6 +4415,7 @@ export default function RepairOrderDetail() {
                           <table className="w-full text-sm">
                             <thead className="bg-muted/50 text-muted-foreground font-medium">
                               <tr>
+                                <th className="w-[40px] px-1"></th>
                                 <th className="px-4 py-3 text-left">Description</th>
                                 <th className="px-4 py-3 text-center">Type</th>
                                 <th className="px-4 py-3 text-center">Qty</th>
@@ -4399,8 +4425,44 @@ export default function RepairOrderDetail() {
                               </tr>
                             </thead>
                             <tbody className="divide-y">
-                              {job.lineItems.map((item) => (
+                              {[...job.lineItems]
+                                .sort((a, b) => {
+                                  // Sort LABOR items to top, preserve relative order within type
+                                  if (a.type === 'LABOR' && b.type !== 'LABOR') return -1;
+                                  if (a.type !== 'LABOR' && b.type === 'LABOR') return 1;
+                                  return 0;
+                                })
+                                .map((item, itemIndex, sortedItems) => {
+                                  const originalIndex = job.lineItems.findIndex(i => i.id === item.id);
+                                  const canMoveUp = originalIndex > 0;
+                                  const canMoveDown = originalIndex < job.lineItems.length - 1;
+                                  return (
                                 <tr key={item.id} className="group hover:bg-muted/30" data-testid={`row-item-${item.id}`}>
+                                  <td className="px-1 py-2">
+                                    <div className="flex flex-col items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-5 w-5"
+                                        onClick={() => handleMoveItem(job.id, item.id, 'up')}
+                                        disabled={!canMoveUp || updateRO.isPending}
+                                        data-testid={`button-move-up-${item.id}`}
+                                      >
+                                        <ChevronUp className="w-3 h-3" />
+                                      </Button>
+                                      <GripVertical className="w-3 h-3 text-muted-foreground" />
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-5 w-5"
+                                        onClick={() => handleMoveItem(job.id, item.id, 'down')}
+                                        disabled={!canMoveDown || updateRO.isPending}
+                                        data-testid={`button-move-down-${item.id}`}
+                                      >
+                                        <ChevronDown className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  </td>
                                   <td className="px-4 py-3 font-medium">
                                     {item.description}
                                     {item.type === 'TIRE' && <Badge variant="secondary" className="ml-2 text-[10px]">In Stock</Badge>}
@@ -4498,10 +4560,10 @@ export default function RepairOrderDetail() {
                                     </div>
                                   </td>
                                 </tr>
-                              ))}
+                              ); })}
                               {job.lineItems.length === 0 && (
                                 <tr>
-                                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground italic">
+                                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground italic">
                                     No items in this job.
                                   </td>
                                 </tr>
