@@ -2663,10 +2663,28 @@ export default function RepairOrderDetail() {
       // Open the labor guide in a new window
       if (data.launchUrl) {
         window.open(data.launchUrl, '_blank', 'noopener,noreferrer');
-        toast({
-          title: 'Labor Guide opened',
-          description: `VIN: ${data.vehicle?.vin || 'N/A'} - Use the extension to capture labor times.`,
-        });
+        
+        // Copy VIN to clipboard for easy paste
+        const vin = data.vehicle?.vin;
+        if (vin && vin.length === 17) {
+          try {
+            await navigator.clipboard.writeText(vin);
+            toast({
+              title: 'ProDemand opened - VIN copied!',
+              description: `${vin} - Log in and paste VIN to search (Ctrl+V)`,
+            });
+          } catch {
+            toast({
+              title: 'ProDemand opened',
+              description: `VIN: ${vin} - Log in and search for this vehicle`,
+            });
+          }
+        } else {
+          toast({
+            title: 'ProDemand opened',
+            description: `Search for: ${data.vehicle?.year} ${data.vehicle?.make} ${data.vehicle?.model}`,
+          });
+        }
       }
       
       // Also open the fallback dialog for manual entry if no extension installed
