@@ -570,7 +570,7 @@ function ShopFeesSection({ locationId, fees, onRefresh }: { locationId: string; 
       name: newFee.name,
       method: methodMap[newFee.type] || 'PERCENTAGE',
       calculateOn: calculateOnMap[newFee.appliesTo] || 'SUBTOTAL',
-      amount: parseFloat(newFee.value) || 0,
+      amount: newFee.value || '0',
       isTaxable: newFee.taxable,
       autoApply: newFee.autoApply,
       sortOrder: fees.length,
