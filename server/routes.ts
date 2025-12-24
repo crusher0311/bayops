@@ -3212,10 +3212,8 @@ export async function registerRoutes(
         return res.status(400).json({ message: "fileData and contentType are required" });
       }
 
-      console.log(`[Logo Upload] Received base64 data length: ${req.body.fileData.length}, contentType: ${req.body.contentType}`);
       const objectStorageService = new ObjectStorageService();
       const fileBuffer = Buffer.from(req.body.fileData, 'base64');
-      console.log(`[Logo Upload] Decoded buffer size: ${fileBuffer.length} bytes`);
       const objectPath = await objectStorageService.uploadFile(fileBuffer, req.body.contentType);
       
       // Update branding with the new logo path
