@@ -36,7 +36,7 @@ import PrintRO from "@/pages/PrintRO";
 import PrintInvoice from "@/pages/PrintInvoice";
 import Messages from "@/pages/Messages";
 import ProtractorMigration from "@/pages/ProtractorMigration";
-import Landing from "@/pages/Landing";
+import LandingPage from "@/pages/LandingPage";
 import SignaturePage from "@/pages/SignaturePage";
 
 function ProtectedRouter() {
@@ -48,8 +48,9 @@ function ProtectedRouter() {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated && location !== '/login') {
-      setLocation('/login');
+    const publicRoutes = ['/', '/login', '/signup', '/landing', '/home'];
+    if (!isLoading && !isAuthenticated && !publicRoutes.includes(location) && !location.startsWith('/inspection/') && !location.startsWith('/authorize/') && !location.startsWith('/checkin/') && !location.startsWith('/sign/')) {
+      setLocation('/');
     }
   }, [isAuthenticated, isLoading, location]);
 
@@ -66,7 +67,8 @@ function ProtectedRouter() {
       <Switch>
         <Route path="/login" component={Login} />
         <Route path="/signup" component={Signup} />
-        <Route component={Login} />
+        <Route path="/" component={LandingPage} />
+        <Route component={LandingPage} />
       </Switch>
     );
   }
@@ -108,7 +110,8 @@ function App() {
       <TooltipProvider>
         <Toaster />
         <Switch>
-          <Route path="/landing" component={Landing} />
+          <Route path="/landing" component={LandingPage} />
+          <Route path="/home" component={LandingPage} />
           <Route path="/inspection/:token" component={InspectionReport} />
           <Route path="/authorize/:token" component={CustomerAuthorization} />
           <Route path="/checkin/:locationId/:token" component={SelfCheckIn} />
