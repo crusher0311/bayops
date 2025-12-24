@@ -92,8 +92,11 @@ export class ObjectStorageService {
     const ext = this.getExtensionFromContentType(contentType);
     const objectId = `uploads/${randomUUID()}${ext}`;
     
+    console.log(`[ObjectStorage] Uploading file: ${objectId}, size: ${file.length} bytes, mode: ${this.mode}`);
+    
     if (this.mode === 'replit' && this.replitClient) {
-      await this.replitClient.uploadFromBytes(objectId, file);
+      const result = await this.replitClient.uploadFromBytes(objectId, new Uint8Array(file));
+      console.log(`[ObjectStorage] Replit upload result:`, result);
     } else if (this.mode === 'supabase' && this.supabaseClient) {
       const { error } = await this.supabaseClient.storage
         .from(this.supabaseBucket)
