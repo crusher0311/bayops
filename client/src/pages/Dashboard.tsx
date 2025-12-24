@@ -205,7 +205,9 @@ export default function Dashboard() {
                   const vehicleYMM = ro.vehicle 
                     ? `${ro.vehicle.year} ${ro.vehicle.make} ${ro.vehicle.model}`
                     : 'No vehicle';
-                  const rvh = ro.notes || '';
+                  const rvh = ro.concerns?.length > 0 
+                    ? ro.concerns.map((c: any) => typeof c === 'string' ? c : c.text).join('; ')
+                    : (ro.notes || '');
                   
                   return (
                     <Link key={ro.id} href={`/ros/${ro.id}`}>
