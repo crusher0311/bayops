@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BayOPS Parts & Labor Connector",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Connect BayOPS repair orders with PartsTech, ProDemand, AllData, and Identifix",
   "permissions": [
     "storage",
@@ -19,7 +19,9 @@
     "https://*.identifix.com/*",
     "http://localhost:5000/*",
     "https://*.replit.app/*",
-    "https://*.replit.dev/*"
+    "https://*.replit.dev/*",
+    "https://bayoperations.com/*",
+    "https://*.bayoperations.com/*"
   ],
   "background": {
     "service_worker": "background.js",
@@ -47,7 +49,7 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["http://localhost:5000/*", "https://*.replit.app/*", "https://*.replit.dev/*"],
+      "matches": ["http://localhost:5000/*", "https://*.replit.app/*", "https://*.replit.dev/*", "https://bayoperations.com/*", "https://*.bayoperations.com/*"],
       "js": ["content-bayops.js"],
       "run_at": "document_idle"
     }
@@ -66,12 +68,12 @@
     "128": "icons/icon128.png"
   },
   "externally_connectable": {
-    "matches": ["http://localhost:5000/*", "https://*.replit.app/*", "https://*.replit.dev/*"]
+    "matches": ["http://localhost:5000/*", "https://*.replit.app/*", "https://*.replit.dev/*", "https://bayoperations.com/*", "https://*.bayoperations.com/*"]
   },
   "web_accessible_resources": [
     {
       "resources": ["injected-bayops.js"],
-      "matches": ["http://localhost:5000/*", "https://*.replit.app/*", "https://*.replit.dev/*"]
+      "matches": ["http://localhost:5000/*", "https://*.replit.app/*", "https://*.replit.dev/*", "https://bayoperations.com/*", "https://*.bayoperations.com/*"]
     },
     {
       "resources": ["injected-partstech.js"],
