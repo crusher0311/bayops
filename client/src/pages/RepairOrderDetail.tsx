@@ -433,11 +433,14 @@ function LaborGuideDialog({ isOpen, onClose, vehicle, onSelect }: LaborGuideDial
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <AlertCircle className="w-12 h-12 text-destructive mb-4" />
-            <h3 className="text-lg font-semibold">Unable to load labor guide</h3>
-            <p className="text-muted-foreground text-sm max-w-sm">
-              {error instanceof Error ? error.message : 'An error occurred'}
+            <AlertCircle className="w-12 h-12 text-orange-500 mb-4" />
+            <h3 className="text-lg font-semibold">Labor pricing data unavailable</h3>
+            <p className="text-muted-foreground text-sm max-w-sm mb-4">
+              ProDemand opened in a new tab. Use it to look up labor times and add them manually using the "+ Labor" button.
             </p>
+            <Button variant="outline" size="sm" onClick={onClose}>
+              Close
+            </Button>
           </div>
         ) : filteredOperations.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
