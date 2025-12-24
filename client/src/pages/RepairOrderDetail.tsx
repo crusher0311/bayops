@@ -1019,15 +1019,8 @@ function PartstechDialog({ isOpen, onClose, vehicle, onSelect, jobName }: Partst
     const queryString = params.toString();
     const url = queryString ? `${baseUrl}/search?${queryString}` : baseUrl;
     
-    const popup = window.open(
-      url,
-      'partstech',
-      'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no'
-    );
-    
-    if (popup) {
-      popup.focus();
-    }
+    // Open in new tab instead of popup to avoid blockers
+    window.open(url, '_blank');
   };
 
   const handleManualPartAdd = (keepOpen = false) => {
