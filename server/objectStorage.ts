@@ -95,7 +95,8 @@ export class ObjectStorageService {
     console.log(`[ObjectStorage] Uploading file: ${objectId}, size: ${file.length} bytes, mode: ${this.mode}`);
     
     if (this.mode === 'replit' && this.replitClient) {
-      const result = await this.replitClient.uploadFromBytes(objectId, new Uint8Array(file));
+      console.log(`[ObjectStorage] File buffer details: isBuffer=${Buffer.isBuffer(file)}, length=${file.length}`);
+      const result = await this.replitClient.uploadFromBytes(objectId, file);
       console.log(`[ObjectStorage] Replit upload result:`, result);
     } else if (this.mode === 'supabase' && this.supabaseClient) {
       const { error } = await this.supabaseClient.storage
@@ -166,15 +167,18 @@ export class ObjectStorageService {
     
     try {
       const objectName = objectPath.replace("/objects/", "");
+      console.log(`[ObjectStorage] Downloading: ${objectName}, mode: ${this.mode}`);
       let data: Buffer;
       
       if (this.mode === 'replit' && this.replitClient) {
-        const { ok, value } = await this.replitClient.downloadAsBytes(objectName);
-        if (!ok || !value) {
+        const result = await this.replitClient.downloadAsBytes(objectName);
+        console.log(`[ObjectStorage] Replit download result: ok=${result.ok}, hasValue=${!!result.value}, valueLength=${result.value?.length}`);
+        if (!result.ok || !result.value) {
+          console.log(`[ObjectStorage] File not found in Replit storage: ${objectName}`);
           res.status(404).json({ error: "File not found" });
           return;
         }
-        data = Buffer.from(value);
+        data = Buffer.from(result.value);
       } else if (this.mode === 'supabase' && this.supabaseClient) {
         const { data: fileData, error } = await this.supabaseClient.storage
           .from(this.supabaseBucket)
