@@ -15,13 +15,11 @@ BayOPS is a multi-tenant SaaS shop management system designed for automotive bus
 | Branch | Purpose | Protection |
 |--------|---------|------------|
 | `main` | Production - stable releases | Protected (requires PR + approval) |
-| `qa` | QA testing before production | None |
-| `develop` | Active development from Replit | None |
+| `qa` | QA testing / active development from Replit | None |
 
 **Deployment Flow:**
-1. **Replit** → `develop` (active work, push with `git push origin main:develop`)
-2. **develop** → `qa` (PR for QA testing)
-3. **qa** → `main` (PR with required approval for production)
+1. **Replit** → `qa` (active work, push with `git push origin main:qa`)
+2. **qa** → `main` (PR with required approval for production)
 
 **Version Tags:** Follow semantic versioning (v1.0.0-beta, v1.0.0-rc.1, v1.0.0)
 
