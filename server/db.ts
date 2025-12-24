@@ -7,6 +7,7 @@ type DrizzleInstance = ReturnType<typeof drizzleNeon> | ReturnType<typeof drizzl
 
 let dbInstance: DrizzleInstance | null = null;
 let poolInstance: any = null;
+let initPromise: Promise<{ db: DrizzleInstance; pool: any }> | null = null;
 
 async function initializeDatabase(): Promise<{ db: DrizzleInstance; pool: any }> {
   if (dbInstance && poolInstance) {
@@ -31,6 +32,39 @@ async function initializeDatabase(): Promise<{ db: DrizzleInstance; pool: any }>
   return { db: dbInstance, pool: poolInstance };
 }
 
-const { db, pool } = await initializeDatabase();
+function getInitPromise() {
+  if (!initPromise) {
+    initPromise = initializeDatabase();
+  }
+  return initPromise;
+}
 
-export { pool, db, initializeDatabase };
+export async function getDb(): Promise<DrizzleInstance> {
+  const { db } = await getInitPromise();
+  return db;
+}
+
+export async function getPool(): Promise<any> {
+  const { pool } = await getInitPromise();
+  return pool;
+}
+
+const dbProxy = new Proxy({} as DrizzleInstance, {
+  get(_, prop) {
+    if (!dbInstance) {
+      throw new Error('Database not initialized. Call initializeDatabase() first or use getDb().');
+    }
+    return (dbInstance as any)[prop];
+  }
+});
+
+const poolProxy = new Proxy({} as any, {
+  get(_, prop) {
+    if (!poolInstance) {
+      throw new Error('Pool not initialized. Call initializeDatabase() first or use getPool().');
+    }
+    return poolInstance[prop];
+  }
+});
+
+export { poolProxy as pool, dbProxy as db, initializeDatabase };
