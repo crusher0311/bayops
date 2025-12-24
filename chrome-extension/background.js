@@ -108,7 +108,7 @@ async function clearSession(jobId) {
 async function notifyBayOPS(jobId, session, persistToServer = true) {
   try {
     const tabs = await chrome.tabs.query({
-      url: ['http://localhost:5000/*', 'https://*.replit.app/*', 'https://*.replit.dev/*']
+      url: ['http://localhost:5000/*', 'https://*.replit.app/*', 'https://*.replit.dev/*', 'https://bayoperations.com/*', 'https://*.bayoperations.com/*']
     });
     
     for (const tab of tabs) {
