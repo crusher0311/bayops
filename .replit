@@ -53,3 +53,5 @@ defaultBucketID = "replit-objstore-753a7ab2-6b5e-43c5-838b-ab1ced2c7012"
 
 [userenv.shared]
 PRIVATE_OBJECT_DIR = "/bayops-files"
+SUPABASE_URL = "https://epuswmvnjwwvmvstypqh.supabase.co"
+SUPABASE_STORAGE_BUCKET = "uploads"
