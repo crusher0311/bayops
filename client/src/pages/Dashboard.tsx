@@ -99,30 +99,30 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground text-sm sm:text-base mt-1">
             Overview for {currentLocation?.name || 'All Locations'} &bull; {format(new Date(), 'MMMM d, yyyy')}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 sm:pb-0">
           <Link href="/quick-checkin">
-            <Button variant="outline" className="gap-2 border-blue-500 text-blue-500 hover:bg-blue-50" data-testid="button-quick-checkin">
+            <Button variant="outline" size="sm" className="gap-2 border-blue-500 text-blue-500 hover:bg-blue-50 whitespace-nowrap" data-testid="button-quick-checkin">
               <Zap className="w-4 h-4" />
-              Quick Check-In
+              <span className="hidden sm:inline">Quick</span> Check-In
             </Button>
           </Link>
           <Link href="/customers">
-            <Button variant="outline" className="gap-2" data-testid="button-new-customer">
+            <Button variant="outline" size="sm" className="gap-2 whitespace-nowrap" data-testid="button-new-customer">
               <Plus className="w-4 h-4" />
-              New Customer
+              <span className="hidden sm:inline">New</span> Customer
             </Button>
           </Link>
           <Link href="/ros/new">
-            <Button className="gap-2" data-testid="button-new-ro">
+            <Button size="sm" className="gap-2 whitespace-nowrap" data-testid="button-new-ro">
               <Plus className="w-4 h-4" />
-              New Repair Order
+              New <span className="hidden sm:inline">Repair Order</span><span className="sm:hidden">RO</span>
             </Button>
           </Link>
         </div>
@@ -188,7 +188,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
+        <Card className="md:col-span-2 lg:col-span-4">
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
             <CardDescription>Latest repair orders and status updates</CardDescription>
@@ -249,7 +249,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
         
-        <Card className="col-span-3">
+        <Card className="md:col-span-2 lg:col-span-3">
           <CardHeader>
             <CardTitle>Shop Status</CardTitle>
             <CardDescription>At a glance</CardDescription>

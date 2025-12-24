@@ -8,7 +8,8 @@ import {
   Search, 
   MapPin,
   ChevronDown,
-  LogOut
+  LogOut,
+  Menu
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -23,7 +24,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLocation } from 'wouter';
 
-export function Header() {
+interface HeaderProps {
+  onMenuClick?: () => void;
+  showMenuButton?: boolean;
+}
+
+export function Header({ onMenuClick, showMenuButton }: HeaderProps) {
   const { user, logout } = useAuthStore();
   const { currentLocationId, setCurrentLocation } = useShopStore();
   const { data: locations = [] } = useLocations();
@@ -46,10 +52,15 @@ export function Header() {
   };
 
   return (
-    <header className="h-16 border-b bg-card px-6 flex items-center justify-between">
-      <div className="flex items-center gap-8">
+    <header className="h-14 md:h-16 border-b bg-card px-4 md:px-6 flex items-center justify-between">
+      <div className="flex items-center gap-4 md:gap-8">
+        {showMenuButton && (
+          <Button variant="ghost" size="icon" onClick={onMenuClick} className="md:hidden" data-testid="button-mobile-menu">
+            <Menu className="w-5 h-5" />
+          </Button>
+        )}
         <div className="flex items-center gap-2">
-          <h2 className="font-semibold text-lg">{orgName}</h2>
+          <h2 className="font-semibold text-base md:text-lg hidden sm:block">{orgName}</h2>
           <span className="text-muted-foreground">/</span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

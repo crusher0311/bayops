@@ -171,3 +171,39 @@
     @apply font-display font-semibold tracking-tight;
   }
 }
+
+/* Mobile-friendly touch targets and improvements */
+@media (max-width: 768px) {
+  /* Ensure minimum touch target size on mobile */
+  button, 
+  [role="button"],
+  a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Smaller touch targets are OK for inline elements */
+  .inline button,
+  .inline a,
+  button.inline,
+  a.inline {
+    min-height: auto;
+    min-width: auto;
+  }
+  
+  /* Improve input touch experience */
+  input, select, textarea {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+  }
+  
+  /* Better spacing for mobile tables */
+  table {
+    font-size: 14px;
+  }
+  
+  /* Full-width dialogs on mobile */
+  [data-radix-dialog-content] {
+    max-width: calc(100vw - 32px) !important;
+    max-height: calc(100vh - 32px) !important;
+  }
+}

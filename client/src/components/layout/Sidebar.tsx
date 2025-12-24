@@ -29,7 +29,7 @@ import {
   Download
 } from 'lucide-react';
 
-export function Sidebar() {
+export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const [location] = useLocation();
   const { user } = useAuthStore();
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
@@ -119,7 +119,7 @@ export function Sidebar() {
   ];
 
   return (
-    <div className="w-64 h-screen bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border">
+    <>
       <div className="p-4 flex items-center justify-center">
         {logoUrl ? (
           <img 
@@ -145,7 +145,7 @@ export function Sidebar() {
         {navItems.map((item) => {
           const isActive = location === item.href;
           return (
-            <Link key={item.href} href={item.href}>
+            <Link key={item.href} href={item.href} onClick={onNavigate}>
               <div className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer",
                 isActive 
@@ -169,7 +169,7 @@ export function Sidebar() {
             {orgNavItems.map((item) => {
               const isActive = location === item.href;
               return (
-                <Link key={item.href} href={item.href}>
+                <Link key={item.href} href={item.href} onClick={onNavigate}>
                   <div className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer",
                     isActive 
@@ -244,6 +244,14 @@ export function Sidebar() {
           <div className="text-xs text-sidebar-foreground/70">Docs & Knowledge Base</div>
         </div>
       </div>
+    </>
+  );
+}
+
+export function Sidebar() {
+  return (
+    <div className="w-64 h-screen bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border">
+      <SidebarContent />
     </div>
   );
 }
