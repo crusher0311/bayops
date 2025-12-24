@@ -45,12 +45,12 @@ function LandingHeader() {
     <header className="bg-[#0d1b2a]/95 backdrop-blur-md sticky top-0 z-50 border-b border-white/10">
       <div className="container mx-auto px-6 h-20 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2" data-testid="logo">
-            <div className="w-10 h-10 bg-gradient-to-br from-sky-500 to-sky-600 rounded-xl flex items-center justify-center">
-              <Wrench className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-white">Bay<span className="text-sky-400">OPS</span></span>
-          </div>
+          <img 
+            src="/bayops-logo.png" 
+            alt="BayOPS - Enterprise Shop Management Software" 
+            className="h-12 w-auto"
+            data-testid="img-logo"
+          />
         </div>
 
         <div className="hidden md:flex items-center gap-6">
@@ -390,12 +390,12 @@ export default function LandingPage() {
       <footer className="bg-[#091422] py-12 border-t border-white/5">
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-sky-500 to-sky-600 rounded-lg flex items-center justify-center">
-                <Wrench className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-white">Bay<span className="text-sky-400">OPS</span></span>
-            </div>
+            <img 
+              src="/bayops-logo.png" 
+              alt="BayOPS" 
+              className="h-10 w-auto"
+              data-testid="img-footer-logo"
+            />
             <p className="text-slate-500 text-sm text-center md:text-right">
               &copy; 2025 BayOPS. Modern shop management for modern shops.
             </p>
