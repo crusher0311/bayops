@@ -889,8 +889,8 @@ function TaxSettingsSection({ locationId, settings, onRefresh }: { locationId: s
   const handleSave = () => {
     saveMutation.mutate({
       locationId,
-      salesTaxRate: parseFloat(formData.salesTaxRate) || 0,
-      tireTaxRate: parseFloat(formData.tireTaxRate) || 0,
+      salesTaxRate: formData.salesTaxRate || '0',
+      tireTaxRate: formData.tireTaxRate || '0',
       taxLabor: formData.taxLabor,
       taxParts: formData.taxParts,
       taxTires: formData.taxTires,
