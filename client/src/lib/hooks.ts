@@ -267,18 +267,26 @@ export function useLaborGuide(year: number | string, make: string, model: string
   });
 }
 
-// AI Labor Time Estimate
-export interface AILaborEstimate {
-  jobName: string;
+// AI Labor Time Estimate - Multi-option response
+export interface AILaborEstimateOption {
+  id: string;
+  name: string;
+  description: string;
   estimatedHours: number;
   hoursRange: { low: number; high: number };
   confidence: 'high' | 'medium' | 'low';
-  reasoning: string;
-  commonProcedures: string[];
+  scope: 'basic' | 'standard' | 'comprehensive';
+  recommended: boolean;
+  procedures: string[];
+}
+
+export interface AILaborEstimateResponse {
+  searchQuery: string;
+  options: AILaborEstimateOption[];
 }
 
 export function useAILaborEstimate() {
-  return useMutation<AILaborEstimate, Error, { 
+  return useMutation<AILaborEstimateResponse, Error, { 
     jobName: string; 
     jobDescription?: string; 
     vehicle: { year: number; make: string; model: string; engine?: string } 

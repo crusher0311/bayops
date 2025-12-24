@@ -2409,7 +2409,7 @@ export async function registerRoutes(
     }
   });
 
-  // AI-powered labor time estimation
+  // AI-powered labor time estimation (returns multiple options)
   app.post("/api/ai/labor-estimate", requireAuth, async (req, res) => {
     try {
       const { jobName, jobDescription, vehicle } = req.body;
@@ -2420,7 +2420,7 @@ export async function registerRoutes(
         });
       }
 
-      const { isAIConfigured, generateLaborTimeEstimate } = await import("./ai");
+      const { isAIConfigured, generateLaborTimeEstimateMulti } = await import("./ai");
       
       if (!isAIConfigured()) {
         return res.status(503).json({ 
@@ -2428,7 +2428,7 @@ export async function registerRoutes(
         });
       }
 
-      const estimate = await generateLaborTimeEstimate({
+      const result = await generateLaborTimeEstimateMulti({
         jobName,
         jobDescription,
         vehicle: {
@@ -2439,7 +2439,7 @@ export async function registerRoutes(
         },
       });
 
-      res.json(estimate);
+      res.json(result);
     } catch (error: any) {
       console.error('AI labor estimate error:', error);
       res.status(500).json({ message: error.message });

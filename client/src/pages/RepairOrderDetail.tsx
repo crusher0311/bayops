@@ -392,12 +392,14 @@ function ClientConcernsSection({
 
 function LaborGuideDialog({ isOpen, onClose, vehicle, onSelect, jobName }: LaborGuideDialogProps & { jobName?: string }) {
   const [searchTerm, setSearchTerm] = useState(jobName || '');
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const aiEstimate = useAILaborEstimate();
   
   // Reset search term when job changes
   useEffect(() => {
     if (isOpen && jobName) {
       setSearchTerm(jobName);
+      setSelectedOption(null);
       // Auto-fetch estimate for the job
       if (vehicle?.year && vehicle?.make && vehicle?.model) {
         aiEstimate.mutate({
@@ -413,9 +415,18 @@ function LaborGuideDialog({ isOpen, onClose, vehicle, onSelect, jobName }: Labor
     }
   }, [isOpen, jobName]);
 
+  // Auto-select recommended option when data arrives
+  useEffect(() => {
+    if (aiEstimate.data?.options) {
+      const recommended = aiEstimate.data.options.find(o => o.recommended);
+      setSelectedOption(recommended?.id || aiEstimate.data.options[0]?.id || null);
+    }
+  }, [aiEstimate.data]);
+
   const handleEstimate = () => {
     if (!searchTerm.trim() || !vehicle?.year || !vehicle?.make || !vehicle?.model) return;
     
+    setSelectedOption(null);
     aiEstimate.mutate({
       jobName: searchTerm,
       vehicle: {
@@ -433,9 +444,17 @@ function LaborGuideDialog({ isOpen, onClose, vehicle, onSelect, jobName }: Labor
     low: 'bg-orange-100 text-orange-800 border-orange-200',
   };
 
+  const scopeLabels = {
+    basic: { label: 'Basic', color: 'bg-slate-100 text-slate-700' },
+    standard: { label: 'Standard', color: 'bg-blue-100 text-blue-700' },
+    comprehensive: { label: 'Complete', color: 'bg-purple-100 text-purple-700' },
+  };
+
+  const selectedOptionData = aiEstimate.data?.options.find(o => o.id === selectedOption);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px] max-h-[85vh]">
+      <DialogContent className="sm:max-w-[700px] max-h-[85vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-purple-600" />
@@ -446,7 +465,7 @@ function LaborGuideDialog({ isOpen, onClose, vehicle, onSelect, jobName }: Labor
         <div className="space-y-4">
           <div className="flex gap-2">
             <Input
-              placeholder="Enter job or repair name..."
+              placeholder="Enter job or repair name (e.g., front brakes, timing belt)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleEstimate()}
@@ -463,14 +482,14 @@ function LaborGuideDialog({ isOpen, onClose, vehicle, onSelect, jobName }: Labor
               ) : (
                 <Sparkles className="w-4 h-4" />
               )}
-              <span className="ml-2">Estimate</span>
+              <span className="ml-2">Search</span>
             </Button>
           </div>
 
           {aiEstimate.isPending && (
-            <div className="flex items-center justify-center py-8">
+            <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
-              <span className="ml-3 text-muted-foreground">Generating estimate...</span>
+              <span className="ml-3 text-muted-foreground">Generating options...</span>
             </div>
           )}
 
@@ -481,76 +500,107 @@ function LaborGuideDialog({ isOpen, onClose, vehicle, onSelect, jobName }: Labor
             </div>
           )}
 
-          {aiEstimate.data && !aiEstimate.isPending && (
-            <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-blue-50">
-              <CardContent className="p-4 space-y-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h4 className="font-semibold text-lg">{aiEstimate.data.jobName}</h4>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border mt-1 ${confidenceColors[aiEstimate.data.confidence]}`}>
-                      {aiEstimate.data.confidence === 'high' && '✓'}
-                      {aiEstimate.data.confidence === 'medium' && '~'}
-                      {aiEstimate.data.confidence === 'low' && '?'}
-                      {aiEstimate.data.confidence} confidence
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-purple-700">
-                      {aiEstimate.data.estimatedHours} hrs
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Range: {aiEstimate.data.hoursRange.low} - {aiEstimate.data.hoursRange.high} hrs
-                    </div>
-                  </div>
+          {aiEstimate.data && !aiEstimate.isPending && aiEstimate.data.options.length === 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+              <AlertCircle className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
+              <p className="text-sm text-yellow-800">
+                No labor options could be generated. Try a more specific search term.
+              </p>
+            </div>
+          )}
+
+          {aiEstimate.data && !aiEstimate.isPending && aiEstimate.data.options.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Select a service option for "{aiEstimate.data.searchQuery}":
+              </p>
+              
+              <ScrollArea className="h-[340px] pr-3">
+                <div className="space-y-2">
+                  {aiEstimate.data.options.map((option) => (
+                    <Card 
+                      key={option.id}
+                      className={`cursor-pointer transition-all ${
+                        selectedOption === option.id 
+                          ? 'ring-2 ring-purple-500 border-purple-300 bg-purple-50/50' 
+                          : 'hover:border-purple-200 hover:bg-slate-50'
+                      } ${option.recommended ? 'relative' : ''}`}
+                      onClick={() => setSelectedOption(option.id)}
+                      data-testid={`labor-option-${option.id}`}
+                    >
+                      {option.recommended && (
+                        <div className="absolute -top-2 left-3 px-2 py-0.5 bg-purple-600 text-white text-xs font-medium rounded-full">
+                          Recommended
+                        </div>
+                      )}
+                      <CardContent className={`p-4 ${option.recommended ? 'pt-5' : ''}`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="font-semibold">{option.name}</h4>
+                              <span className={`px-2 py-0.5 rounded text-xs font-medium ${scopeLabels[option.scope]?.color || 'bg-slate-100 text-slate-700'}`}>
+                                {scopeLabels[option.scope]?.label || 'Standard'}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded text-xs font-medium border ${confidenceColors[option.confidence] || confidenceColors.medium}`}>
+                                {option.confidence || 'medium'}
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {option.description}
+                            </p>
+                            {option.procedures.length > 0 && (
+                              <p className="text-xs text-muted-foreground mt-2">
+                                <span className="font-medium">Includes:</span> {option.procedures.slice(0, 3).join(', ')}
+                                {option.procedures.length > 3 && ` +${option.procedures.length - 3} more`}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className="text-xl font-bold text-purple-700">
+                              {option.estimatedHours} hrs
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {option.hoursRange.low}-{option.hoursRange.high} hrs
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
+              </ScrollArea>
 
-                <p className="text-sm text-muted-foreground">
-                  {aiEstimate.data.reasoning}
-                </p>
+              <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-xs text-amber-800">
+                <strong>AI Estimate:</strong> These are AI-generated estimates. Verify with ProDemand or industry labor guides before quoting.
+              </div>
 
-                {aiEstimate.data.commonProcedures.length > 0 && (
-                  <div>
-                    <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                      Common Procedures
-                    </h5>
-                    <ul className="text-sm space-y-1">
-                      {aiEstimate.data.commonProcedures.map((proc, i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <span className="text-purple-500 mt-0.5">•</span>
-                          <span>{proc}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-xs text-amber-800">
-                  <strong>AI Estimate:</strong> This is an AI-generated estimate. Verify with ProDemand or industry labor guides before quoting.
-                </div>
-
-                <Button 
-                  className="w-full"
-                  onClick={() => {
+              <Button 
+                className="w-full"
+                disabled={!selectedOptionData}
+                onClick={() => {
+                  if (selectedOptionData) {
                     onSelect({
-                      title: aiEstimate.data!.jobName,
-                      description: aiEstimate.data!.reasoning,
-                      hours: aiEstimate.data!.estimatedHours,
+                      title: selectedOptionData.name,
+                      description: selectedOptionData.description,
+                      hours: selectedOptionData.estimatedHours,
                     });
                     onClose();
-                  }}
-                >
-                  Add {aiEstimate.data.estimatedHours} hrs to Job
-                </Button>
-              </CardContent>
-            </Card>
+                  }
+                }}
+              >
+                {selectedOptionData 
+                  ? `Add ${selectedOptionData.estimatedHours} hrs to Job` 
+                  : 'Select an option'}
+              </Button>
+            </div>
           )}
 
           {!aiEstimate.data && !aiEstimate.isPending && !aiEstimate.error && (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="flex flex-col items-center justify-center py-12 text-center">
               <Sparkles className="w-12 h-12 text-purple-300 mb-4" />
-              <h3 className="text-lg font-semibold">Get AI Labor Estimate</h3>
+              <h3 className="text-lg font-semibold">Get AI Labor Estimates</h3>
               <p className="text-muted-foreground text-sm max-w-sm mt-2">
-                Enter a job name (e.g., "timing chain replacement", "brake pads and rotors") and click Estimate to get AI-powered labor time suggestions.
+                Enter a repair type (e.g., "front brakes", "timing belt") to see multiple service options with different scopes.
               </p>
             </div>
           )}

@@ -612,6 +612,18 @@ export interface LaborTimeEstimate {
   commonProcedures: string[];
 }
 
+export interface LaborEstimateOption {
+  id: string;
+  name: string;
+  description: string;
+  estimatedHours: number;
+  hoursRange: { low: number; high: number };
+  confidence: 'high' | 'medium' | 'low';
+  scope: 'basic' | 'standard' | 'comprehensive';
+  recommended: boolean;
+  procedures: string[];
+}
+
 export interface LaborEstimateRequest {
   jobName: string;
   jobDescription?: string;
@@ -623,43 +635,86 @@ export interface LaborEstimateRequest {
   };
 }
 
+export interface LaborEstimateMultiResponse {
+  searchQuery: string;
+  options: LaborEstimateOption[];
+}
+
 export async function generateLaborTimeEstimate(
   request: LaborEstimateRequest
 ): Promise<LaborTimeEstimate> {
+  // Legacy single-estimate function - kept for backwards compatibility
+  const multiResult = await generateLaborTimeEstimateMulti(request);
+  const recommended = multiResult.options.find(o => o.recommended) || multiResult.options[0];
+  
+  return {
+    jobName: recommended?.name || request.jobName,
+    estimatedHours: recommended?.estimatedHours || 1.0,
+    hoursRange: recommended?.hoursRange || { low: 0.5, high: 2.0 },
+    confidence: recommended?.confidence || 'low',
+    reasoning: recommended?.description || 'Estimate based on typical repair times.',
+    commonProcedures: recommended?.procedures || [],
+  };
+}
+
+export async function generateLaborTimeEstimateMulti(
+  request: LaborEstimateRequest
+): Promise<LaborEstimateMultiResponse> {
   const { jobName, jobDescription, vehicle } = request;
   
-  const prompt = `You are an experienced automotive technician and service advisor. Estimate the labor time for this repair job.
+  const prompt = `You are an experienced automotive technician and service advisor. For the repair query below, provide 3-5 different service scope options the customer might need.
 
 Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.engine ? ` with ${vehicle.engine}` : ''}
 
-Job: ${jobName}
-${jobDescription ? `Details: ${jobDescription}` : ''}
+Customer's Request: ${jobName}
+${jobDescription ? `Additional Details: ${jobDescription}` : ''}
 
-Based on your knowledge of standard repair times for this type of work on this vehicle, provide an estimate in JSON format:
+Provide graded service options from basic to comprehensive. For example:
+- "Front brakes" → offer pads only, pads+rotors, pads+rotors+calipers
+- "Timing belt" → offer timing belt only, timing belt+water pump, timing belt+water pump+tensioners+seals
 
+Return JSON format:
 {
-  "jobName": "${jobName}",
-  "estimatedHours": 2.5,
-  "hoursRange": { "low": 2.0, "high": 3.5 },
-  "confidence": "medium",
-  "reasoning": "Brief explanation of the estimate based on typical procedures for this vehicle",
-  "commonProcedures": ["Step 1", "Step 2", "Step 3"]
+  "searchQuery": "${jobName}",
+  "options": [
+    {
+      "id": "brake-pads-only",
+      "name": "Front Brake Pad Replacement",
+      "description": "Replace worn brake pads only - suitable when rotors are in good condition",
+      "estimatedHours": 0.8,
+      "hoursRange": { "low": 0.6, "high": 1.0 },
+      "confidence": "high",
+      "scope": "basic",
+      "recommended": false,
+      "procedures": ["Remove wheel", "Remove caliper", "Replace pads", "Reinstall"]
+    },
+    {
+      "id": "brake-pads-rotors",
+      "name": "Front Brake Pads & Rotors",
+      "description": "Replace brake pads and rotors - recommended for worn or scored rotors",
+      "estimatedHours": 1.5,
+      "hoursRange": { "low": 1.2, "high": 2.0 },
+      "confidence": "high",
+      "scope": "standard",
+      "recommended": true,
+      "procedures": ["Remove wheel", "Remove caliper", "Remove rotor", "Install new rotor", "Replace pads", "Reinstall"]
+    }
+  ]
 }
 
 Guidelines:
-- Base estimates on industry-standard flat-rate times when applicable
-- Consider vehicle-specific factors (engine access, design complexity)
-- Use "high" confidence for common/straightforward repairs
-- Use "medium" confidence for repairs with some variability
-- Use "low" confidence for uncommon repairs or when more info is needed
-- Provide 2-4 common procedures involved
-- Be realistic - don't underestimate complex jobs`;
+- Provide 3-5 options with increasing scope (basic → standard → comprehensive)
+- Mark ONE option as "recommended" (usually the standard/common choice)
+- Use realistic labor times based on industry flat-rate guides
+- Consider vehicle-specific complexity
+- Keep descriptions customer-friendly and explain when each option is appropriate
+- Use unique kebab-case IDs for each option`;
 
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 400,
+      max_tokens: 1200,
       temperature: 0.4,
       response_format: { type: "json_object" },
     });
@@ -667,28 +722,83 @@ Guidelines:
     const content = response.choices[0]?.message?.content || "{}";
     const parsed = JSON.parse(content);
 
+    const options: LaborEstimateOption[] = [];
+    
+    // Helper to normalize scope values
+    const normalizeScope = (scope: unknown): 'basic' | 'standard' | 'comprehensive' => {
+      if (typeof scope !== 'string') return 'standard';
+      const normalized = scope.toLowerCase().trim();
+      if (normalized.includes('basic') || normalized.includes('minimal') || normalized.includes('simple')) return 'basic';
+      if (normalized.includes('comprehensive') || normalized.includes('complete') || normalized.includes('full')) return 'comprehensive';
+      return 'standard';
+    };
+    
+    if (Array.isArray(parsed.options)) {
+      for (const opt of parsed.options) {
+        // Skip options without required fields
+        if (typeof opt.name !== 'string' || !opt.name.trim()) continue;
+        if (typeof opt.estimatedHours !== 'number' || opt.estimatedHours <= 0) continue;
+        
+        options.push({
+          id: typeof opt.id === 'string' ? opt.id : `option-${options.length}`,
+          name: opt.name.trim(),
+          description: typeof opt.description === 'string' ? opt.description : '',
+          estimatedHours: Math.round(opt.estimatedHours * 10) / 10, // Round to 1 decimal
+          hoursRange: {
+            low: typeof opt.hoursRange?.low === 'number' ? Math.round(opt.hoursRange.low * 10) / 10 : Math.round(opt.estimatedHours * 0.8 * 10) / 10,
+            high: typeof opt.hoursRange?.high === 'number' ? Math.round(opt.hoursRange.high * 10) / 10 : Math.round(opt.estimatedHours * 1.3 * 10) / 10,
+          },
+          confidence: ['high', 'medium', 'low'].includes(opt.confidence) ? opt.confidence : 'medium',
+          scope: normalizeScope(opt.scope),
+          recommended: opt.recommended === true,
+          procedures: Array.isArray(opt.procedures) 
+            ? opt.procedures.filter((p: unknown) => typeof p === 'string').slice(0, 6)
+            : [],
+        });
+      }
+    }
+
+    // Ensure at least one option exists
+    if (options.length === 0) {
+      options.push({
+        id: 'default',
+        name: jobName,
+        description: 'Standard repair service',
+        estimatedHours: 1.0,
+        hoursRange: { low: 0.5, high: 2.0 },
+        confidence: 'low',
+        scope: 'standard',
+        recommended: true,
+        procedures: [],
+      });
+    }
+
+    // Ensure exactly one option is marked recommended
+    const hasRecommended = options.some(o => o.recommended);
+    if (!hasRecommended && options.length > 0) {
+      const middleIndex = Math.floor(options.length / 2);
+      options[middleIndex].recommended = true;
+    }
+
     return {
-      jobName: typeof parsed.jobName === 'string' ? parsed.jobName : jobName,
-      estimatedHours: typeof parsed.estimatedHours === 'number' ? parsed.estimatedHours : 1.0,
-      hoursRange: {
-        low: typeof parsed.hoursRange?.low === 'number' ? parsed.hoursRange.low : 0.5,
-        high: typeof parsed.hoursRange?.high === 'number' ? parsed.hoursRange.high : 2.0,
-      },
-      confidence: ['high', 'medium', 'low'].includes(parsed.confidence) ? parsed.confidence : 'low',
-      reasoning: typeof parsed.reasoning === 'string' ? parsed.reasoning : 'Estimate based on typical repair times.',
-      commonProcedures: Array.isArray(parsed.commonProcedures) 
-        ? parsed.commonProcedures.filter((p: unknown) => typeof p === 'string').slice(0, 5)
-        : [],
+      searchQuery: typeof parsed.searchQuery === 'string' ? parsed.searchQuery : jobName,
+      options,
     };
   } catch (error) {
     console.error('AI labor estimate error:', error);
     return {
-      jobName,
-      estimatedHours: 1.0,
-      hoursRange: { low: 0.5, high: 2.0 },
-      confidence: 'low',
-      reasoning: 'Unable to generate estimate. Please verify with labor guide.',
-      commonProcedures: [],
+      searchQuery: jobName,
+      options: [{
+        id: 'error-fallback',
+        name: jobName,
+        description: 'Unable to generate estimate. Please verify with labor guide.',
+        estimatedHours: 1.0,
+        hoursRange: { low: 0.5, high: 2.0 },
+        confidence: 'low',
+        scope: 'standard',
+        recommended: true,
+        procedures: [],
+      }],
     };
   }
 }
