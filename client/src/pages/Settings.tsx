@@ -563,12 +563,14 @@ function ShopFeesSection({ locationId, fees, onRefresh }: { locationId: string; 
   });
 
   const handleAdd = () => {
+    const methodMap: Record<string, string> = { percentage: 'PERCENTAGE', fixed: 'FIXED' };
+    const calculateOnMap: Record<string, string> = { labor: 'LABOR', parts: 'PARTS', labor_parts: 'LABOR_PARTS', subtotal: 'SUBTOTAL' };
     createMutation.mutate({
       locationId,
       name: newFee.name,
-      type: newFee.type,
-      value: parseFloat(newFee.value) || 0,
-      appliesTo: newFee.appliesTo,
+      method: methodMap[newFee.type] || 'PERCENTAGE',
+      calculateOn: calculateOnMap[newFee.appliesTo] || 'SUBTOTAL',
+      amount: parseFloat(newFee.value) || 0,
       isTaxable: newFee.taxable,
       autoApply: newFee.autoApply,
       sortOrder: fees.length,
@@ -635,6 +637,7 @@ function ShopFeesSection({ locationId, fees, onRefresh }: { locationId: string; 
                   <SelectContent>
                     <SelectItem value="labor">Labor Only</SelectItem>
                     <SelectItem value="parts">Parts Only</SelectItem>
+                    <SelectItem value="labor_parts">Labor & Parts</SelectItem>
                     <SelectItem value="subtotal">Total Subtotal</SelectItem>
                   </SelectContent>
                 </Select>
@@ -684,13 +687,15 @@ function ShopFeesSection({ locationId, fees, onRefresh }: { locationId: string; 
               </TableRow>
             </TableHeader>
             <TableBody>
-              {fees.map((fee) => (
+              {fees.map((fee) => {
+                const calculateOnLabels: Record<string, string> = { LABOR: 'Labor', PARTS: 'Parts', LABOR_PARTS: 'Labor & Parts', SUBTOTAL: 'Subtotal' };
+                return (
                 <TableRow key={fee.id} data-testid={`row-shop-fee-${fee.id}`}>
                   <TableCell className="font-medium">{fee.name}</TableCell>
                   <TableCell>
-                    {fee.type === 'percentage' ? `${Number(fee.value)}%` : `$${Number(fee.value).toFixed(2)}`}
+                    {fee.method === 'PERCENTAGE' ? `${Number(fee.amount)}%` : `$${Number(fee.amount).toFixed(2)}`}
                   </TableCell>
-                  <TableCell className="capitalize">{fee.appliesTo}</TableCell>
+                  <TableCell>{calculateOnLabels[fee.calculateOn] || fee.calculateOn}</TableCell>
                   <TableCell>{fee.isTaxable ? 'Yes' : 'No'}</TableCell>
                   <TableCell>{fee.autoApply ? 'Yes' : 'No'}</TableCell>
                   <TableCell className="text-right">
@@ -699,7 +704,7 @@ function ShopFeesSection({ locationId, fees, onRefresh }: { locationId: string; 
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+              )})}
             </TableBody>
           </Table>
         )}
