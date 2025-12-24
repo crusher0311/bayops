@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-rc.1] - 2024-12-24
+
 ### Added
+- Public landing page for bayoperations.com with hero, features, AI showcase, and CTA sections
+- Full mobile responsiveness with sidebar drawer, touch-friendly targets (44px minimum), iOS zoom prevention
 - AI-powered Similar Jobs with engine compatibility matching
 - VIN-based engine spec comparison using DataOne API
 - CARFAX Service History integration with OEM maintenance correlation
@@ -25,8 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved engine matching using parsed specs (displacement, cylinders, configuration)
 - Enhanced similar jobs search to query all historical repair orders
 - Database refactor to normalized ro_jobs/ro_job_lines structure (Phase 2 complete)
+- Public routing now shows landing page for unauthenticated visitors
 
 ### Fixed
+- Shop fee calculations now properly use location settings (PERCENTAGE/FIXED methods, calculateOn options)
+- Tax calculations now use configured rates from settings instead of hardcoded values
 - Similar jobs AI fallback now properly finds timing jobs across all vehicles
 - Client concerns deletion for legacy notes
 
