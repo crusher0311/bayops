@@ -662,53 +662,68 @@ export async function generateLaborTimeEstimateMulti(
 ): Promise<LaborEstimateMultiResponse> {
   const { jobName, jobDescription, vehicle } = request;
   
-  const prompt = `You are an experienced automotive technician and service advisor. For the repair query below, provide 3-5 different service scope options the customer might need.
+  const prompt = `You are an ASE Master Technician with 20+ years experience quoting jobs using Mitchell, AllData, and OEM labor guides. Provide accurate labor times that match what professional shops actually charge.
 
-Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.engine ? ` with ${vehicle.engine}` : ''}
+Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.engine ? ` (${vehicle.engine})` : ''}
 
 Customer's Request: ${jobName}
 ${jobDescription ? `Additional Details: ${jobDescription}` : ''}
 
-Provide graded service options from basic to comprehensive. For example:
-- "Front brakes" → offer pads only, pads+rotors, pads+rotors+calipers
-- "Timing belt" → offer timing belt only, timing belt+water pump, timing belt+water pump+tensioners+seals
+CRITICAL LABOR TIME RULES:
+1. Use REAL WORLD flat-rate labor times from Mitchell/AllData/OEM guides - NOT optimistic best-case times
+2. Major engine work (timing chains/belts, head gaskets, engine R&R) = 8-20+ hours depending on complexity
+3. Transmission work = 4-12+ hours depending on type and access
+4. Timing chain/belt jobs on V6/V8 engines typically require 8-16 hours for full service
+5. Consider access difficulty: AWD/4WD adds time, transverse V6 adds time, interference engines add care
+6. Include realistic R&R time for components that must be removed to access the repair
+7. Factor in: front cover reseal, oil pan drop if debris present, cleaning time, phaser replacement on VVT engines
 
-Return JSON format:
+Provide 3-5 graded service options from minimum to comprehensive:
+- BASIC: Minimum repair that addresses immediate concern (but may not be recommended)
+- STANDARD: Most common professional repair scope (usually recommended)
+- COMPREHENSIVE: Full service including related/preventative items
+
+Examples of REALISTIC labor times:
+- Ford 5.4L 3V timing job (chains only): 8-10 hrs | with phasers: 10-14 hrs | with oil pan cleanup: 14-16+ hrs
+- Honda 3.5L timing belt + water pump: 4-6 hrs
+- Toyota Camry V6 timing belt service: 5-7 hrs
+- GM 3.6L timing chains: 8-12 hrs
+- Front brake pads only: 0.5-1.0 hrs | pads + rotors: 1.0-2.0 hrs
+
+Return JSON:
 {
   "searchQuery": "${jobName}",
   "options": [
     {
-      "id": "brake-pads-only",
-      "name": "Front Brake Pad Replacement",
-      "description": "Replace worn brake pads only - suitable when rotors are in good condition",
-      "estimatedHours": 0.8,
-      "hoursRange": { "low": 0.6, "high": 1.0 },
-      "confidence": "high",
+      "id": "timing-chains-minimum",
+      "name": "Timing Chains Only",
+      "description": "Replace timing chains, guides, tensioners - minimum repair, does not address phasers or VVT issues",
+      "estimatedHours": 9.0,
+      "hoursRange": { "low": 8.0, "high": 10.0 },
+      "confidence": "medium",
       "scope": "basic",
       "recommended": false,
-      "procedures": ["Remove wheel", "Remove caliper", "Replace pads", "Reinstall"]
+      "procedures": ["Remove front dress", "Remove timing cover", "Replace chains/guides/tensioners", "Reseal cover", "Reinstall"]
     },
     {
-      "id": "brake-pads-rotors",
-      "name": "Front Brake Pads & Rotors",
-      "description": "Replace brake pads and rotors - recommended for worn or scored rotors",
-      "estimatedHours": 1.5,
-      "hoursRange": { "low": 1.2, "high": 2.0 },
+      "id": "timing-full-service",
+      "name": "Full Timing Service with Phasers",
+      "description": "Complete timing service including chains, guides, tensioners, cam phasers, VVT solenoids, and timing cover reseal",
+      "estimatedHours": 12.0,
+      "hoursRange": { "low": 10.0, "high": 14.0 },
       "confidence": "high",
       "scope": "standard",
       "recommended": true,
-      "procedures": ["Remove wheel", "Remove caliper", "Remove rotor", "Install new rotor", "Replace pads", "Reinstall"]
+      "procedures": ["Remove front dress", "Remove timing cover", "Replace all timing components", "Replace cam phasers", "Replace VVT solenoids", "Reseal timing cover", "Reinstall", "Oil change"]
     }
   ]
 }
 
-Guidelines:
-- Provide 3-5 options with increasing scope (basic → standard → comprehensive)
-- Mark ONE option as "recommended" (usually the standard/common choice)
-- Use realistic labor times based on industry flat-rate guides
-- Consider vehicle-specific complexity
-- Keep descriptions customer-friendly and explain when each option is appropriate
-- Use unique kebab-case IDs for each option`;
+IMPORTANT:
+- Your estimates will be used to quote real customers - accuracy prevents profit loss and customer complaints
+- When in doubt, round UP to account for rust, stuck fasteners, and complications
+- Mark ONE option as "recommended" (usually standard scope)
+- Use unique kebab-case IDs`;
 
   try {
     const response = await openai.chat.completions.create({
