@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRoute, Link } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/lib/authStore';
 import { 
@@ -58,7 +61,6 @@ import {
   ShoppingCart,
   Package,
   ChevronDown,
-  ChevronUp,
   GripVertical,
   Receipt,
   Calendar,
@@ -141,6 +143,226 @@ const PARTS_SUPPLIERS = [
   { id: 'napa', name: 'NAPA', shortName: 'NP', color: '#1E40AF', bgColor: 'bg-blue-800' },
   { id: 'advance', name: 'Advance Auto', shortName: 'AA', color: '#DC2626', bgColor: 'bg-red-700' },
 ];
+
+// Sortable row component for drag-and-drop line items
+function SortableLineItemRow({ 
+  item, 
+  onEdit, 
+  onDelete, 
+  disabled 
+}: { 
+  item: LineItem; 
+  onEdit: () => void;
+  onDelete: () => void;
+  disabled?: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const cost = item.unitCost || 0;
+  const price = item.unitPrice || 0;
+  const isPart = item.type === 'PART';
+  
+  // Determine warning state for parts
+  let priceColorClass = '';
+  let showWarning = false;
+  let warningColor = '';
+  let tooltip = '';
+  
+  if (isPart) {
+    if (price < cost) {
+      priceColorClass = 'text-red-600';
+      showWarning = true;
+      warningColor = 'text-red-600';
+      tooltip = 'Negative gross profit - sale is less than cost';
+    } else if (cost <= 0 && price <= 0) {
+      priceColorClass = 'text-red-600';
+      showWarning = true;
+      warningColor = 'text-red-600';
+      tooltip = 'Part needs pricing - use Search Parts to source';
+    } else if (cost <= 0) {
+      priceColorClass = 'text-amber-500';
+      showWarning = true;
+      warningColor = 'text-amber-500';
+      tooltip = 'Missing cost data - gross profit will be inaccurate';
+    }
+  }
+
+  let totalColorClass = '';
+  if (isPart) {
+    if (price < cost || (cost <= 0 && price <= 0)) {
+      totalColorClass = 'text-red-600';
+    } else if (cost <= 0) {
+      totalColorClass = 'text-amber-500';
+    }
+  }
+
+  return (
+    <tr 
+      ref={setNodeRef} 
+      style={style} 
+      className="group hover:bg-muted/30 bg-white" 
+      data-testid={`row-item-${item.id}`}
+    >
+      <td className="px-1 py-2 w-[40px]">
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing flex items-center justify-center h-full"
+        >
+          <GripVertical className="w-4 h-4 text-muted-foreground" />
+        </div>
+      </td>
+      <td className="px-4 py-3 font-medium">
+        {item.description}
+        {item.type === 'TIRE' && <Badge variant="secondary" className="ml-2 text-[10px]">In Stock</Badge>}
+      </td>
+      <td className="px-4 py-3 text-center">
+        <Badge variant="outline" className="text-[10px]">{item.type}</Badge>
+      </td>
+      <td className="px-4 py-3 text-center">{item.quantity}</td>
+      <td className="px-4 py-3 text-right">
+        <span className={priceColorClass}>${price.toFixed(2)}</span>
+        {showWarning && (
+          <span className={`ml-1 inline-flex items-center ${warningColor}`} title={tooltip}>
+            <AlertTriangle className="w-3.5 h-3.5" />
+          </span>
+        )}
+      </td>
+      <td className="px-4 py-3 text-right font-medium">
+        <span className={totalColorClass}>${(price * item.quantity).toFixed(2)}</span>
+      </td>
+      <td className="px-4 py-3 text-center">
+        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8"
+            onClick={onEdit}
+            disabled={disabled}
+            data-testid={`button-edit-${item.id}`}
+          >
+            <Pencil className="w-4 h-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 text-destructive"
+            onClick={onDelete}
+            disabled={disabled}
+            data-testid={`button-delete-${item.id}`}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+// Line items table with drag-and-drop reordering
+function LineItemsTable({
+  job,
+  onReorder,
+  onEdit,
+  onDelete,
+  disabled
+}: {
+  job: ServiceJob;
+  onReorder: (items: LineItem[]) => void;
+  onEdit: (item: LineItem) => void;
+  onDelete: (itemId: string) => void;
+  disabled?: boolean;
+}) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const oldIndex = job.lineItems.findIndex(item => item.id === active.id);
+      const newIndex = job.lineItems.findIndex(item => item.id === over.id);
+      
+      const newItems = arrayMove(job.lineItems, oldIndex, newIndex);
+      onReorder(newItems);
+    }
+  };
+
+  // Sort with LABOR first for initial display
+  const sortedItems = [...job.lineItems].sort((a, b) => {
+    if (a.type === 'LABOR' && b.type !== 'LABOR') return -1;
+    if (a.type !== 'LABOR' && b.type === 'LABOR') return 1;
+    return 0;
+  });
+
+  return (
+    <div className="overflow-x-auto">
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50 text-muted-foreground font-medium">
+            <tr>
+              <th className="w-[40px] px-1"></th>
+              <th className="px-4 py-3 text-left">Description</th>
+              <th className="px-4 py-3 text-center">Type</th>
+              <th className="px-4 py-3 text-center">Qty</th>
+              <th className="px-4 py-3 text-right">Unit Price</th>
+              <th className="px-4 py-3 text-right">Total</th>
+              <th className="w-[80px]"></th>
+            </tr>
+          </thead>
+          <SortableContext
+            items={job.lineItems.map(item => item.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <tbody className="divide-y">
+              {job.lineItems.map((item) => (
+                <SortableLineItemRow
+                  key={item.id}
+                  item={item}
+                  onEdit={() => onEdit(item)}
+                  onDelete={() => onDelete(item.id)}
+                  disabled={disabled}
+                />
+              ))}
+              {job.lineItems.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground italic">
+                    No items in this job.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </SortableContext>
+        </table>
+      </DndContext>
+    </div>
+  );
+}
 
 // Supplier bar component for job cards
 function SupplierBar({ 
@@ -3283,22 +3505,10 @@ export default function RepairOrderDetail() {
     });
   };
 
-  const handleMoveItem = (jobId: string, itemId: string, direction: 'up' | 'down') => {
-    const updatedJobs = jobs.map(job => {
-      if (job.id !== jobId) return job;
-      
-      const items = [...job.lineItems];
-      const currentIndex = items.findIndex(i => i.id === itemId);
-      if (currentIndex === -1) return job;
-      
-      const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-      if (newIndex < 0 || newIndex >= items.length) return job;
-      
-      // Swap items
-      [items[currentIndex], items[newIndex]] = [items[newIndex], items[currentIndex]];
-      
-      return { ...job, lineItems: items };
-    });
+  const handleReorderItems = (jobId: string, newItems: LineItem[]) => {
+    const updatedJobs = jobs.map(job => 
+      job.id === jobId ? { ...job, lineItems: newItems } : job
+    );
     
     updateRO.mutate({
       id: ro.id,
@@ -4411,166 +4621,13 @@ export default function RepairOrderDetail() {
                           }
                           return null;
                         })()}
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm">
-                            <thead className="bg-muted/50 text-muted-foreground font-medium">
-                              <tr>
-                                <th className="w-[40px] px-1"></th>
-                                <th className="px-4 py-3 text-left">Description</th>
-                                <th className="px-4 py-3 text-center">Type</th>
-                                <th className="px-4 py-3 text-center">Qty</th>
-                                <th className="px-4 py-3 text-right">Unit Price</th>
-                                <th className="px-4 py-3 text-right">Total</th>
-                                <th className="w-[80px]"></th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y">
-                              {[...job.lineItems]
-                                .sort((a, b) => {
-                                  // Sort LABOR items to top, preserve relative order within type
-                                  if (a.type === 'LABOR' && b.type !== 'LABOR') return -1;
-                                  if (a.type !== 'LABOR' && b.type === 'LABOR') return 1;
-                                  return 0;
-                                })
-                                .map((item, itemIndex, sortedItems) => {
-                                  const originalIndex = job.lineItems.findIndex(i => i.id === item.id);
-                                  const canMoveUp = originalIndex > 0;
-                                  const canMoveDown = originalIndex < job.lineItems.length - 1;
-                                  return (
-                                <tr key={item.id} className="group hover:bg-muted/30" data-testid={`row-item-${item.id}`}>
-                                  <td className="px-1 py-2">
-                                    <div className="flex flex-col items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-5 w-5"
-                                        onClick={() => handleMoveItem(job.id, item.id, 'up')}
-                                        disabled={!canMoveUp || updateRO.isPending}
-                                        data-testid={`button-move-up-${item.id}`}
-                                      >
-                                        <ChevronUp className="w-3 h-3" />
-                                      </Button>
-                                      <GripVertical className="w-3 h-3 text-muted-foreground" />
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-5 w-5"
-                                        onClick={() => handleMoveItem(job.id, item.id, 'down')}
-                                        disabled={!canMoveDown || updateRO.isPending}
-                                        data-testid={`button-move-down-${item.id}`}
-                                      >
-                                        <ChevronDown className="w-3 h-3" />
-                                      </Button>
-                                    </div>
-                                  </td>
-                                  <td className="px-4 py-3 font-medium">
-                                    {item.description}
-                                    {item.type === 'TIRE' && <Badge variant="secondary" className="ml-2 text-[10px]">In Stock</Badge>}
-                                  </td>
-                                  <td className="px-4 py-3 text-center">
-                                    <Badge variant="outline" className="text-[10px]">{item.type}</Badge>
-                                  </td>
-                                  <td className="px-4 py-3 text-center">{item.quantity}</td>
-                                  <td className="px-4 py-3 text-right">
-                                    {(() => {
-                                      const cost = item.unitCost || 0;
-                                      const price = item.unitPrice || 0;
-                                      const isPart = item.type === 'PART';
-                                      
-                                      // Determine warning state for parts
-                                      let colorClass = '';
-                                      let showWarning = false;
-                                      let warningColor = '';
-                                      let tooltip = '';
-                                      
-                                      if (isPart) {
-                                        if (price < cost) {
-                                          // Negative gross profit - red
-                                          colorClass = 'text-red-600';
-                                          showWarning = true;
-                                          warningColor = 'text-red-600';
-                                          tooltip = 'Negative gross profit - sale is less than cost';
-                                        } else if (cost <= 0 && price <= 0) {
-                                          // Both missing - red
-                                          colorClass = 'text-red-600';
-                                          showWarning = true;
-                                          warningColor = 'text-red-600';
-                                          tooltip = 'Part needs pricing - use Search Parts to source';
-                                        } else if (cost <= 0) {
-                                          // Missing cost - yellow
-                                          colorClass = 'text-amber-500';
-                                          showWarning = true;
-                                          warningColor = 'text-amber-500';
-                                          tooltip = 'Missing cost data - gross profit will be inaccurate';
-                                        }
-                                      }
-                                      
-                                      return (
-                                        <>
-                                          <span className={colorClass}>${price.toFixed(2)}</span>
-                                          {showWarning && (
-                                            <span className={`ml-1 inline-flex items-center ${warningColor}`} title={tooltip}>
-                                              <AlertTriangle className="w-3.5 h-3.5" />
-                                            </span>
-                                          )}
-                                        </>
-                                      );
-                                    })()}
-                                  </td>
-                                  <td className="px-4 py-3 text-right font-medium">
-                                    {(() => {
-                                      const cost = item.unitCost || 0;
-                                      const price = item.unitPrice || 0;
-                                      const isPart = item.type === 'PART';
-                                      let colorClass = '';
-                                      
-                                      if (isPart) {
-                                        if (price < cost || (cost <= 0 && price <= 0)) {
-                                          colorClass = 'text-red-600';
-                                        } else if (cost <= 0) {
-                                          colorClass = 'text-amber-500';
-                                        }
-                                      }
-                                      
-                                      return <span className={colorClass}>${(price * item.quantity).toFixed(2)}</span>;
-                                    })()}
-                                  </td>
-                                  <td className="px-4 py-3 text-center">
-                                    <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
-                                      <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="h-8 w-8"
-                                        onClick={() => handleEditItem(job.id, item)}
-                                        disabled={updateRO.isPending}
-                                        data-testid={`button-edit-${item.id}`}
-                                      >
-                                        <Pencil className="w-4 h-4" />
-                                      </Button>
-                                      <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="h-8 w-8 text-destructive"
-                                        onClick={() => handleDeleteItem(job.id, item.id)}
-                                        disabled={updateRO.isPending}
-                                        data-testid={`button-delete-${item.id}`}
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </Button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ); })}
-                              {job.lineItems.length === 0 && (
-                                <tr>
-                                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground italic">
-                                    No items in this job.
-                                  </td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
+                        <LineItemsTable
+                          job={job}
+                          onReorder={(newItems) => handleReorderItems(job.id, newItems)}
+                          onEdit={(item) => handleEditItem(job.id, item)}
+                          onDelete={(itemId) => handleDeleteItem(job.id, itemId)}
+                          disabled={updateRO.isPending}
+                        />
                         {/* Supplier Bar */}
                         <SupplierBar 
                           job={job}
