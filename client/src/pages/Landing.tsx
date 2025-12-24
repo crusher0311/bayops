@@ -2,7 +2,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Wrench, 
   Car, 
   FileText, 
   Users, 
@@ -82,10 +81,11 @@ export default function Landing() {
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center">
-              <Wrench className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-slate-900">BayOPS</span>
+            <img 
+              src="/bayops-logo.png" 
+              alt="BayOPS" 
+              className="h-10 object-contain"
+            />
           </div>
           <div className="flex items-center gap-4">
             <Link href="/login">
@@ -368,10 +368,11 @@ export default function Landing() {
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center gap-3 mb-4 md:mb-0">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center">
-                <Wrench className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-lg font-semibold text-white">BayOPS</span>
+              <img 
+                src="/bayops-logo.png" 
+                alt="BayOPS" 
+                className="h-8 object-contain"
+              />
             </div>
             <p className="text-slate-500 text-sm">
               © {new Date().getFullYear()} BayOPS. Modern shop management for modern shops.

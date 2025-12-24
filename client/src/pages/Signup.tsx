@@ -16,7 +16,6 @@ import {
   ChevronLeft,
   Check,
   Loader2,
-  Wrench,
   Database,
   ArrowRight,
   PartyPopper,
@@ -215,11 +214,12 @@ export default function Signup() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-              <Wrench className="w-7 h-7 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-white">BayOPS</h1>
+          <div className="flex justify-center mb-4">
+            <img 
+              src="/bayops-logo.png" 
+              alt="BayOPS" 
+              className="h-14 object-contain"
+            />
           </div>
           <p className="text-slate-400">Create your shop account in minutes</p>
         </div>

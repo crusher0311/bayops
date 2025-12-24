@@ -4,8 +4,7 @@ import { useLocation } from 'wouter';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Wrench } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader } from '../components/ui/card';
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -26,14 +25,17 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-slate-900 border-slate-800">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #0d1b2a 0%, #1b3a57 100%)' }}>
+      <Card className="w-full max-w-md border-[#1b3a57]" style={{ background: 'rgba(13, 27, 42, 0.95)' }}>
         <CardHeader className="space-y-4 text-center">
-          <div className="mx-auto bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center">
-            <Wrench className="w-8 h-8 text-white" />
+          <div className="mx-auto">
+            <img 
+              src="/bayops-logo.png" 
+              alt="BayOPS" 
+              className="h-16 object-contain"
+            />
           </div>
           <div>
-            <CardTitle className="text-2xl text-white font-rajdhani">BayOPS</CardTitle>
             <CardDescription className="text-slate-400">
               Sign in to your account
             </CardDescription>
@@ -49,7 +51,7 @@ export default function Login() {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="bg-slate-800 border-slate-700 text-white"
+                className="bg-[#1b3a57] border-[#2d4a63] text-white placeholder:text-slate-500"
                 required
                 autoComplete="username"
               />
@@ -62,7 +64,7 @@ export default function Login() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-slate-800 border-slate-700 text-white"
+                className="bg-[#1b3a57] border-[#2d4a63] text-white placeholder:text-slate-500"
                 required
                 autoComplete="current-password"
               />
@@ -75,7 +77,7 @@ export default function Login() {
             <Button
               type="submit"
               data-testid="button-login"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              className="w-full bg-[#1e88e5] hover:bg-[#1976d2] text-white"
               disabled={isLoading}
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
@@ -86,13 +88,13 @@ export default function Login() {
             <p className="font-mono text-xs">owner / password123</p>
             <p className="font-mono text-xs">advisor / password123</p>
           </div>
-          <div className="mt-6 pt-6 border-t border-slate-800 text-center">
+          <div className="mt-6 pt-6 border-t border-[#1b3a57] text-center">
             <p className="text-slate-400 text-sm">
               New to BayOPS?{' '}
               <button
                 type="button"
                 onClick={() => setLocation('/signup')}
-                className="text-blue-400 hover:text-blue-300 font-medium"
+                className="text-[#4fc3f7] hover:text-[#81d4fa] font-medium"
                 data-testid="link-signup"
               >
                 Create your shop account

@@ -16,7 +16,6 @@ import {
   Package, 
   BarChart3, 
   Settings,
-  Wrench,
   Building2,
   LayoutGrid,
   Kanban,
@@ -121,12 +120,12 @@ export function Sidebar() {
 
   return (
     <div className="w-64 h-screen bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border">
-      <div className="p-6 flex items-center gap-3">
+      <div className="p-4 flex items-center justify-center">
         {logoUrl ? (
           <img 
             src={logoUrl} 
             alt={shopName} 
-            className="h-8 max-w-[180px] object-contain"
+            className="h-10 max-w-[200px] object-contain"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
               e.currentTarget.nextElementSibling?.classList.remove('hidden');
@@ -134,10 +133,11 @@ export function Sidebar() {
           />
         ) : null}
         <div className={cn("flex items-center gap-3", logoUrl && "hidden")}>
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <Wrench className="w-5 h-5 text-primary-foreground" />
-          </div>
-          <span className="font-display font-bold text-xl tracking-tight">{shopName}</span>
+          <img 
+            src="/bayops-logo.png" 
+            alt="BayOPS" 
+            className="h-10 max-w-[200px] object-contain"
+          />
         </div>
       </div>
 
