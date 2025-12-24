@@ -52,7 +52,7 @@ export function setupAuth(app: Express) {
       maxAge: 86400000, // 24 hours
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: "lax",
     },
     store: new MemoryStore({
       checkPeriod: 86400000,

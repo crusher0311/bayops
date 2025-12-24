@@ -7,11 +7,11 @@ type DrizzleInstance = ReturnType<typeof drizzleNeon> | ReturnType<typeof drizzl
 
 let dbInstance: DrizzleInstance | null = null;
 let poolInstance: any = null;
-let initPromise: Promise<{ db: DrizzleInstance; pool: any }> | null = null;
+let initPromise: Promise<void> | null = null;
 
-async function initializeDatabase(): Promise<{ db: DrizzleInstance; pool: any }> {
+async function initializeDatabase(): Promise<void> {
   if (dbInstance && poolInstance) {
-    return { db: dbInstance, pool: poolInstance };
+    return;
   }
 
   if (config.database.useNeonDriver) {
@@ -28,11 +28,9 @@ async function initializeDatabase(): Promise<{ db: DrizzleInstance; pool: any }>
     dbInstance = drizzlePg({ client: poolInstance, schema });
     console.log('[Database] Using standard PostgreSQL driver');
   }
-
-  return { db: dbInstance, pool: poolInstance };
 }
 
-function getInitPromise() {
+function ensureInit() {
   if (!initPromise) {
     initPromise = initializeDatabase();
   }
@@ -40,31 +38,31 @@ function getInitPromise() {
 }
 
 export async function getDb(): Promise<DrizzleInstance> {
-  const { db } = await getInitPromise();
-  return db;
+  await ensureInit();
+  return dbInstance!;
 }
 
 export async function getPool(): Promise<any> {
-  const { pool } = await getInitPromise();
-  return pool;
+  await ensureInit();
+  return poolInstance!;
 }
 
-const dbProxy = new Proxy({} as DrizzleInstance, {
+export { initializeDatabase };
+
+export const db = new Proxy({} as DrizzleInstance, {
   get(_, prop) {
     if (!dbInstance) {
-      throw new Error('Database not initialized. Call initializeDatabase() first or use getDb().');
+      throw new Error('Database not initialized. Ensure initializeDatabase() is called at startup.');
     }
     return (dbInstance as any)[prop];
   }
 });
 
-const poolProxy = new Proxy({} as any, {
+export const pool = new Proxy({} as any, {
   get(_, prop) {
     if (!poolInstance) {
-      throw new Error('Pool not initialized. Call initializeDatabase() first or use getPool().');
+      throw new Error('Pool not initialized. Ensure initializeDatabase() is called at startup.');
     }
     return poolInstance[prop];
   }
 });
-
-export { poolProxy as pool, dbProxy as db, initializeDatabase };
