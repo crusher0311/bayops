@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>BayOPS Parts Connector</title>
+  <title>BayOPS Connector</title>
   <style>
     * {
       box-sizing: border-box;
@@ -70,6 +70,82 @@
     
     .status-dot.inactive {
       background: #94a3b8;
+    }
+    
+    .integrations {
+      margin-top: 16px;
+    }
+    
+    .integrations h2 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+    
+    .integration-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .integration-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 11px;
+      color: white;
+    }
+    
+    .integration-icon.partstech {
+      background: linear-gradient(135deg, #f97316, #ea580c);
+    }
+    
+    .integration-icon.prodemand {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    }
+    
+    .integration-info {
+      flex: 1;
+    }
+    
+    .integration-name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .integration-status {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+    
+    .integration-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    
+    .integration-badge.ready {
+      background: #dcfce7;
+      color: #166534;
+    }
+    
+    .integration-badge.pending {
+      background: #fef3c7;
+      color: #92400e;
     }
     
     .sessions {
@@ -166,8 +242,8 @@
       </svg>
     </div>
     <div>
-      <h1>BayOPS Parts Connector</h1>
-      <p>Seamless PartsTech integration</p>
+      <h1>BayOPS Connector</h1>
+      <p>Parts & Labor Guide Integration</p>
     </div>
   </div>
   
@@ -175,6 +251,28 @@
     <div class="status">
       <div class="status-dot" id="statusDot"></div>
       <span id="statusText">Connected to BayOPS</span>
+    </div>
+    
+    <div class="integrations">
+      <h2>Integrations</h2>
+      
+      <div class="integration-card">
+        <div class="integration-icon partstech">PT</div>
+        <div class="integration-info">
+          <div class="integration-name">PartsTech</div>
+          <div class="integration-status">Parts ordering & search</div>
+        </div>
+        <span class="integration-badge ready">Ready</span>
+      </div>
+      
+      <div class="integration-card">
+        <div class="integration-icon prodemand">PD</div>
+        <div class="integration-info">
+          <div class="integration-name">ProDemand</div>
+          <div class="integration-status">Labor guide & repair info</div>
+        </div>
+        <span class="integration-badge ready">Ready</span>
+      </div>
     </div>
     
     <div class="sessions">
@@ -187,14 +285,14 @@
             <path d="m3.3 7 8.7 5 8.7-5"/>
             <path d="M12 22V12"/>
           </svg>
-          <p>No active parts sessions.<br>Open a repair order in BayOPS to start.</p>
+          <p>No active sessions.<br>Open a repair order in BayOPS to start.</p>
         </div>
       </div>
     </div>
   </div>
   
   <div class="footer">
-    BayOPS Parts Connector v1.9.3
+    BayOPS Parts & Labor Connector v2.1.0
   </div>
   
   <script src="popup.js"></script>

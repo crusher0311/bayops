@@ -1,37 +1,78 @@
-# BayOPS Parts Connector - Chrome Extension
+# BayOPS Parts & Labor Connector
 
-Connect BayOPS repair orders with PartsTech for seamless parts ordering.
+Chrome extension for integrating BayOPS with PartsTech, ProDemand, AllData, and Identifix.
 
-## Installation (Development)
+## Version 2.1.0
 
-1. Open Chrome and go to `chrome://extensions/`
+### Features
+
+#### PartsTech Integration
+- Auto-sync parts from PartsTech to BayOPS repair orders
+- VIN pre-fill for vehicle context
+- Real-time cart synchronization
+- One-click ordering when ready
+
+#### ProDemand Integration (NEW in v2.1.0)
+- Deep link integration with vehicle pre-selection
+- VIN auto-fill on ProDemand pages
+- Login state detection with helpful guidance
+- Labor time capture (experimental)
+
+#### Other Labor Guides
+- AllData support (content script ready)
+- Identifix support (content script ready)
+
+## Installation
+
+1. Open Chrome and navigate to `chrome://extensions/`
 2. Enable "Developer mode" (toggle in top right)
 3. Click "Load unpacked"
 4. Select the `chrome-extension` folder
 
-## How It Works
+## Usage
 
-1. **Open BayOPS** and navigate to a repair order
-2. **Click "Search Parts"** on a job - this opens PartsTech in a new tab
-3. **Add parts to cart** on PartsTech as normal
-4. **Extension tracks all parts** added and links them to the job
-5. **Parts sync back to BayOPS** automatically
-6. When the job is sold, click **"Order from PartsTech"** to complete the purchase
+### Opening ProDemand from BayOPS
+1. Open a repair order in BayOPS
+2. In the Vehicle section, click "Open in ProDemand"
+3. ProDemand opens and the VIN is copied to your clipboard
+4. Log in to ProDemand if prompted
+5. Paste the VIN in ProDemand's vehicle search (Ctrl+V / Cmd+V)
+6. The extension will show a floating panel with:
+   - Connection status
+   - VIN fill button (auto-fills or copies to clipboard)
+   - Labor capture button
 
-## Features
+### PartsTech Integration
+1. Click the PartsTech button on any job in BayOPS
+2. PartsTech opens with the VIN pre-filled
+3. Add parts to your cart
+4. Parts automatically sync back to BayOPS
 
-- **Session tracking**: Parts are organized by job/RO
-- **No duplicates**: Extension knows which parts belong to which job
-- **Persistent**: Cart data saved even if you close the PartsTech tab
-- **One-click ordering**: When ready, trigger checkout directly
+## How ProDemand Integration Works
+
+When you click "Open in ProDemand" from BayOPS:
+1. ProDemand's main page opens in a new tab
+2. The VIN is automatically copied to your clipboard
+3. You can paste it directly in ProDemand's vehicle search
+
+The Chrome extension provides additional features when you're on ProDemand:
+- Detects if you're logged in or on the login page
+- Shows a "Fill VIN" button that auto-fills VIN fields when detected
+- Falls back to clipboard copy if auto-fill isn't possible
+- Provides a "Capture Labor Times" button (experimental)
+
+**Note:** ProDemand requires a valid subscription and login. The extension cannot bypass authentication.
 
 ## Files
 
 - `manifest.json` - Extension configuration
-- `background.js` - Service worker handling sessions and tab management
-- `content-partstech.js` - Script injected into PartsTech to monitor cart
-- `content-bayops.js` - Script injected into BayOPS to enable communication
-- `popup.html/js` - Extension popup UI showing active sessions
+- `background.js` - Background service worker
+- `popup.html/js` - Extension popup UI
+- `content-bayops.js` - BayOPS page integration
+- `content-partstech.js` - PartsTech page integration
+- `content-prodemand.js` - ProDemand page integration
+- `content-alldata.js` - AllData page integration
+- `content-identifix.js` - Identifix page integration
 
 ## Required Icons
 
@@ -42,8 +83,33 @@ Add the following icon files to the `icons/` folder:
 
 You can use any wrench/tool icon in BayOPS brand colors (blue/purple gradient).
 
+## Security Notes
+
+- No credentials are stored in the extension
+- Uses browser's native password manager for login
+- Session management handled by each service
+- All communication stays within the browser
+
+## Changelog
+
+### v2.1.0
+- Added ProDemand deep link integration
+- Added login state detection for ProDemand
+- Updated popup UI to show both PartsTech and ProDemand status
+- Improved VIN auto-fill reliability
+
+### v2.0.0
+- Multi-service support (PartsTech, ProDemand, AllData, Identifix)
+- Labor guide capture framework
+- Unified popup interface
+
+### v1.9.x
+- PartsTech cart synchronization
+- VIN pass-through
+- Real-time sync to BayOPS
+
 ## Notes
 
 - This extension monitors PartsTech's cart using DOM observation
-- If PartsTech changes their site structure, the cart parsing may need updates
+- If PartsTech or ProDemand change their site structure, updates may be needed
 - Once you have PartsTech Partner API access, this can be replaced with official integration

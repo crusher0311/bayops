@@ -1,4 +1,4 @@
-// BayOPS Parts Connector - Popup Script
+// BayOPS Parts & Labor Connector - Popup Script
 
 async function loadSessions() {
   try {
@@ -23,7 +23,7 @@ async function loadSessions() {
             <path d="m3.3 7 8.7 5 8.7-5"/>
             <path d="M12 22V12"/>
           </svg>
-          <p>No active parts sessions.<br>Open a repair order in BayOPS to start.</p>
+          <p>No active sessions.<br>Open a repair order in BayOPS to start.</p>
         </div>
       `;
       return;
