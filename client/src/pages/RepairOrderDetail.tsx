@@ -2755,60 +2755,9 @@ export default function RepairOrderDetail() {
     });
   };
 
-  const openLaborGuide = async (jobId: string) => {
-    if (!ro?.id) return;
-    
-    try {
-      // Create a labor guide session via the API
-      const response = await fetch('/api/labor-guide/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ repairOrderId: ro.id, jobId }),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to create labor guide session');
-      }
-      
-      const data = await response.json();
-      
-      // Open the labor guide in a new window
-      if (data.launchUrl) {
-        window.open(data.launchUrl, '_blank', 'noopener,noreferrer');
-        
-        // Copy VIN to clipboard for easy paste
-        const vin = data.vehicle?.vin;
-        if (vin && vin.length === 17) {
-          try {
-            await navigator.clipboard.writeText(vin);
-            toast({
-              title: 'ProDemand opened - VIN copied!',
-              description: `${vin} - Log in and paste VIN to search (Ctrl+V)`,
-            });
-          } catch {
-            toast({
-              title: 'ProDemand opened',
-              description: `VIN: ${vin} - Log in and search for this vehicle`,
-            });
-          }
-        } else {
-          toast({
-            title: 'ProDemand opened',
-            description: `Search for: ${data.vehicle?.year} ${data.vehicle?.make} ${data.vehicle?.model}`,
-          });
-        }
-      }
-      
-      // Also open the fallback dialog for manual entry if no extension installed
-      setLaborGuideJobId(jobId);
-      setIsLaborGuideOpen(true);
-    } catch (error) {
-      console.error('Failed to open labor guide:', error);
-      // Fallback to the dialog for manual entry
-      setLaborGuideJobId(jobId);
-      setIsLaborGuideOpen(true);
-    }
+  const openLaborGuide = (jobId: string) => {
+    setLaborGuideJobId(jobId);
+    setIsLaborGuideOpen(true);
   };
 
   // PartsTech handlers - use Chrome extension if installed, otherwise fallback to popup
