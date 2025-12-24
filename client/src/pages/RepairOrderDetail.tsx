@@ -3019,7 +3019,7 @@ export default function RepairOrderDetail() {
     setIsLaborGuideOpen(true);
   };
 
-  // PartsTech handlers - use Chrome extension if installed, otherwise fallback to popup
+  // PartsTech handlers - use Chrome extension if installed, otherwise open directly
   const openPartstechSearch = async (jobId: string, jobName?: string) => {
     // Wait briefly for extension to be ready (in case page just loaded)
     const extensionReady = await waitForExtension(500);
@@ -3042,10 +3042,22 @@ export default function RepairOrderDetail() {
       }
     }
     
-    // Fallback to popup dialog
+    // Fallback: Open PartsTech directly in new tab (no dialog)
+    const baseUrl = 'https://app.partstech.com';
+    const params = new URLSearchParams();
+    if (vehicle?.vin) {
+      params.set('vin', vehicle.vin);
+    }
+    if (jobName) {
+      params.set('keyword', jobName);
+    }
+    const queryString = params.toString();
+    const url = queryString ? `${baseUrl}/search?${queryString}` : baseUrl;
+    window.open(url, '_blank');
+    
+    // Store job ID for manual part entry if user wants to add parts later
     setPartstechJobId(jobId);
     setPartstechJobName(jobName);
-    setIsPartstechOpen(true);
   };
 
   const handleAddFromPartstech = (part: PartstechPart) => {
