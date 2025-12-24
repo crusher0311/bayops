@@ -2420,6 +2420,21 @@ export default function RepairOrderDetail() {
       return res.json() as Promise<{ 
         partsMatrices: PartsMatrix[];
         laborRates: Array<{ id: string; name: string; rate: string; isDefault: boolean }>;
+        shopFees: Array<{ 
+          id: string; 
+          name: string; 
+          method: 'PERCENTAGE' | 'FIXED'; 
+          amount: string; 
+          calculateOn: 'LABOR' | 'PARTS' | 'LABOR_PARTS' | 'SUBTOTAL';
+          isActive: boolean;
+        }>;
+        taxSettings: {
+          salesTaxRate?: string;
+          tireTaxRate?: string;
+          taxOnLabor?: boolean;
+          taxOnParts?: boolean;
+          taxOnFees?: boolean;
+        } | null;
       }>;
     },
     enabled: !!ro?.locationId,
@@ -2936,8 +2951,35 @@ export default function RepairOrderDetail() {
     .reduce((acc, i) => acc + (i.unitPrice * i.quantity), 0);
 
   const subtotal = partsTotal + laborTotal;
-  const tax = subtotal * 0.0825;
-  const total = subtotal + tax;
+  
+  // Calculate shop fees from settings
+  const shopFeesTotal = (settings?.shopFees || [])
+    .filter(fee => fee.isActive)
+    .reduce((acc, fee) => {
+      const amount = parseFloat(fee.amount) || 0;
+      let base = 0;
+      switch (fee.calculateOn) {
+        case 'LABOR': base = laborTotal; break;
+        case 'PARTS': base = partsTotal; break;
+        case 'LABOR_PARTS': base = laborTotal + partsTotal; break;
+        case 'SUBTOTAL': base = subtotal; break;
+      }
+      return acc + (fee.method === 'PERCENTAGE' ? base * (amount / 100) : amount);
+    }, 0);
+  
+  // Use tax rate from settings (fallback to 8.25%)
+  const taxRate = parseFloat(settings?.taxSettings?.salesTaxRate || '8.25') / 100;
+  const taxOnLabor = settings?.taxSettings?.taxOnLabor ?? true;
+  const taxOnParts = settings?.taxSettings?.taxOnParts ?? true;
+  const taxOnFees = settings?.taxSettings?.taxOnFees ?? false;
+  
+  const taxableAmount = 
+    (taxOnLabor ? laborTotal : 0) + 
+    (taxOnParts ? partsTotal : 0) + 
+    (taxOnFees ? shopFeesTotal : 0);
+  const tax = taxableAmount * taxRate;
+  
+  const total = subtotal + shopFeesTotal + tax;
 
   const currentStepIndex = activeStages.findIndex(s => s.id === ro.status);
 
@@ -4756,7 +4798,7 @@ export default function RepairOrderDetail() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Shop Supplies</span>
-                  <span>$0.00</span>
+                  <span>${shopFeesTotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Tax</span>
