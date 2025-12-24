@@ -1,0 +1,139 @@
+✅ Fix (you only need to do ONE of these)
+✅ Option A (recommended): Let Render be canonical, remove Cloudflare redirect
+
+Since Render wants:
+www → non-www
+
+Then you must remove the Cloudflare redirect that forces:
+
+www → non-www (wait — Cloudflare is already doing that)
+
+Actually, your Cloudflare redirect is correct — the origin is wrong.
+
+So the best fix is:
+
+✅ Make your origin stop redirecting bayoperations.com → www.bayoperations.com
+
+✅ Where that redirect is coming from (origin-side)
+
+Because the response includes:
+
+Server: ip-10-124-4-131.us-west-2.compute.internal
+
+
+That means the redirect is happening inside Render’s AWS container/network.
+
+So it is very likely:
+
+You have host normalization code like this
+
+Express example:
+
+if (req.headers.host === "bayoperations.com") {
+  return res.redirect(301, "https://www.bayoperations.com" + req.url)
+}
+
+
+Or a Next config like:
+
+async redirects() {
+  return [
+    {
+      source: "/:path*",
+      has: [{ type: "host", value: "bayoperations.com" }],
+      destination: "https://www.bayoperations.com/:path*",
+      permanent: true,
+    },
+  ]
+}
+
+
+Or a middleware.ts host redirect.
+
+✅ Cloudflare side cause
+
+Cloudflare is returning:
+
+HTTP/2 301
+location: https://bayoperations.com/
+server: cloudflare
+
+
+That means you have either:
+
+✅ “Always use HTTPS” + some canonical host setting
+✅ a forwarding rule
+✅ a Page Rule redirect
+✅ or a Bulk Redirect rule
+
+✅ Your fastest guaranteed fix
+✅ Decide which domain is canonical:
+
+Pick ONE:
+
+✅ bayoperations.com
+or
+✅ www.bayoperations.com
+
+Then enforce it in ONLY ONE place.
+
+✅ Since Render is already configured to canonicalize to non-www…
+✅ Make canonical = bayoperations.com
+Step 1 — Remove any app redirect to www
+
+Search your codebase for:
+
+www.bayoperations.com
+
+redirect
+
+host
+
+canonical
+
+bayoperations.com → www
+
+If Node:
+
+grep -R "www.bayoperations.com" -n .
+grep -R "redirect" -n .
+
+Step 2 — Remove Cloudflare redirect rule (if it forces www->non-www is fine, but if it forces non-www->www, remove that)
+
+In Cloudflare dashboard:
+
+✅ Rules → Redirect Rules / Bulk Redirects
+✅ Page Rules
+✅ Transform Rules (rare)
+
+Delete the redirect that conflicts.
+
+✅ Why the logs look normal
+
+Render logs show repeated GETs because:
+
+The browser keeps retrying after each redirect bounce, causing a storm of GETs that never resolve.
+
+✅ What to do next (I can help you pinpoint in 60 seconds)
+
+Tell me what framework you’re using:
+
+Express?
+
+Next.js?
+
+Rails?
+
+Django?
+
+Static site?
+
+And I’ll tell you exactly where that origin redirect is configured and what code/config to delete.
+
+If you’re using Next.js, paste your:
+
+✅ next.config.js redirects section
+or
+✅ middleware.ts if you have one
+
+and I’ll point to the exact line creating bayoperations.com → www.
